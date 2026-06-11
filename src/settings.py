@@ -1,0 +1,16 @@
+import json
+import numpy as np
+
+
+class Screen:
+    def __init__(self, settings):
+        self.width = settings["screen"]["width"]
+        self.height = settings["screen"]["height"]
+        self.resolution = np.array([self.width, self.height])
+        self.fps_cap = settings["screen"]["height"]
+
+
+with open("src/settings.json") as f:
+    json_settings = json.load(f)
+
+screen = Screen(json_settings)
