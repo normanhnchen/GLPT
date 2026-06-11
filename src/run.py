@@ -12,8 +12,8 @@ def main():
     if not glfwInit():
         return "Failed to initialize GLFW"
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3)
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3)
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4)
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4)
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE)
     # Apple system required config
     if sys.platform == "darwin":
@@ -37,6 +37,27 @@ def main():
         "src/shaders/render.vs",
         "src/shaders/render.fs"
     )
+    comp_shader = CompShader(
+        ctx,
+        "src/shaders/render.comp"
+    )
+
+    texture = ctx.texture(screen.resolution, 4, dtype="f4")
+
+    vertices = np.array([
+        0.0,  0.5, 0.0,
+        -0.5, -0.5, 0.0,
+        0.5, -0.5, 0.0
+    ], dtype="f4")
+
+    vbo = ctx.buffer(vertices.tobytes())
+
+    vao = ctx.vertex_array(
+        shader.prog,
+        [
+            [vbo, "3f", "aPos"]
+        ]
+    )
 
     start_time = time.perf_counter()
     last_time = 0
@@ -44,8 +65,6 @@ def main():
 
     curr_frame_count = 0
     stats_frame_count = 0
-
-    target_frame_time = 1 / screen.fps_cap
 
     while not glfwWindowShouldClose(window):
         current_time = time.perf_counter() - start_time
@@ -67,6 +86,19 @@ def main():
         process_input(window)
 
         ctx.clear(0, 0, 0, 1)
+
+        # Apply ceiling function
+        # Allows the GPU to reach the entire screen despite different screen resolutions
+        groups_x = (screen.width + 15) // 16
+        groups_y = (screen.height + 15) // 16
+
+        # Run compute shader
+        texture.bind_to_image(0, read=True, write=True)
+        comp_shader.prog.run(groups_x, groups_y)
+
+        texture.use(location=0)
+
+        vao.render()
 
         glfwSwapBuffers(window)
         glfwPollEvents()

@@ -1,0 +1,17 @@
+#version 460 core
+
+layout(local_size_x=16, local_size_y=16) in;
+
+layout(rgba32f, binding = 0) uniform image2D imgOutput;
+
+void main() {
+    ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 dimensions = imageSize(imgOutput);
+
+    // Only render pixels in frame
+    if (pixelCoords.x >= dimensions.x || pixelCoords.y >= dimensions.y) return;
+
+    vec3 outColor = vec3(1.0, 0.0, 0.0);
+
+    imageStore(imgOutput, pixelCoords, vec4(outColor, 1.0));
+}
