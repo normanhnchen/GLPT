@@ -1,0 +1,7 @@
+{
+    "screen": {
+        "width": 1080,
+        "height": 720,
+        "fps_cap": 240
+    }
+}
