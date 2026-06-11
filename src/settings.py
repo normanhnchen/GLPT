@@ -7,6 +7,7 @@ class Screen:
         self.width = settings["screen"]["width"]
         self.height = settings["screen"]["height"]
         self.resolution = np.array([self.width, self.height])
+        self.vsync = settings["screen"]["vsync"]
         self.fps_cap = settings["screen"]["height"]
 
 
