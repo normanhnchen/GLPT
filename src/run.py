@@ -6,6 +6,16 @@ import time
 
 from src.settings import *
 from src.shader import *
+from src.camera import *
+from src.model import *
+
+
+camera = Camera()
+
+
+first_mouse = True
+last_x = screen.width / 2
+last_y = screen.height / 2
 
 
 def main():
@@ -25,6 +35,9 @@ def main():
         return "Failed to create GLFW window"
     
     glfwMakeContextCurrent(window)
+    glfwSetCursorPosCallback(window, mouse_callback)
+    glfwSetScrollCallback(window, scroll_callback)
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
     if screen.vsync == True:
         glfwSwapInterval(1)
     else:
@@ -32,30 +45,33 @@ def main():
 
     ctx = moderngl.create_context()
 
+    scene = Scene("src/assets/cornell_box.glb")
+
     shader = Shader(
         ctx,
         "src/shaders/render.vs",
         "src/shaders/render.fs"
     )
-    comp_shader = CompShader(
+    compute_shader = ComputeShader(
         ctx,
         "src/shaders/render.comp"
     )
 
-    texture = ctx.texture(screen.resolution, 4, dtype="f4")
+    compute_texture = ctx.texture(screen.resolution, 4, dtype="f4")
 
-    vertices = np.array([
-        0.0,  0.5, 0.0,
-        -0.5, -0.5, 0.0,
-        0.5, -0.5, 0.0
-    ], dtype="f4")
-
-    vbo = ctx.buffer(vertices.tobytes())
+    # Full-screen quad
+    quad_buffer = ctx.buffer(np.array([
+        # Vertices    # TexCoords
+        -1.0,  1.0,   0.0, 1.0,
+        -1.0, -1.0,   0.0, 0.0,
+         1.0,  1.0,   1.0, 1.0,
+         1.0, -1.0,   1.0, 0.0,
+    ], dtype="f4"))
 
     vao = ctx.vertex_array(
         shader.prog,
         [
-            [vbo, "3f", "aPos"]
+            [quad_buffer, "2f 2f", "aPos", "aTexCoords"]
         ]
     )
 
@@ -83,7 +99,7 @@ def main():
             stats_start_time = time.perf_counter()
             stats_frame_count = 0
 
-        process_input(window)
+        process_input(window, delta_time)
 
         ctx.clear(0, 0, 0, 1)
 
@@ -93,12 +109,12 @@ def main():
         groups_y = (screen.height + 15) // 16
 
         # Run compute shader
-        texture.bind_to_image(0, read=True, write=True)
-        comp_shader.prog.run(groups_x, groups_y)
+        compute_texture.bind_to_image(0, read=True, write=True)
+        compute_shader.prog.run(groups_x, groups_y)
 
-        texture.use(location=0)
+        compute_texture.use(location=0)
 
-        vao.render()
+        vao.render(moderngl.TRIANGLE_STRIP)
 
         glfwSwapBuffers(window)
         glfwPollEvents()
@@ -115,10 +131,39 @@ def update_stats(window, fps):
         f"FPS: {fps:.2f}"
     )
 
-def process_input(window):
+def process_input(window, delta_time):
     if glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS:
         glfwSetWindowShouldClose(window, True)
+    
+    if glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS:
+        camera.process_keyboard(CameraMovement.FORWARD, delta_time)
+    if glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS:
+        camera.process_keyboard(CameraMovement.BACKWARD, delta_time)
+    if glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS:
+        camera.process_keyboard(CameraMovement.LEFT, delta_time)
+    if glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS:
+        camera.process_keyboard(CameraMovement.RIGHT, delta_time)
 
+
+def mouse_callback(window, xpos, ypos):
+    global first_mouse, last_x, last_y
+
+    if first_mouse:
+        last_x = xpos
+        last_y = ypos
+        first_mouse = False
+    
+    xoffset = xpos - last_x
+    # Reversed since y-coordinates go from bottom to top
+    yoffset = last_y - ypos
+    last_x = xpos
+    last_y = ypos
+
+    camera.process_mouse_movement(xoffset, yoffset)
+
+
+def scroll_callback(window, xoffset, yoffset):
+    camera.process_mouse_scroll(yoffset)
 
 if __name__ == "__main__":
     main()

@@ -4,10 +4,10 @@ import glm
 # Defines several possible options for camera movement
 # Used as abstraction to stay away from window-system specific input methods
 class CameraMovement:
-    FORWARD: 0
-    BACKWARD: 1
-    LEFT: 2
-    RIGHT: 3
+    FORWARD = 0
+    BACKWARD = 1
+    LEFT = 2
+    RIGHT = 3
 
 
 # Default camera values
@@ -25,7 +25,7 @@ class Camera:
             self,
             position=glm.vec3(0, 0, 0),
             front=glm.vec3(0, 0, -1),
-            up=glm.vec3(0, 1, 1),
+            up=glm.vec3(0, 1, 0),
             right=None,
             world_up=glm.vec3(0, 1, 0),
             yaw=YAW,
@@ -67,15 +67,15 @@ class Camera:
         xoffset *= self.mouse_sensitivity
         yoffset *= self.mouse_sensitivity
 
-        yaw += xoffset
-        pitch += yoffset
+        self.yaw += xoffset
+        self.pitch += yoffset
 
         # Make sure that when pitch is out of bounds, screen doesn't get flipped
         if constrain_pitch:
-            if pitch > 89.99:
-                pitch = 89.99
-            elif pitch < -89.99:
-                pitch = -89.99
+            if self.pitch > 89.99:
+                self.pitch = 89.99
+            elif self.pitch < -89.99:
+                self.pitch = -89.99
         
         # Update Front, Right and Up Vectors using the updated Euler angles
         self._update_camera_vectors()
