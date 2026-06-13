@@ -24,7 +24,7 @@ class Shader:
             print(f"Shader files not successfully read: {e}")
 
 
-class CompShader:
+class ComputeShader:
     def __init__(self, ctx, comp_path):
         try:
             src = _load_shader(comp_path)
