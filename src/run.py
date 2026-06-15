@@ -29,7 +29,7 @@ def main():
     if sys.platform == "darwin":
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE)
     
-    window = glfwCreateWindow(screen.width, screen.height, "FPS: ", None, None)
+    window = glfwCreateWindow(screen.width, screen.height, "FPS: 0 | Samples: 0", None, None)
 
     if not window:
         return "Failed to create GLFW window"
@@ -104,7 +104,9 @@ def main():
     last_time = 0
     stats_start_time = time.perf_counter()
 
-    curr_frame_count = 0
+    avg_fps = 0
+
+    total_frame_count = 0
     stats_frame_count = 0
 
     while not glfwWindowShouldClose(window):
@@ -118,11 +120,12 @@ def main():
         if stats_elapsed_time >= 1.5:
             # Calculate average FPS over the 1.5 second window
             avg_fps = stats_frame_count / stats_elapsed_time
-            update_stats(window, avg_fps)
 
             # Reset stats counters
             stats_start_time = time.perf_counter()
             stats_frame_count = 0
+        
+        update_stats(window, avg_fps, total_frame_count)
 
         process_input(window, delta_time)
 
@@ -136,6 +139,9 @@ def main():
         camera_data["fov"] = camera.fov
 
         ubo.write(camera_data.tobytes())
+
+        compute_shader.prog["randomSeed"].value = np.random.randint(0, 0xFFFFFFFF, dtype=np.uint32)
+        # compute_shader.prog["totalFrames"].value = total_frame_count
 
         # Apply ceiling function
         # Allows the GPU to reach the entire screen despite different screen resolutions
@@ -154,16 +160,16 @@ def main():
         glfwSwapBuffers(window)
         glfwPollEvents()
 
-        curr_frame_count += 1
+        total_frame_count += 1
         stats_frame_count += 1
     
     glfwTerminate()
 
 
-def update_stats(window, fps):
+def update_stats(window, fps, samples):
     glfwSetWindowTitle(
         window,
-        f"FPS: {fps:.2f}"
+        f"FPS: {fps:.2f} | Samples: {samples}"
     )
 
 def process_input(window, delta_time):
