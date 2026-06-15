@@ -75,6 +75,31 @@ def main():
         ]
     )
 
+    # NOTE: std140 or std430 blocks are padded to multiples of 16 bytes
+
+    vec2 = ("f4", 2)
+    vec3 = ("f4", 3)
+    vec4 = ("f4", 4)
+
+    camera_dtype = np.dtype([
+        ("pos", *vec3), # 12 bytes
+        ("pad1", np.float32), # 4 bytes
+        ("front", *vec3), # 12 bytes
+        ("pad2", np.float32), # 4 bytes
+        ("up", *vec3), # 12 bytes
+        ("pad3", np.float32), # 4 bytes
+        ("right", *vec3), # 12 bytes
+        ("fov", np.float32) # 4 bytes
+    ])
+
+    camera_data = np.zeros(1, dtype=camera_dtype)
+
+    vbo = ctx.buffer(scene.vertices.tobytes())
+    vbo.bind_to_storage_buffer(0)
+
+    ubo = ctx.buffer(camera_data.tobytes())
+    ubo.bind_to_storage_buffer(1)
+
     start_time = time.perf_counter()
     last_time = 0
     stats_start_time = time.perf_counter()
@@ -103,6 +128,15 @@ def main():
 
         ctx.clear(0, 0, 0, 1)
 
+        # Update camera data
+        camera_data["pos"] = camera.pos
+        camera_data["front"] = camera.front
+        camera_data["up"] = camera.up
+        camera_data["right"] = camera.right
+        camera_data["fov"] = camera.fov
+
+        ubo.write(camera_data.tobytes())
+
         # Apply ceiling function
         # Allows the GPU to reach the entire screen despite different screen resolutions
         groups_x = (screen.width + 15) // 16
@@ -112,6 +146,7 @@ def main():
         compute_texture.bind_to_image(0, read=True, write=True)
         compute_shader.prog.run(groups_x, groups_y)
 
+        # Draw to screen
         compute_texture.use(location=0)
 
         vao.render(moderngl.TRIANGLE_STRIP)

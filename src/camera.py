@@ -15,7 +15,7 @@ YAW = 90
 PITCH = 0
 SPEED = 2.5
 SENSITIVITY = 0.1
-ZOOM = 45
+FOV = 45
 
 
 # An abstract camera class that processes input
@@ -23,7 +23,7 @@ ZOOM = 45
 class Camera:
     def __init__(
             self,
-            position=glm.vec3(0, 0, 0),
+            pos=glm.vec3(0, 0, 0),
             front=glm.vec3(0, 0, -1),
             up=glm.vec3(0, 1, 0),
             right=None,
@@ -32,9 +32,9 @@ class Camera:
             pitch=PITCH,
             movement_speed=SPEED,
             mouse_sensitivity=SENSITIVITY,
-            zoom=ZOOM
+            fov=FOV
         ):
-        self.position = position
+        self.pos = pos
         self.front = front
         self.up = up
         self.right = right
@@ -45,23 +45,23 @@ class Camera:
         # Camera options
         self.movement_speed = movement_speed
         self.mouse_sensitivity = mouse_sensitivity
-        self.zoom = zoom
+        self.fov = fov
 
         self._update_camera_vectors()
     
     def get_view_matrix(self):
-        return glm.lookAt(self.position, self.position + self.front, self.up)
+        return glm.lookAt(self.pos, self.pos + self.front, self.up)
 
     def process_keyboard(self, direction, delta_time):
         velocity = self.movement_speed * delta_time
         if direction == CameraMovement.FORWARD:
-            self.position += self.front * velocity
+            self.pos += self.front * velocity
         elif direction == CameraMovement.BACKWARD:
-            self.position -= self.front * velocity
+            self.pos -= self.front * velocity
         elif direction == CameraMovement.LEFT:
-            self.position -= self.right * velocity
+            self.pos -= self.right * velocity
         elif direction == CameraMovement.RIGHT:
-            self.position += self.right * velocity
+            self.pos += self.right * velocity
     
     def process_mouse_movement(self, xoffset, yoffset, constrain_pitch=True):
         xoffset *= self.mouse_sensitivity
@@ -81,11 +81,11 @@ class Camera:
         self._update_camera_vectors()
     
     def process_mouse_scroll(self, yoffset):
-        self.zoom -= yoffset
-        if self.zoom < 1:
-            self.zoom = 1
-        elif self.zoom > 45:
-            self.zoom = 45
+        self.fov -= yoffset
+        if self.fov < 1:
+            self.fov = 1
+        elif self.fov > 45:
+            self.fov = 45
 
     def _update_camera_vectors(self):
         # Calculate the new Front vector
