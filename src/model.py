@@ -7,3 +7,5 @@ class Scene:
         self.scene = scene.to_mesh()
         self.vertices = self.scene.vertices.astype("f4")
         self.face_indices = self.scene.faces.astype("i4")
+        self.num_triangles = len(self.face_indices)
+        
