@@ -48,6 +48,8 @@ class Camera:
         self.fov = fov
 
         self._update_camera_vectors()
+
+        self.last_state = self.get_state()
     
     def get_view_matrix(self):
         return glm.lookAt(self.pos, self.pos + self.front, self.up)
@@ -97,3 +99,14 @@ class Camera:
         # Also re-calculate the Right and Up vector
         self.right = glm.normalize(glm.cross(self.front, self.world_up))
         self.up = glm.normalize(glm.cross(self.right, self.front))
+
+    def get_state(self):
+        # Check for any camera movements which affect static rendering
+        return self.pos, self.front, self.fov
+    
+    def has_moved(self):
+        current_state = self.get_state()
+        if self.last_state != current_state:
+            self.last_state = current_state
+            return True
+        return False

@@ -82,23 +82,43 @@ def main():
     vec4 = ("f4", 4)
 
     camera_dtype = np.dtype([
-        ("pos", *vec3), # 12 bytes
-        ("pad1", np.float32), # 4 bytes
-        ("front", *vec3), # 12 bytes
-        ("pad2", np.float32), # 4 bytes
-        ("up", *vec3), # 12 bytes
-        ("pad3", np.float32), # 4 bytes
-        ("right", *vec3), # 12 bytes
-        ("fov", np.float32) # 4 bytes
+        ("pos", *vec3),
+        ("pad1", np.float32),
+        ("front", *vec3),
+        ("pad2", np.float32),
+        ("up", *vec3),
+        ("pad3", np.float32),
+        ("right", *vec3),
+        ("fov", np.float32)
     ])
 
     camera_data = np.zeros(1, dtype=camera_dtype)
 
-    vbo = ctx.buffer(scene.vertices.tobytes())
-    vbo.bind_to_storage_buffer(0)
+    camera_buffer = ctx.buffer(camera_data.tobytes())
+    camera_buffer.bind_to_storage_buffer(0)
 
-    ubo = ctx.buffer(camera_data.tobytes())
-    ubo.bind_to_storage_buffer(1)
+    vertex_dtype = np.dtype([
+        ("pos", *vec3),
+        ("pad", np.float32)
+    ])
+
+    triangle_dtype = np.dtype([
+        ("v0", vertex_dtype),
+        ("v1", vertex_dtype),
+        ("v2", vertex_dtype),
+    ])
+
+    triangle_data = np.zeros(scene.num_triangles, dtype=triangle_dtype)
+    
+    for i in range(scene.num_triangles):
+        face = scene.face_indices[i]
+        
+        triangle_data[i]["v0"]["pos"] = scene.vertices[face[0]]
+        triangle_data[i]["v1"]["pos"] = scene.vertices[face[1]]
+        triangle_data[i]["v2"]["pos"] = scene.vertices[face[2]]
+
+    triangle_buffer = ctx.buffer(triangle_data.tobytes())
+    triangle_buffer.bind_to_storage_buffer(1)
 
     start_time = time.perf_counter()
     last_time = 0
@@ -108,6 +128,8 @@ def main():
 
     total_frame_count = 0
     stats_frame_count = 0
+
+    should_render = True
 
     while not glfwWindowShouldClose(window):
         current_time = time.perf_counter() - start_time
@@ -131,6 +153,10 @@ def main():
 
         ctx.clear(0, 0, 0, 1)
 
+        if camera.has_moved():
+            total_frame_count = 0
+            continue
+
         # Update camera data
         camera_data["pos"] = camera.pos
         camera_data["front"] = camera.front
@@ -138,10 +164,10 @@ def main():
         camera_data["right"] = camera.right
         camera_data["fov"] = camera.fov
 
-        ubo.write(camera_data.tobytes())
+        camera_buffer.write(camera_data.tobytes())
 
         compute_shader.prog["randomSeed"].value = np.random.randint(0, 0xFFFFFFFF, dtype=np.uint32)
-        # compute_shader.prog["totalFrames"].value = total_frame_count
+        compute_shader.prog["totalSamples"].value = total_frame_count
 
         # Apply ceiling function
         # Allows the GPU to reach the entire screen despite different screen resolutions
