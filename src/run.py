@@ -83,13 +83,13 @@ def main():
 
     camera_dtype = np.dtype([
         ("pos", *vec3),
-        ("pad1", np.float32),
+        ("pad1", "f4"),
         ("front", *vec3),
-        ("pad2", np.float32),
+        ("pad2", "f4"),
         ("up", *vec3),
-        ("pad3", np.float32),
+        ("pad3", "f4"),
         ("right", *vec3),
-        ("fov", np.float32)
+        ("fov", "f4")
     ])
 
     camera_data = np.zeros(1, dtype=camera_dtype)
@@ -99,7 +99,7 @@ def main():
 
     vertex_dtype = np.dtype([
         ("pos", *vec3),
-        ("pad", np.float32)
+        ("pad", "f4")
     ])
 
     triangle_dtype = np.dtype([
@@ -165,6 +165,7 @@ def main():
 
         compute_shader.prog["randomSeed"].value = np.random.randint(0, 0xFFFFFFFF, dtype=np.uint32)
         compute_shader.prog["totalSamples"].value = total_frame_count
+        compute_shader.prog["numTriangles"].value = scene.num_triangles
 
         # Apply ceiling function
         # Allows the GPU to reach the entire screen despite different screen resolutions
