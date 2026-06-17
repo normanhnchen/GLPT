@@ -102,7 +102,7 @@ class Camera:
 
     def get_state(self):
         # Check for any camera movements which affect static rendering
-        return self.pos, self.front, self.fov
+        return tuple(self.pos), tuple(self.front), self.fov
     
     def has_moved(self):
         current_state = self.get_state()
