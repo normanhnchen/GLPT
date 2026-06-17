@@ -8,6 +8,8 @@ class CameraMovement:
     BACKWARD = 1
     LEFT = 2
     RIGHT = 3
+    UP = 4
+    DOWN = 5
 
 
 # Default camera values
@@ -64,6 +66,10 @@ class Camera:
             self.pos -= self.right * velocity
         elif direction == CameraMovement.RIGHT:
             self.pos += self.right * velocity
+        elif direction == CameraMovement.UP:
+            self.pos += self.up * velocity
+        elif direction == CameraMovement.DOWN:
+            self.pos -= self.up * velocity
     
     def process_mouse_movement(self, xoffset, yoffset, constrain_pitch=True):
         xoffset *= self.mouse_sensitivity

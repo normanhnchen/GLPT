@@ -163,7 +163,7 @@ def main():
 
         camera_buffer.write(camera_data.tobytes())
 
-        compute_shader.prog["randomSeed"].value = np.random.randint(0, 0xFFFFFFFF, dtype=np.uint32)
+        compute_shader.prog["randomSeed"].value = np.random.randint(0, 2**32, dtype=np.uint32)
         compute_shader.prog["totalSamples"].value = total_frame_count
         compute_shader.prog["numTriangles"].value = scene.num_triangles
 
@@ -226,14 +226,18 @@ def process_input(window, delta_time):
     if glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS:
         glfwSetWindowShouldClose(window, True)
     
-    if glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS:
+    elif glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS:
         camera.process_keyboard(CameraMovement.FORWARD, delta_time)
-    if glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS:
+    elif glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS:
         camera.process_keyboard(CameraMovement.BACKWARD, delta_time)
-    if glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS:
+    elif glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS:
         camera.process_keyboard(CameraMovement.LEFT, delta_time)
-    if glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS:
+    elif glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS:
         camera.process_keyboard(CameraMovement.RIGHT, delta_time)
+    elif glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS:
+        camera.process_keyboard(CameraMovement.UP, delta_time)
+    elif glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS:
+        camera.process_keyboard(CameraMovement.DOWN, delta_time)
 
 
 def mouse_callback(window, xpos, ypos):
