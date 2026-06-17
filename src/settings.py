@@ -8,7 +8,7 @@ class Screen:
         self.height = settings["screen"]["height"]
         self.resolution = np.array([self.width, self.height])
         self.vsync = settings["screen"]["vsync"]
-        self.fps_cap = settings["screen"]["height"]
+        self.fps_cap = settings["screen"]["fps_cap"]
 
 
 with open("src/settings.json") as f:
