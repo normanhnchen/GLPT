@@ -119,9 +119,8 @@ def main():
 
     triangle_buffer = ctx.buffer(triangle_data.tobytes())
     triangle_buffer.bind_to_storage_buffer(1)
-
-    start_time = time.perf_counter()
-    last_time = 0
+    
+    last_frame_start = 0
     stats_start_time = time.perf_counter()
 
     avg_fps = 0
@@ -129,12 +128,11 @@ def main():
     total_frame_count = 0
     stats_frame_count = 0
 
-    should_render = True
-
+    # Render loop
     while not glfwWindowShouldClose(window):
-        current_time = time.perf_counter() - start_time
-        delta_time = current_time - last_time
-        last_time = current_time
+        frame_start = time.perf_counter()
+        delta_time = frame_start - last_frame_start
+        last_frame_start = frame_start
 
         stats_elapsed_time = time.perf_counter() - stats_start_time
         
@@ -155,7 +153,6 @@ def main():
 
         if camera.has_moved():
             total_frame_count = 0
-            continue
 
         # Update camera data
         camera_data["pos"] = camera.pos
@@ -188,8 +185,34 @@ def main():
 
         total_frame_count += 1
         stats_frame_count += 1
+
+        cap_fps(frame_start, screen.fps_cap)
     
     glfwTerminate()
+
+
+def cap_fps(frame_start, target_fps):
+    target_duration = 1 / target_fps
+    # Target time when the target_fps is reached
+    target_time = frame_start + target_duration
+
+    # Sleep/wait until the target_time is reached
+    while True:
+        remaining_time = target_time - time.perf_counter()
+
+        if remaining_time <= 0:
+            break
+        
+        # Sleep for the majority of the time to save CPU resources
+        if remaining_time > 0.001:
+            # Sleep for half of the remaining time
+            # This methods allow sleeping precision as remaining time approaches zero
+            sleep_time = remaining_time * 0.5
+            time.sleep(sleep_time)
+        
+        # Wait until the target time is reached
+        else:
+            pass
 
 
 def update_stats(window, fps, samples):
