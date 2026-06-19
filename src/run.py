@@ -4,6 +4,7 @@ import moderngl
 import sys
 import time
 
+from src.dtypes import *
 from src.settings import *
 from src.shader import *
 from src.camera import *
@@ -57,7 +58,7 @@ def main():
         "src/shaders/render.comp"
     )
 
-    compute_texture = ctx.texture(screen.resolution, 4, dtype="f4")
+    compute_texture = ctx.texture(screen.resolution, 4, dtype=f4)
 
     # Full-screen quad
     quad_buffer = ctx.buffer(np.array([
@@ -66,7 +67,7 @@ def main():
         -1.0, -1.0,   0.0, 0.0,
          1.0,  1.0,   1.0, 1.0,
          1.0, -1.0,   1.0, 0.0,
-    ], dtype="f4"))
+    ], dtype=f4))
 
     vao = ctx.vertex_array(
         shader.prog,
@@ -77,19 +78,15 @@ def main():
 
     # NOTE: std140 or std430 blocks are padded to multiples of 16 bytes
 
-    vec2 = ("f4", 2)
-    vec3 = ("f4", 3)
-    vec4 = ("f4", 4)
-
     camera_dtype = np.dtype([
         ("pos", *vec3),
-        ("pad1", "f4"),
+        ("pad1", f4),
         ("front", *vec3),
-        ("pad2", "f4"),
+        ("pad2", f4),
         ("up", *vec3),
-        ("pad3", "f4"),
+        ("pad3", f4),
         ("right", *vec3),
-        ("fov", "f4")
+        ("fov", f4)
     ])
 
     camera_data = np.zeros(1, dtype=camera_dtype)
@@ -99,24 +96,29 @@ def main():
 
     vertex_dtype = np.dtype([
         ("pos", *vec3),
-        ("pad", "f4")
+        ("pad1", f4),
     ])
 
     triangle_dtype = np.dtype([
         ("v0", vertex_dtype),
         ("v1", vertex_dtype),
         ("v2", vertex_dtype),
+        ("col", *vec3),
+        ("pad1", f4)
     ])
 
     triangle_data = np.zeros(scene.num_triangles, dtype=triangle_dtype)
     
-    for i in range(scene.num_triangles):
-        face = scene.face_indices[i]
-        
-        triangle_data[i]["v0"]["pos"] = scene.vertices[face[0]]
-        triangle_data[i]["v1"]["pos"] = scene.vertices[face[1]]
-        triangle_data[i]["v2"]["pos"] = scene.vertices[face[2]]
+    idx0 = scene.triangles[:, 0]
+    idx1 = scene.triangles[:, 1]
+    idx2 = scene.triangles[:, 2]
 
+    triangle_data["v0"]["pos"] = scene.vertices[idx0]
+    triangle_data["v1"]["pos"] = scene.vertices[idx1]
+    triangle_data["v2"]["pos"] = scene.vertices[idx2]
+
+    triangle_data["col"] = scene.material_colors[scene.material_ids] / 255
+    
     triangle_buffer = ctx.buffer(triangle_data.tobytes())
     triangle_buffer.bind_to_storage_buffer(1)
     
@@ -222,21 +224,22 @@ def update_stats(window, fps, samples):
         f"FPS: {fps:.2f} | Samples: {samples}"
     )
 
+
 def process_input(window, delta_time):
     if glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS:
         glfwSetWindowShouldClose(window, True)
     
-    elif glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS:
+    if glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS:
         camera.process_keyboard(CameraMovement.FORWARD, delta_time)
-    elif glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS:
+    if glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS:
         camera.process_keyboard(CameraMovement.BACKWARD, delta_time)
-    elif glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS:
+    if glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS:
         camera.process_keyboard(CameraMovement.LEFT, delta_time)
-    elif glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS:
+    if glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS:
         camera.process_keyboard(CameraMovement.RIGHT, delta_time)
-    elif glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS:
+    if glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS:
         camera.process_keyboard(CameraMovement.UP, delta_time)
-    elif glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS:
+    if glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS:
         camera.process_keyboard(CameraMovement.DOWN, delta_time)
 
 
