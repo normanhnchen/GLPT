@@ -50,10 +50,7 @@ struct Ray {
 struct HitRecord {
     vec3 point;
     vec3 normal;
-    vec3 col;
-    vec3 emissive;
-    bool hasEmission;
-    
+    Material mat;
     float t;
 };
 
@@ -105,9 +102,7 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, float closestSoFar, inout HitRe
     rec.t = t;
     rec.point = GetRayPoint(ray, rec.t);
     rec.normal = normal;
-    rec.col = tri.mat.baseCol;
-    rec.emissive = tri.mat.emissive;
-    rec.hasEmission = tri.mat.hasEmission;
+    rec.mat = tri.mat;
     return true;
 }
 
@@ -116,7 +111,7 @@ bool Hit(Ray ray, inout HitRecord rec) {
     bool hitAnything = false;
     float closestSoFar = INF;
 
-    rec.col = vec3(0.5);
+    rec.mat.baseCol = vec3(0.5);
 
     for (int i = 0; i < numTriangles; i++) {
         Triangle tri = triangles[i];
@@ -180,18 +175,19 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
             break;
         }
 
-        if (rec.hasEmission) {
-            radiance += throughput * rec.emissive * 10.0;
-            break;
+        if (rec.mat.hasEmission) {
+            radiance += throughput * rec.mat.emissive;
         }
 
+        vec3 lambertDir = CosineSampleHemisphere(v, rec.normal);
+        vec3 reflectDir = reflect(ray.dir, rec.normal);
+
+        vec3 bounceDir = mix(reflectDir, lambertDir, rec.mat.roughness);
+
+        ray.dir = bounceDir;
         ray.orig = rec.point + rec.normal * EPSILON;
 
-        vec3 bounceDir = CosineSampleHemisphere(v, rec.normal);
-
-        throughput *= rec.col;
-        
-        ray.dir = bounceDir;
+        throughput *= rec.mat.baseCol;
     }
 
     return radiance;
