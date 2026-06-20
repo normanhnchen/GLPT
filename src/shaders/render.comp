@@ -55,12 +55,13 @@ struct HitRecord {
     float t;
 };
 
-#define EPSILON 1e-6
+#define EPSILON 1e-4
 #define INF 1e20
 
 uniform uint randomSeed;
 uniform uint totalSamples;
 uniform int numTriangles;
+uniform int maxDepth;
 
 
 vec3 GetRayPoint(Ray ray, float t) {
@@ -105,7 +106,6 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, float closestSoFar, inout HitRe
     return false;
 }
 
-
 // PCG 3d hash randomization
 // http://www.jcgt.org/published/0009/03/02/
 vec3 PCG3d(inout uvec3 v) {
@@ -115,6 +115,16 @@ vec3 PCG3d(inout uvec3 v) {
     v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y;
     // Divide by 2^32 (uint32 limit) to convert to range [0, 1]
     return vec3(v) / 4294967295.0;
+}
+
+vec3 RandomBounceDir(inout uvec3 v, vec3 normal) {
+    vec3 dir = normalize(PCG3d(v) * 2.0 - 1.0);
+    if (dot(dir, normal) > 0.0) {
+        // In the same hemisphere as the normal
+        return dir;
+    } else {
+        return -dir;
+    }
 }
 
 bool Hit(Ray ray, inout HitRecord rec) {
@@ -136,15 +146,28 @@ bool Hit(Ray ray, inout HitRecord rec) {
     return hitAnything;
 }
 
-vec3 RayColor(Ray ray) {
+vec3 RayColor(Ray ray, inout uvec3 v) {
     HitRecord rec;
-    if (Hit(ray, rec)) {
-        return rec.col;
+
+    vec3 throughput = vec3(1.0);
+    vec3 radiance = vec3(0.0);
+
+    for (int i = 0; i < maxDepth; i++) {
+        if (!Hit(ray, rec)) {
+            vec3 skyColor = vec3(0.5, 0.7, 1.0); 
+            radiance += throughput * skyColor;
+            break;
+        }
+
+        throughput *= rec.col;
+
+        ray.orig = rec.point + rec.normal * EPSILON;
+
+        ray.dir = RandomBounceDir(v, rec.normal);
     }
 
-    return vec3(0.1);
+    return radiance;
 }
-
 
 void main() {
     ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
@@ -176,7 +199,7 @@ void main() {
     ray.orig = Camera.pos;
     ray.dir = normalize(rayDir);
 
-    vec3 sampledColor = RayColor(ray);
+    vec3 sampledColor = RayColor(ray, state);
 
     vec3 oldColor = imageLoad(imgOutput, pixelCoords).rgb;
     float weight = 1.0 / (float(totalSamples) + 1.0);
