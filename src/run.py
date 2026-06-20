@@ -182,7 +182,6 @@ def main():
 
         camera_buffer.write(camera_data.tobytes())
 
-        compute_shader.prog["randomSeed"].value = np.random.randint(0, 2**32, dtype=np.uint32)
         compute_shader.prog["totalSamples"].value = total_frame_count
         compute_shader.prog["numTriangles"].value = scene.num_triangles
         compute_shader.prog["maxDepth"].value = path_tracing.max_depth
