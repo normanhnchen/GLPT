@@ -21,21 +21,20 @@ struct Vertex {
     float pad1;
 };
 
+struct Material {
+    vec3 baseCol;
+    float roughness;
+    vec3 emissive;
+    bool hasEmission;
+};
+
 struct Triangle {
     Vertex v0, v1, v2;
-    vec3 col;
-    float pad1;
+    Material mat;
 };
 
 layout(std430, binding = 1) buffer TriangleBuffer {
     Triangle triangles[];
-};
-
-struct Material {
-    vec4 baseColor;
-    int textureID; // -1 if no texture
-    float roughness;
-    vec2 padding;
 };
 
 layout(std430, binding = 2) buffer MaterialBuffer {
@@ -52,6 +51,9 @@ struct HitRecord {
     vec3 point;
     vec3 normal;
     vec3 col;
+    vec3 emissive;
+    bool hasEmission;
+    
     float t;
 };
 
@@ -67,7 +69,6 @@ uniform int maxDepth;
 vec3 GetRayPoint(Ray ray, float t) {
     return ray.orig + t * ray.dir;
 }
-
 
 // Möller-Trumbore ray-triangle intersection algorithm
 bool RayTriangleIntersect(Ray ray, Triangle tri, float closestSoFar, inout HitRecord rec) {
@@ -99,7 +100,9 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, float closestSoFar, inout HitRe
         rec.t = t;
         rec.point = GetRayPoint(ray, rec.t);
         rec.normal = normal;
-        rec.col = tri.col;
+        rec.col = tri.mat.baseCol;
+        rec.emissive = tri.mat.emissive;
+        rec.hasEmission = tri.mat.hasEmission;
         return true;
     }
 
@@ -154,8 +157,14 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
 
     for (int i = 0; i < maxDepth; i++) {
         if (!Hit(ray, rec)) {
-            vec3 skyColor = vec3(0.5, 0.7, 1.0); 
-            radiance += throughput * skyColor;
+            // Ray has exited the scene
+            vec3 envColor = vec3(0.02);
+            radiance += throughput * envColor;
+            break;
+        }
+
+        if (rec.hasEmission) {
+            radiance += throughput * rec.emissive;
             break;
         }
 

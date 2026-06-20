@@ -99,13 +99,31 @@ def main():
         ("pad1", f4),
     ])
 
+    material_dtype = np.dtype([
+        ("baseCol", *vec3),
+        ("roughness", f4),
+        ("emissive", *vec3),
+        ("hasEmission", i4)
+    ])
+
     triangle_dtype = np.dtype([
         ("v0", vertex_dtype),
         ("v1", vertex_dtype),
         ("v2", vertex_dtype),
-        ("col", *vec3),
-        ("pad1", f4)
+        ("mat", material_dtype),
     ])
+
+    material_data = np.zeros(scene.num_materials, dtype=material_dtype)
+
+    base_colors = np.vstack([mat.base_color for mat in scene.materials], dtype=f4)
+    roughnesses = np.array([mat.roughness for mat in scene.materials], dtype=f4)
+    emissive_colors = np.vstack([mat.emissive_color for mat in scene.materials], dtype=f4)
+    has_emissions = np.array([mat.has_emission for mat in scene.materials], dtype=i4)
+
+    material_data["baseCol"] = base_colors
+    material_data["roughness"] = roughnesses
+    material_data["emissive"] = emissive_colors
+    material_data["hasEmission"] = has_emissions
 
     triangle_data = np.zeros(scene.num_triangles, dtype=triangle_dtype)
     
@@ -116,8 +134,7 @@ def main():
     triangle_data["v0"]["pos"] = scene.vertices[idx0]
     triangle_data["v1"]["pos"] = scene.vertices[idx1]
     triangle_data["v2"]["pos"] = scene.vertices[idx2]
-
-    triangle_data["col"] = scene.material_colors[scene.material_ids] / 255
+    triangle_data["mat"] = material_data[scene.material_ids]
     
     triangle_buffer = ctx.buffer(triangle_data.tobytes())
     triangle_buffer.bind_to_storage_buffer(1)

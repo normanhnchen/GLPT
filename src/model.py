@@ -4,6 +4,35 @@ import numpy as np
 from src.dtypes import *
 
 
+class Material:
+    def __init__(self, trimesh_material):
+        if hasattr(trimesh_material, "baseColorFactor") and trimesh_material.baseColorFactor is not None:
+            self.base_color = self._color_to_vec3(trimesh_material.baseColorFactor)
+        else:
+            # Set default color
+            self.base_color = np.array([0.8, 0.8, 0.8], dtype=f4)
+        
+        if hasattr(trimesh_material, "emissiveFactor") and trimesh_material.emissiveFactor is not None:
+            self.emissive_color = self._color_to_vec3(trimesh_material.emissiveFactor)
+            self.has_emission = set_i4(1)
+        else:
+            # Set to no emission 
+            self.emissive_color = np.array([-1, -1, -1], dtype=f4)
+            self.has_emission = set_i4(0)
+
+        if hasattr(trimesh_material, "roughnessFactor") and trimesh_material.roughnessFactor is not None:
+            self.roughness = set_f4(trimesh_material.roughnessFactor)
+        else:
+            # Set default roughness
+            self.roughness = set_f4(0.8)
+    
+    def _color_to_vec3(self, color):
+        color = np.asarray(color[:3], dtype=f4)
+        if np.max(color) > 1.0:
+            color = color / 255
+        return color
+
+
 class Scene:
     def __init__(self, file_path):
         scene = trimesh.load(file_path)
@@ -14,7 +43,7 @@ class Scene:
         all_material_ids = []
         
         materials_list = []
-        material_colors = []
+        materials = []
 
         vertex_offset = 0
 
@@ -26,22 +55,14 @@ class Scene:
             # Convert mesh data to world space
             mesh.apply_transform(transform)
 
-            current_material = mesh.visual.material
+            trimesh_material = mesh.visual.material
+            material = Material(trimesh_material)
             
-            if current_material not in materials_list:
-                materials_list.append(current_material)
-                if hasattr(current_material, "baseColorFactor") and current_material.baseColorFactor is not None:
-                    raw_color = current_material.baseColorFactor[:3]
-                elif hasattr(current_material, "main_color") and current_material.main_color is not None:
-                    raw_color = np.array(current_material.main_color[:3], dtype=np.float32)
-                    if raw_color.max() > 1.0:
-                        raw_color /= 255.0
-                else:
-                    # Set default color
-                    raw_color = np.array([0.8, 0.8, 0.8], dtype=np.float32)
-                material_colors.append(raw_color)
+            if material not in materials_list:
+                materials_list.append(material)
+                materials.append(material)
                 
-            mat_id = materials_list.index(current_material)
+            mat_id = materials_list.index(material)
 
             vertices = mesh.vertices
             faces = mesh.faces
@@ -62,6 +83,7 @@ class Scene:
         self.triangles = np.vstack(all_triangles).astype(i4)
         self.uvs = np.vstack(all_uvs).astype(f4)
         self.material_ids = np.concatenate(all_material_ids).astype(i4)
-        self.material_colors = np.vstack(material_colors).astype(f4)
+        self.materials = np.array(materials)
 
         self.num_triangles = len(self.triangles)
+        self.num_materials = len(self.materials)
