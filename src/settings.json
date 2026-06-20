@@ -5,7 +5,7 @@
         "vsync": false,
         "fps_cap": 240
     },
-    
+
     "path_tracing": {
         "max_depth": 10
     }

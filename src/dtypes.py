@@ -1,3 +1,6 @@
+import numpy as np
+
+
 f4 = "f4"
 i4 = "i4"
 u4 = "u4"
@@ -16,3 +19,12 @@ ivec4 = vec(i4, 4)
 uvec2 = vec(u4, 2)
 uvec3 = vec(u4, 3)
 uvec4 = vec(u4, 4)
+
+def set_f4(v):
+    return np.float32(v)
+
+def set_i4(v):
+    return np.int32(v)
+
+def set_u4(v):
+    return np.uint32(v)
