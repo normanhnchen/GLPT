@@ -59,7 +59,7 @@ struct HitRecord {
 
 #define EPSILON 1e-4
 #define INF 1e20
-#define PI 3.14159265
+#define PI 3.14159265359
 
 uniform uint totalSamples;
 uniform int numTriangles;
@@ -71,28 +71,29 @@ vec3 GetRayPoint(Ray ray, float t) {
 }
 
 // Möller-Trumbore ray-triangle intersection algorithm
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
 bool RayTriangleIntersect(Ray ray, Triangle tri, float closestSoFar, inout HitRecord rec) {
     vec3 e1 = tri.v1.pos - tri.v0.pos;
     vec3 e2 = tri.v2.pos - tri.v0.pos;
-    vec3 tvec = ray.orig - tri.v0.pos;
     vec3 pvec = cross(ray.dir, e2);
-    vec3 qvec = cross(tvec, e1);
-
     float det = dot(e1, pvec);
-    float invDet = 1.0 / det;
 
+    // If det is close to 0, ray is parallel to the triangle
     if (abs(det) < EPSILON) return false;
 
-    float t = dot(e2, qvec) * invDet;
-    if (t < 0.0) return false;
+    float invDet = 1.0 / det;
 
+    vec3 tvec = ray.orig - tri.v0.pos;
     float u = dot(tvec, pvec) * invDet;
     if (u < 0.0 || u > 1.0) return false;
 
+    vec3 qvec = cross(tvec, e1);
     float v = dot(ray.dir, qvec) * invDet;
     if (v < 0.0 || u + v > 1.0) return false;
-
-    float w = 1.0 - u - v;
+    
+    float t = dot(e2, qvec) * invDet;
+    // Check if the hit distance is positive and closer than current closest triangle
+    if (t < EPSILON || t >= closestSoFar) return false;
 
     vec3 normal = normalize(cross(e1, e2));
 
@@ -101,17 +102,13 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, float closestSoFar, inout HitRe
         normal = -normal;
     }
 
-    if (t < closestSoFar) {
-        rec.t = t;
-        rec.point = GetRayPoint(ray, rec.t);
-        rec.normal = normal;
-        rec.col = tri.mat.baseCol;
-        rec.emissive = tri.mat.emissive;
-        rec.hasEmission = tri.mat.hasEmission;
-        return true;
-    }
-
-    return false;
+    rec.t = t;
+    rec.point = GetRayPoint(ray, rec.t);
+    rec.normal = normal;
+    rec.col = tri.mat.baseCol;
+    rec.emissive = tri.mat.emissive;
+    rec.hasEmission = tri.mat.hasEmission;
+    return true;
 }
 
 bool Hit(Ray ray, inout HitRecord rec) {
@@ -144,11 +141,29 @@ vec3 PCG3d(inout uvec3 v) {
     return vec3(v) / 4294967295.0;
 }
 
-vec3 RandomBounceDir(inout uvec3 v, vec3 normal) {
-    // Get random unit vector
-    vec3 dir = normalize(PCG3d(v) * 2.0 - 1.0);
-    // If the random direction points in the wrong direction, flip it
-    return dot(dir, normal) > 0.0 ? dir : -dir;
+// https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
+vec3 CosineSampleHemisphere(inout uvec3 v, vec3 normal) {
+    vec3 r = PCG3d(v);
+    float r1 = r.x;
+    float r2 = r.y;
+
+    float theta = acos(sqrt(r1));
+    float phi = 2.0 * PI * r2;
+    
+    // Sample in local space
+    vec3 dir = vec3(
+        sin(theta) * cos(phi),
+        cos(theta),
+        sin(theta) * sin(phi)
+    );
+
+    // Create Orthonormal Basis (ONB)
+    vec3 helper = abs(normal.x) > 0.9 ? vec3(0, 1, 0) : vec3(1, 0, 0);
+    vec3 tangent = normalize(cross(normal, helper));
+    vec3 bitangent = cross(normal, tangent);
+    
+    // Transform to world space
+    return dir.x * tangent + dir.y * normal + dir.z * bitangent;
 }
 
 vec3 RayColor(Ray ray, inout uvec3 v) {
@@ -172,7 +187,7 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
 
         ray.orig = rec.point + rec.normal * EPSILON;
 
-        vec3 bounceDir = RandomBounceDir(v, rec.normal);
+        vec3 bounceDir = CosineSampleHemisphere(v, rec.normal);
 
         throughput *= rec.col;
         
