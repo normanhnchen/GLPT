@@ -14,6 +14,7 @@ class Screen:
 class PathTracing:
     def __init__(self, settings):
         self.max_depth = settings["path_tracing"]["max_depth"]
+        self.max_samples = settings["path_tracing"]["max_samples"]
 
 
 with open("src/settings.json") as f:

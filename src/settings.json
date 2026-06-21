@@ -7,6 +7,7 @@
     },
 
     "path_tracing": {
-        "max_depth": 10
+        "max_depth": 10,
+        "max_samples": 1024
     }
 }
