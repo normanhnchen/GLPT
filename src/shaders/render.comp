@@ -22,16 +22,16 @@ struct Vertex {
 };
 
 struct Material {
+    // Basic material
+    vec3 baseCol;
+    float alpha;
+    vec3 emissive;
+    float metallic;
+    float roughness;
     // Settings
     int alphaMode; // 0=OPAQUE, 1=MASK, or 2=BLEND
     float alphaCutoff;
     int doubleSided;
-    float pad1;
-
-    vec3 col;
-    float roughness;
-    vec3 emissive;
-    float metallic;
     // Flags
     int hasEmission;
     int hasBaseTex;
@@ -40,7 +40,6 @@ struct Material {
     int hasMetalTex;
     int hasNormalTex;
     int hasOcclTex;
-    float pad2;
     // Texture IDs
     int baseTexId;
     int emissiveTexId;
@@ -48,7 +47,9 @@ struct Material {
     int metalTexId;
     int normalTexId;
     int occlTexId;
-    vec2 pad3;
+    float pad1;
+    float pad2;
+    float pad3;
 };
 
 struct Triangle {
@@ -63,6 +64,13 @@ layout(std430, binding = 1) buffer TriangleBuffer {
 layout(std430, binding = 2) buffer MaterialBuffer {
     Material materials[];
 };
+
+layout(binding = 0) uniform sampler2DArray baseColorTextures;
+layout(binding = 1) uniform sampler2DArray emissiveTextures;
+layout(binding = 2) uniform sampler2DArray roughnessTextures;
+layout(binding = 3) uniform sampler2DArray metallicTextures;
+layout(binding = 4) uniform sampler2DArray normalTextures;
+layout(binding = 5) uniform sampler2DArray occlusionTextures;
 
 struct Ray {
     vec3 orig;
@@ -134,7 +142,7 @@ bool Hit(Ray ray, inout HitRecord rec) {
     bool hitAnything = false;
     float closestSoFar = INF;
 
-    rec.mat.col = vec3(0.5);
+    rec.mat.baseCol = vec3(0.5);
 
     for (int i = 0; i < numTriangles; i++) {
         Triangle tri = triangles[i];
@@ -198,7 +206,7 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
             break;
         }
 
-        if (rec.mat.hasEmission != 0) {
+        if (rec.mat.hasEmission == 1) {
             radiance += throughput * rec.mat.emissive;
         }
 
@@ -210,7 +218,7 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
         ray.dir = bounceDir;
         ray.orig = rec.point + rec.normal * EPSILON;
 
-        throughput *= rec.mat.col;
+        throughput *= rec.mat.baseCol;
     }
 
     return radiance;

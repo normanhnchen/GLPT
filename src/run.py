@@ -46,7 +46,7 @@ def main():
 
     ctx = moderngl.create_context()
 
-    scene = Scene("src/assets/cornell_box.glb")
+    scene = Scene("src/assets/texture_test.glb")
 
     shader = Shader(
         ctx,
@@ -88,11 +88,8 @@ def main():
         ("right", *vec3),
         ("fov", f4)
     ])
-
+    
     camera_data = np.zeros(1, dtype=camera_dtype)
-
-    camera_buffer = ctx.buffer(camera_data.tobytes())
-    camera_buffer.bind_to_storage_buffer(0)
 
     vertex_dtype = np.dtype([
         ("pos", *vec3),
@@ -100,16 +97,15 @@ def main():
     ])
 
     material_dtype = np.dtype([
+        ("baseCol", *vec3),
+        ("alpha", f4),
+        ("emissive", *vec3),
+        ("metallic", f4),
+        ("roughness", f4),
         # Settings
         ("alphaMode", i4), # 0=OPAQUE, 1=MASK, or 2=BLEND
         ("alphaCutoff", f4),
         ("doubleSided", i4),
-        ("pad1", f4),
-
-        ("col", *vec3),
-        ("roughness", f4),
-        ("emissive", *vec3),
-        ("metallic", f4),
         # Flags
         ("hasEmission", i4),
         ("hasBaseTex", i4),
@@ -118,7 +114,6 @@ def main():
         ("hasMetalTex", i4),
         ("hasNormalTex", i4),
         ("hasOcclTex", i4),
-        ("pad2", f4),
         # Texture IDs
         ("baseTexId", i4),
         ("emissiveTexId", i4),
@@ -126,7 +121,9 @@ def main():
         ("metalTexId", i4),
         ("normalTexId", i4),
         ("occlTexId", i4),
-        ("pad3", *vec2)
+        ("pad1", f4),
+        ("pad2", f4),
+        ("pad3", f4)
     ])
 
     triangle_dtype = np.dtype([
@@ -139,11 +136,12 @@ def main():
     material_data = np.zeros(scene.num_materials, dtype=material_dtype)
 
     for i, mat in enumerate(scene.materials):
-        material_data[i]["col"] = mat.base_color
+        material_data[i]["baseCol"] = mat.base_color[:3]
+        material_data[i]["alpha"] = mat.base_color[-1]
         material_data[i]["roughness"] = mat.roughness
         material_data[i]["emissive"] = mat.emissive_color
         material_data[i]["metallic"] = mat.metallic
-        
+
         # Flags
         material_data[i]["hasEmission"] = mat.has_emission
         material_data[i]["hasBaseTex"] = mat.has_base_color_tex
@@ -171,9 +169,18 @@ def main():
     triangle_data["v1"]["pos"] = scene.vertices[idx1]
     triangle_data["v2"]["pos"] = scene.vertices[idx2]
     triangle_data["mat"] = material_data[scene.material_ids]
-    
+
+    camera_buffer = ctx.buffer(camera_data.tobytes())
+    camera_buffer.bind_to_storage_buffer(0)
+
     triangle_buffer = ctx.buffer(triangle_data.tobytes())
     triangle_buffer.bind_to_storage_buffer(1)
+
+    material_buffer = ctx.buffer(material_data.tobytes())
+    material_buffer.bind_to_storage_buffer(2)
+
+    scene.create_texture_arrays(ctx, 1024, 1024)
+    scene.bind_texture_arrays()
     
     last_frame_start = 0
     stats_start_time = time.perf_counter()
