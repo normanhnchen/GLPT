@@ -100,10 +100,33 @@ def main():
     ])
 
     material_dtype = np.dtype([
-        ("baseCol", *vec3),
+        # Settings
+        ("alphaMode", i4), # 0=OPAQUE, 1=MASK, or 2=BLEND
+        ("alphaCutoff", f4),
+        ("doubleSided", i4),
+        ("pad1", f4),
+
+        ("col", *vec3),
         ("roughness", f4),
         ("emissive", *vec3),
-        ("hasEmission", i4)
+        ("metallic", f4),
+        # Flags
+        ("hasEmission", i4),
+        ("hasBaseTex", i4),
+        ("hasEmissiveTex", i4),
+        ("hasRoughTex", i4),
+        ("hasMetalTex", i4),
+        ("hasNormalTex", i4),
+        ("hasOcclTex", i4),
+        ("pad2", f4),
+        # Texture IDs
+        ("baseTexId", i4),
+        ("emissiveTexId", i4),
+        ("roughTexId", i4),
+        ("metalTexId", i4),
+        ("normalTexId", i4),
+        ("occlTexId", i4),
+        ("pad3", *vec2)
     ])
 
     triangle_dtype = np.dtype([
@@ -115,15 +138,28 @@ def main():
 
     material_data = np.zeros(scene.num_materials, dtype=material_dtype)
 
-    base_colors = np.vstack([mat.base_color for mat in scene.materials], dtype=f4)
-    roughnesses = np.array([mat.roughness for mat in scene.materials], dtype=f4)
-    emissive_colors = np.vstack([mat.emissive_color for mat in scene.materials], dtype=f4)
-    has_emissions = np.array([mat.has_emission for mat in scene.materials], dtype=i4)
-
-    material_data["baseCol"] = base_colors
-    material_data["roughness"] = roughnesses
-    material_data["emissive"] = emissive_colors
-    material_data["hasEmission"] = has_emissions
+    for i, mat in enumerate(scene.materials):
+        material_data[i]["col"] = mat.base_color
+        material_data[i]["roughness"] = mat.roughness
+        material_data[i]["emissive"] = mat.emissive_color
+        material_data[i]["metallic"] = mat.metallic
+        
+        # Flags
+        material_data[i]["hasEmission"] = mat.has_emission
+        material_data[i]["hasBaseTex"] = mat.has_base_color_tex
+        material_data[i]["hasEmissiveTex"] = mat.has_emissive_tex
+        material_data[i]["hasRoughTex"] = mat.has_roughness_tex
+        material_data[i]["hasMetalTex"] = mat.has_metallic_tex
+        material_data[i]["hasNormalTex"] = mat.has_normal_tex
+        material_data[i]["hasOcclTex"] = mat.has_occlusion_tex
+        
+        # Texture IDs
+        material_data[i]["baseTexId"] = mat.base_color_tex_id
+        material_data[i]["emissiveTexId"] = mat.emissive_tex_id
+        material_data[i]["roughTexId"] = mat.roughness_tex_id
+        material_data[i]["metalTexId"] = mat.metallic_tex_id
+        material_data[i]["normalTexId"] = mat.normal_tex_id
+        material_data[i]["occlTexId"] = mat.occlusion_tex_id
 
     triangle_data = np.zeros(scene.num_triangles, dtype=triangle_dtype)
     
