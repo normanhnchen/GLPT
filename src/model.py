@@ -4,6 +4,25 @@ import numpy as np
 from src.dtypes import *
 
 
+class Texture:
+    def __init__(self, pil_image):
+        if pil_image is None:
+            self.is_empty = True
+            self.data = None
+            return
+            
+        self.is_empty = False
+        self._original_image = pil_image
+        self.image = pil_image.convert("RGBA")
+        self.data = self.image.tobytes()
+    
+    def resize(self, width, height):
+        if self.is_empty:
+            return
+        self.image = self._original_image.resize((width, height))
+        self.data = self.image.tobytes()
+
+
 class Material:
     def __init__(self, trimesh_material):
         self.alpha_mode = getattr(trimesh_material, "alphaMode", "OPAQUE")
@@ -15,30 +34,46 @@ class Material:
         roughness = getattr(trimesh_material, "roughnessFactor", None)
         metallic = getattr(trimesh_material, "metallicFactor", None)
 
-        self.base_color_texture = getattr(trimesh_material, "baseColorTexture", None)
-        self.emissive_texture = getattr(trimesh_material, "emissiveTexture", None)
-        self.normal_texture = getattr(trimesh_material, "normalTexture", None)
-        self.occlusion_texture = getattr(trimesh_material, "occlusionTexture", None)
+        base_color_tex = getattr(trimesh_material, "baseColorTexture", None)
+        emissive_tex = getattr(trimesh_material, "emissiveTexture", None)
+        normal_tex = getattr(trimesh_material, "normalTexture", None)
+        occlusion_tex = getattr(trimesh_material, "occlusionTexture", None)
 
         metallic_roughness_texture = getattr(trimesh_material, "metallicRoughnessTexture", None)
         
-        self.roughness_texture = None
-        self.metallic_texture = None
+        roughness_tex = None
+        metallic_tex = None
 
         # Unpack metallic roughness texture
         if metallic_roughness_texture is not None:
             r, g, b = metallic_roughness_texture.split()
-            self.roughness_texture = g
-            self.metallic_texture = b
+            roughness_tex = g
+            metallic_tex = b
+        
+        self.base_color_tex = Texture(base_color_tex)
+        self.emissive_tex = Texture(emissive_tex)
+        self.roughness_tex = Texture(roughness_tex)
+        self.metallic_tex = Texture(metallic_tex)
+        self.normal_tex = Texture(normal_tex)
+        self.occlusion_tex = Texture(occlusion_tex)
+
+        self.textures = [
+            self.base_color_tex,
+            self.emissive_tex,
+            self.roughness_tex,
+            self.metallic_tex,
+            self.normal_tex,
+            self.occlusion_tex
+        ]
 
         if base_color is not None:
-            self.base_color = self._color_to_vec3(trimesh_material.baseColorFactor)
+            self.base_color = self._to_float_rgb(trimesh_material.baseColorFactor)
         else:
             # Set default color
-            self.base_color = np.array([0.8, 0.8, 0.8], dtype=f4)
+            self.base_color = np.array([0.8, 0.8, 0.8, 1.0], dtype=f4)
         
         if emissive_color is not None:
-            self.emissive_color = self._color_to_vec3(trimesh_material.emissiveFactor)
+            self.emissive_color = self._to_float_rgb(trimesh_material.emissiveFactor)
             self.has_emission = set_i4(1)
         else:
             # Set to no emission 
@@ -58,12 +93,12 @@ class Material:
             self.metallic = set_f4(0)
         
         self.has_emission = set_i4(1) if emissive_color is not None else set_i4(0)
-        self.has_base_color_tex = set_i4(1) if self.base_color_texture is not None else set_i4(0)
-        self.has_emissive_tex = set_i4(1) if self.emissive_texture is not None else set_i4(0)
-        self.has_roughness_tex = set_i4(1) if self.roughness_texture is not None else set_i4(0)
-        self.has_metallic_tex = set_i4(1) if self.metallic_texture is not None else set_i4(0)
-        self.has_normal_tex = set_i4(1) if self.normal_texture is not None else set_i4(0)
-        self.has_occlusion_tex = set_i4(1) if self.occlusion_texture is not None else set_i4(0) 
+        self.has_base_color_tex = set_i4(0) if self.base_color_tex.is_empty else set_i4(1)
+        self.has_emissive_tex = set_i4(0) if self.emissive_tex.is_empty else set_i4(1)
+        self.has_roughness_tex = set_i4(0) if self.roughness_tex.is_empty else set_i4(1)
+        self.has_metallic_tex = set_i4(0) if self.metallic_tex.is_empty else set_i4(1)
+        self.has_normal_tex = set_i4(0) if self.normal_tex.is_empty else set_i4(1)
+        self.has_occlusion_tex = set_i4(0) if self.occlusion_tex.is_empty else set_i4(1)
 
         self.base_color_tex_id = set_i4(-1)
         self.emissive_tex_id = set_i4(-1)
@@ -72,11 +107,11 @@ class Material:
         self.normal_tex_id = set_i4(-1)
         self.occlusion_tex_id = set_i4(-1)
     
-    def _color_to_vec3(self, color):
-        color = np.asarray(color[:3], dtype=f4)
+    def _to_float_rgb(self, color):
+        color = np.asarray(color, dtype=f4)
         if np.max(color) > 1.0:
-            # Convert to float rgb
-            color = color / 255
+            # Convert to float RGB
+            return color / 255
         return color
 
 
@@ -92,7 +127,12 @@ class Scene:
         materials_list = []
         materials = []
 
-        self.textures = []
+        self.base_color_textures = []
+        self.emissive_textures = []
+        self.roughness_textures = []
+        self.metallic_textures = []
+        self.normal_textures = []
+        self.occlusion_textures = []
 
         vertex_offset = 0
 
@@ -107,13 +147,13 @@ class Scene:
             trimesh_material = mesh.visual.material
             material = Material(trimesh_material)
 
-            material.base_color_tex_id = self._get_texture_id(material.base_color_texture)
-            material.emissive_tex_id = self._get_texture_id(material.emissive_texture)
-            material.roughness_tex_id = self._get_texture_id(material.roughness_texture)
-            material.metallic_tex_id = self._get_texture_id(material.metallic_texture)
-            material.normal_tex_id = self._get_texture_id(material.normal_texture)
-            material.occlusion_tex_id = self._get_texture_id(material.occlusion_texture)
-            
+            material.base_color_tex_id = self._get_texture_id(material.base_color_tex, self.base_color_textures)
+            material.emissive_tex_id = self._get_texture_id(material.emissive_tex, self.emissive_textures)
+            material.roughness_tex_id = self._get_texture_id(material.roughness_tex, self.roughness_textures)
+            material.metallic_tex_id = self._get_texture_id(material.metallic_tex, self.metallic_textures)
+            material.normal_tex_id = self._get_texture_id(material.normal_tex, self.normal_textures)
+            material.occlusion_tex_id = self._get_texture_id(material.occlusion_tex, self.occlusion_textures)
+
             if material not in materials_list:
                 materials_list.append(material)
                 materials.append(material)
@@ -141,14 +181,71 @@ class Scene:
         self.material_ids = np.concatenate(all_material_ids).astype(i4)
         self.materials = np.array(materials)
 
+        self.mgl_texture_arrays = {}
+
         self.num_triangles = len(self.triangles)
         self.num_materials = len(self.materials)
     
-    def _get_texture_id(self, tex):
-        if tex is None:
+    def _get_texture_id(self, tex, tex_list):
+        if tex.is_empty:
             return set_i4(-1)
         
-        if tex not in self.textures:
-            self.textures.append(tex)
+        if tex not in tex_list:
+            tex_list.append(tex)
+            return set_i4(len(tex_list) - 1)
         
-        return set_i4(self.textures.index(tex))
+        return set_i4(tex_list.index(tex))
+
+    def create_texture_arrays(self, ctx, width, height):
+        self.texture_arrays = {}
+
+        def build_array(tex_list, name):
+            if not tex_list:
+                return
+            
+            data = bytearray()
+            for tex in tex_list:
+                tex.resize(width, height)
+                data.extend(tex.data)
+                
+            self.texture_arrays[name] = ctx.texture_array(
+                size=(width, height, len(tex_list)),
+                components=4,
+                data=data
+            )
+
+        build_array(self.base_color_textures, "base_color")
+        build_array(self.emissive_textures, "emissive")
+        build_array(self.roughness_textures, "roughness")
+        build_array(self.metallic_textures, "metallic")
+        build_array(self.normal_textures, "normal")
+        build_array(self.occlusion_textures, "occlusion")
+    
+    def bind_texture_arrays(
+            self,
+            base_color_tex_loc = 0,
+            emissive_tex_loc = 1,
+            roughness_tex_loc = 2,
+            metallic_tex_loc = 3,
+            normal_tex_loc = 4,
+            occlusion_tex_loc = 5
+        ):
+
+        if "base_color" in self.texture_arrays:
+            self.texture_arrays["base_color"].use(location=base_color_tex_loc)
+
+        if "emissive" in self.texture_arrays:
+            self.texture_arrays["emissive"].use(location=emissive_tex_loc)
+            
+        if "roughness" in self.texture_arrays:
+            self.texture_arrays["roughness"].use(location=roughness_tex_loc)
+            
+        if "metallic" in self.texture_arrays:
+            self.texture_arrays["metallic"].use(location=metallic_tex_loc)
+            
+        if "normal" in self.texture_arrays:
+            self.texture_arrays["normal"].use(location=normal_tex_loc)
+            
+        if "occlusion" in self.texture_arrays:
+            self.texture_arrays["occlusion"].use(location=occlusion_tex_loc)
+
