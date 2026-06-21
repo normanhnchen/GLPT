@@ -187,8 +187,10 @@ def main():
 
     avg_fps = 0
 
-    total_frame_count = 0
+    total_samples = 0
     stats_frame_count = 0
+
+    should_render = True
 
     # Render loop
     while not glfwWindowShouldClose(window):
@@ -207,36 +209,41 @@ def main():
             stats_start_time = time.perf_counter()
             stats_frame_count = 0
         
-        update_stats(window, avg_fps, total_frame_count)
+        update_stats(window, avg_fps, total_samples)
 
         process_input(window, delta_time)
 
         ctx.clear(0, 0, 0, 1)
 
         if camera.has_moved():
-            total_frame_count = 0
+            total_samples = 0
+            should_render = True
+        
+        if total_samples >= path_tracing.max_samples:
+            should_render = False
+        
+        if should_render:
+            # Update camera data
+            camera_data["pos"] = camera.pos
+            camera_data["front"] = camera.front
+            camera_data["up"] = camera.up
+            camera_data["right"] = camera.right
+            camera_data["fov"] = camera.fov
 
-        # Update camera data
-        camera_data["pos"] = camera.pos
-        camera_data["front"] = camera.front
-        camera_data["up"] = camera.up
-        camera_data["right"] = camera.right
-        camera_data["fov"] = camera.fov
+            camera_buffer.write(camera_data.tobytes())
 
-        camera_buffer.write(camera_data.tobytes())
+            compute_shader.prog["totalSamples"].value = total_samples
+            compute_shader.prog["numTriangles"].value = scene.num_triangles
+            compute_shader.prog["maxDepth"].value = path_tracing.max_depth
 
-        compute_shader.prog["totalSamples"].value = total_frame_count
-        compute_shader.prog["numTriangles"].value = scene.num_triangles
-        compute_shader.prog["maxDepth"].value = path_tracing.max_depth
-
-        # Apply ceiling function
-        # Allows the GPU to reach the entire screen despite different screen resolutions
-        groups_x = (screen.width + 15) // 16
-        groups_y = (screen.height + 15) // 16
-
-        # Run compute shader
-        compute_texture.bind_to_image(0, read=True, write=True)
-        compute_shader.prog.run(groups_x, groups_y)
+            # Apply ceiling function
+            # Allows the GPU to reach the entire screen despite different screen resolutions
+            groups_x = (screen.width + 15) // 16
+            groups_y = (screen.height + 15) // 16
+            
+            # Run compute shader
+            compute_texture.bind_to_image(0, read=True, write=True)
+            compute_shader.prog.run(groups_x, groups_y)
 
         # Draw to screen
         compute_texture.use(location=0)
@@ -246,7 +253,8 @@ def main():
         glfwSwapBuffers(window)
         glfwPollEvents()
 
-        total_frame_count += 1
+        if should_render:
+            total_samples += 1
         stats_frame_count += 1
 
         cap_fps(frame_start, screen.fps_cap)
