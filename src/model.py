@@ -121,6 +121,8 @@ class Scene:
 
         all_vertices = []
         all_triangles = []
+        all_normals = []
+        all_faces = []
         all_uvs = []
         all_material_ids = []
         
@@ -161,6 +163,7 @@ class Scene:
             mat_id = materials_list.index(material)
 
             vertices = mesh.vertices
+            normals = mesh.vertex_normals
             faces = mesh.faces
             uvs = mesh.visual.uv
 
@@ -170,6 +173,8 @@ class Scene:
 
             all_vertices.append(vertices)
             all_triangles.append(global_faces)
+            all_normals.append(normals)
+            all_faces.append(faces)
             all_uvs.append(uvs)
             all_material_ids.append(mesh_material_ids)
 
@@ -177,9 +182,13 @@ class Scene:
         
         self.vertices = np.vstack(all_vertices).astype(f4)
         self.triangles = np.vstack(all_triangles).astype(i4)
+        self.normals = np.vstack(all_normals).astype(f4)
+        self.faces = np.vstack(all_faces).astype(f4)
         self.uvs = np.vstack(all_uvs).astype(f4)
         self.material_ids = np.concatenate(all_material_ids).astype(i4)
         self.materials = np.array(materials)
+
+        self._compute_tangents()
 
         self.mgl_texture_arrays = {}
 
@@ -195,6 +204,64 @@ class Scene:
             return set_i4(len(tex_list) - 1)
         
         return set_i4(tex_list.index(tex))
+
+    # https://learnopengl.com/Advanced-Lighting/Normal-Mapping
+    def _compute_tangents(self):
+        vertices = self.vertices
+        triangles = self.triangles
+        uvs = self.uvs
+
+        self.tangents = np.zeros_like(vertices)
+        self.bitangents = np.zeros_like(vertices)
+
+        for face in triangles:
+            idx0, idx1, idx2 = face
+
+            v0, v1, v2 = vertices[idx0], vertices[idx1], vertices[idx2]
+            uv0, uv1, uv2 = uvs[idx0], uvs[idx1], uvs[idx2]
+
+            edge1 = v1 - v0
+            edge2 = v2 - v0
+            delta_uv1 = uv1 - uv0
+            delta_uv2 = uv2 - uv0
+
+            det = (delta_uv1[0] * delta_uv2[1] - delta_uv2[0] * delta_uv1[1])
+            
+            # Prevent division by zero
+            if abs(det) < 1e-6:
+                continue
+                
+            f = 1 / det
+
+            tangent = f * (delta_uv2[1] * edge1 - delta_uv1[1] * edge2)
+            bitangent = f * (-delta_uv2[0] * edge1 + delta_uv1[0] * edge2)
+
+            # Accumulate onto vertices
+            for idx in face:
+                self.tangents[idx] += tangent
+                self.bitangents[idx] += bitangent
+        
+        # Normalize to get unit vectors
+        # Add small offset to prevent division by zero
+        self.tangents /= np.linalg.norm(self.tangents, axis=1, keepdims=True) + 1e-6
+        self.bitangents /= np.linalg.norm(self.bitangents, axis=1, keepdims=True) + 1e-6
+
+        # Gram-Schmidt process
+        # Re-orthogonalize TBN vectors to be mutually perpendicular
+        for i in range(len(self.vertices)):
+            T = self.tangents[i]
+            N = self.normals[i]
+
+            # Re-orthogonalize T with respect to N
+            T = T - np.dot(T, N) * N
+            # Add small offset to prevent division by zero
+            T /= np.linalg.norm(T) + 1e-6
+
+            # Retrieve perpendicular vector B with the cross product of T and N
+            B = np.cross(T, N)
+
+            self.tangents[i] = T
+            self.bitangents[i] = B
 
     def create_texture_arrays(self, ctx, width, height):
         self.texture_arrays = {}
@@ -248,4 +315,3 @@ class Scene:
             
         if "occlusion" in self.texture_arrays:
             self.texture_arrays["occlusion"].use(location=occlusion_tex_loc)
-

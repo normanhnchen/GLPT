@@ -96,6 +96,12 @@ def main():
         ("pad1", f4),
         ("uv", *vec2),
         ("pad2", *vec2),
+        ("normal", *vec3),
+        ("pad3", f4),
+        ("tangent", *vec3),
+        ("pad4", f4),
+        ("bitangent", *vec3),
+        ("pad5", f4),
     ])
 
     material_dtype = np.dtype([
@@ -172,6 +178,18 @@ def main():
     triangle_data["v0"]["uv"] = scene.uvs[idx0]
     triangle_data["v1"]["uv"] = scene.uvs[idx1]
     triangle_data["v2"]["uv"] = scene.uvs[idx2]
+
+    triangle_data["v0"]["normal"] = scene.normals[idx0]
+    triangle_data["v1"]["normal"] = scene.normals[idx1]
+    triangle_data["v2"]["normal"] = scene.normals[idx2]
+
+    triangle_data["v0"]["tangent"] = scene.tangents[idx0]
+    triangle_data["v1"]["tangent"] = scene.tangents[idx1]
+    triangle_data["v2"]["tangent"] = scene.tangents[idx2]
+
+    triangle_data["v0"]["bitangent"] = scene.bitangents[idx0]
+    triangle_data["v1"]["bitangent"] = scene.bitangents[idx1]
+    triangle_data["v2"]["bitangent"] = scene.bitangents[idx2]
 
     triangle_data["mat"] = material_data[scene.material_ids]
 
