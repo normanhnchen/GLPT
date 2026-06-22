@@ -1,5 +1,7 @@
 import glm
 
+from src.settings import camera_settings
+
 
 # Defines several possible options for camera movement
 # Used as abstraction to stay away from window-system specific input methods
@@ -12,29 +14,21 @@ class CameraMovement:
     DOWN = 5
 
 
-# Default camera values
-YAW = 90
-PITCH = 0
-SPEED = 10
-SENSITIVITY = 0.1
-FOV = 45
-
-
 # An abstract camera class that processes input
 # calculates the corresponding Euler Angles, Vectors and Matrices for use in OpenGL
 class Camera:
     def __init__(
             self,
-            pos=glm.vec3(0, 0, 0),
-            front=glm.vec3(0, 0, -1),
-            up=glm.vec3(0, 1, 0),
+            pos=camera_settings.pos,
+            front=camera_settings._front,
+            up=camera_settings._up,
             right=None,
-            world_up=glm.vec3(0, 1, 0),
-            yaw=YAW,
-            pitch=PITCH,
-            movement_speed=SPEED,
-            mouse_sensitivity=SENSITIVITY,
-            fov=FOV
+            world_up=camera_settings._world_up,
+            yaw=camera_settings._yaw,
+            pitch=camera_settings._pitch,
+            movement_speed=camera_settings.movement_speed,
+            mouse_sensitivity=camera_settings.mouse_sensitivity,
+            fov=camera_settings.fov
         ):
         self.pos = pos
         self.front = front
@@ -92,8 +86,8 @@ class Camera:
         self.fov -= yoffset
         if self.fov < 1:
             self.fov = 1
-        elif self.fov > 45:
-            self.fov = 45
+        elif self.fov > 100:
+            self.fov = 100
 
     def _update_camera_vectors(self):
         # Calculate the new Front vector
