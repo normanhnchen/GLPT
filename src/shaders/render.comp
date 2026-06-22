@@ -19,6 +19,8 @@ layout(std430, binding = 0) buffer CameraBuffer {
 struct Vertex {
     vec3 pos;
     float pad1;
+    vec2 uv;
+    vec2 pad2;
 };
 
 struct Material {
@@ -34,7 +36,7 @@ struct Material {
     int doubleSided;
     // Flags
     int hasEmission;
-    int hasBaseTex;
+    int hasBaseColTex;
     int hasEmissiveTex;
     int hasRoughTex;
     int hasMetalTex;
@@ -81,8 +83,10 @@ struct Ray {
 struct HitRecord {
     vec3 point;
     vec3 normal;
+    vec2 uv;
     Material mat;
     float t;
+    int triIdx;
 };
 
 #define EPSILON 1e-4
@@ -100,7 +104,7 @@ vec3 GetRayPoint(Ray ray, float t) {
 
 // Möller-Trumbore ray-triangle intersection algorithm
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
-bool RayTriangleIntersect(Ray ray, Triangle tri, float closestSoFar, inout HitRecord rec) {
+bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar, inout HitRecord rec) {
     vec3 e1 = tri.v1.pos - tri.v0.pos;
     vec3 e2 = tri.v2.pos - tri.v0.pos;
     vec3 pvec = cross(ray.dir, e2);
@@ -130,10 +134,15 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, float closestSoFar, inout HitRe
         normal = -normal;
     }
 
+    float w = 1.0 - u - v;
+    vec2 texCoords = w * tri.v0.uv + u * tri.v1.uv + v * tri.v2.uv;
+
     rec.t = t;
     rec.point = GetRayPoint(ray, rec.t);
     rec.normal = normal;
+    rec.uv = texCoords;
     rec.mat = tri.mat;
+    rec.triIdx = triIdx;
     return true;
 }
 
@@ -142,11 +151,9 @@ bool Hit(Ray ray, inout HitRecord rec) {
     bool hitAnything = false;
     float closestSoFar = INF;
 
-    rec.mat.baseCol = vec3(0.5);
-
     for (int i = 0; i < numTriangles; i++) {
         Triangle tri = triangles[i];
-        if (RayTriangleIntersect(ray, tri, closestSoFar, tempRec)) {
+        if (RayTriangleIntersect(ray, tri, i, closestSoFar, tempRec)) {
             hitAnything = true;
             closestSoFar = tempRec.t;
             rec = tempRec;
@@ -206,19 +213,41 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
             break;
         }
 
-        if (rec.mat.hasEmission == 1) {
+        Material mat = rec.mat;
+
+        if (mat.hasBaseColTex == 1) {
+            mat.baseCol = texture(baseColorTextures, vec3(rec.uv, mat.baseTexId)).rgb;
+        }
+        if (mat.hasEmissiveTex == 1) {
+            mat.emissive = texture(emissiveTextures, vec3(rec.uv, mat.emissiveTexId)).rgb;
+        }
+        if (mat.hasRoughTex == 1) {
+            mat.roughness = texture(roughnessTextures, vec3(rec.uv, mat.roughTexId)).r;
+        }
+        if (mat.hasMetalTex == 1) {
+            mat.metallic = texture(metallicTextures, vec3(rec.uv, mat.metalTexId)).r;
+        }
+        if (mat.hasNormalTex == 1) {
+            // Not yet implemented
+        }
+        if (mat.hasOcclTex == 1) {
+            float occlusion = texture(occlusionTextures, vec3(rec.uv, mat.occlTexId)).r;
+            throughput *= occlusion; 
+        }
+
+        if (mat.hasEmission == 1) {
             radiance += throughput * rec.mat.emissive;
         }
 
         vec3 lambertDir = CosineSampleHemisphere(v, rec.normal);
         vec3 reflectDir = reflect(ray.dir, rec.normal);
 
-        vec3 bounceDir = mix(reflectDir, lambertDir, rec.mat.roughness);
+        vec3 bounceDir = mix(reflectDir, lambertDir, mat.roughness);
 
         ray.dir = bounceDir;
         ray.orig = rec.point + rec.normal * EPSILON;
 
-        throughput *= rec.mat.baseCol;
+        throughput *= mat.baseCol;
     }
 
     return radiance;

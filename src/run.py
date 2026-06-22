@@ -94,6 +94,8 @@ def main():
     vertex_dtype = np.dtype([
         ("pos", *vec3),
         ("pad1", f4),
+        ("uv", *vec2),
+        ("pad2", *vec2),
     ])
 
     material_dtype = np.dtype([
@@ -108,7 +110,7 @@ def main():
         ("doubleSided", i4),
         # Flags
         ("hasEmission", i4),
-        ("hasBaseTex", i4),
+        ("hasBaseColTex", i4),
         ("hasEmissiveTex", i4),
         ("hasRoughTex", i4),
         ("hasMetalTex", i4),
@@ -127,9 +129,7 @@ def main():
     ])
 
     triangle_dtype = np.dtype([
-        ("v0", vertex_dtype),
-        ("v1", vertex_dtype),
-        ("v2", vertex_dtype),
+        ("v0", vertex_dtype), ("v1", vertex_dtype), ("v2", vertex_dtype),
         ("mat", material_dtype),
     ])
 
@@ -144,7 +144,7 @@ def main():
 
         # Flags
         material_data[i]["hasEmission"] = mat.has_emission
-        material_data[i]["hasBaseTex"] = mat.has_base_color_tex
+        material_data[i]["hasBaseColTex"] = mat.has_base_color_tex
         material_data[i]["hasEmissiveTex"] = mat.has_emissive_tex
         material_data[i]["hasRoughTex"] = mat.has_roughness_tex
         material_data[i]["hasMetalTex"] = mat.has_metallic_tex
@@ -168,6 +168,11 @@ def main():
     triangle_data["v0"]["pos"] = scene.vertices[idx0]
     triangle_data["v1"]["pos"] = scene.vertices[idx1]
     triangle_data["v2"]["pos"] = scene.vertices[idx2]
+
+    triangle_data["v0"]["uv"] = scene.uvs[idx0]
+    triangle_data["v1"]["uv"] = scene.uvs[idx1]
+    triangle_data["v2"]["uv"] = scene.uvs[idx2]
+
     triangle_data["mat"] = material_data[scene.material_ids]
 
     camera_buffer = ctx.buffer(camera_data.tobytes())

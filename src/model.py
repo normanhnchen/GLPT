@@ -19,7 +19,7 @@ class Texture:
     def resize(self, width, height):
         if self.is_empty:
             return
-        self.image = self._original_image.resize((width, height))
+        self.image = self._original_image.resize((width, height)).convert("RGBA")
         self.data = self.image.tobytes()
 
 
@@ -46,9 +46,9 @@ class Material:
 
         # Unpack metallic roughness texture
         if metallic_roughness_texture is not None:
-            r, g, b = metallic_roughness_texture.split()
-            roughness_tex = g
-            metallic_tex = b
+            channels = metallic_roughness_texture.split()
+            roughness_tex = channels[1] # Green channel
+            metallic_tex = channels[2] # Blue channel
         
         self.base_color_tex = Texture(base_color_tex)
         self.emissive_tex = Texture(emissive_tex)
