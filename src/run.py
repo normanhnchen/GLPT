@@ -4,8 +4,8 @@ import moderngl
 import sys
 import time
 
-from src.dtypes import *
 from src.settings import *
+from src.dtypes import *
 from src.shader import *
 from src.camera import *
 from src.model import *
@@ -80,16 +80,20 @@ def main():
 
     camera_dtype = np.dtype([
         ("pos", *vec3),
-        ("pad1", f4),
+        ("aperture", f4),
         ("front", *vec3),
-        ("pad2", f4),
+        ("focusDist", f4),
         ("up", *vec3),
-        ("pad3", f4),
+        ("autoFocus", f4),
         ("right", *vec3),
         ("fov", f4)
     ])
     
     camera_data = np.zeros(1, dtype=camera_dtype)
+
+    camera_data["aperture"] = post_process_settings.aperture
+    camera_data["focusDist"] = post_process_settings.focus_dist
+    camera_data["autoFocus"] = post_process_settings.auto_focus
 
     vertex_dtype = np.dtype([
         ("pos", *vec3),
@@ -242,7 +246,7 @@ def main():
             total_samples = 0
             should_render = True
         
-        if total_samples >= path_tracing.max_samples:
+        if total_samples >= pt_settings.max_samples:
             should_render = False
         
         if should_render:
@@ -257,16 +261,18 @@ def main():
 
             compute_shader.prog["totalSamples"].value = total_samples
             compute_shader.prog["numTriangles"].value = scene.num_triangles
-            compute_shader.prog["maxDepth"].value = path_tracing.max_depth
+            compute_shader.prog["maxDepth"].value = pt_settings.max_depth
+
+            compute_shader.prog["blur"].value = post_process_settings.blur
 
             # Apply ceiling function
             # Allows the GPU to reach the entire screen despite different screen resolutions
-            groups_x = (screen.width + 15) // 16
-            groups_y = (screen.height + 15) // 16
+            local_size_x = (screen.width + 15) // 16
+            local_size_y = (screen.height + 15) // 16
             
             # Run compute shader
             compute_texture.bind_to_image(0, read=True, write=True)
-            compute_shader.prog.run(groups_x, groups_y)
+            compute_shader.prog.run(local_size_x, local_size_y)
 
         # Draw to screen
         compute_texture.use(location=0)
@@ -353,6 +359,7 @@ def mouse_callback(window, xpos, ypos):
 
 def scroll_callback(window, xoffset, yoffset):
     camera.process_mouse_scroll(yoffset)
+
 
 if __name__ == "__main__":
     main()

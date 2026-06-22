@@ -7,11 +7,11 @@ layout(rgba32f, binding = 0) uniform image2D imgOutput;
 
 layout(std430, binding = 0) buffer CameraBuffer {
     vec3 pos;
-    float pad1;
+    float aperture;
     vec3 front;
-    float pad2;
+    float focusDist;
     vec3 up;
-    float pad3;
+    int autoFocus;
     vec3 right;
     float fov;
 } Camera;
@@ -105,7 +105,7 @@ struct HitRecord {
 uniform uint totalSamples;
 uniform int numTriangles;
 uniform int maxDepth;
-
+uniform float blur;
 
 vec3 GetRayPoint(Ray ray, float t) {
     return ray.orig + t * ray.dir;
@@ -154,7 +154,6 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar,
         tangent = -tangent;
         bitangent = -bitangent;
     }
-
 
     rec.t = t;
     rec.point = GetRayPoint(ray, rec.t);
@@ -292,6 +291,13 @@ uvec3 InitRngState(ivec2 pixelCoords) {
     return state;
 }
 
+vec2 SampleUnitDisk(inout uvec3 v) {
+    vec3 r = PCG3d(v);
+    float theta = 2.0 * PI * r.x;
+    float radius = sqrt(r.y);
+    return vec2(radius * cos(theta), radius * sin(theta));
+}
+
 void main() {
     ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
     ivec2 dims = imageSize(imgOutput);
@@ -302,10 +308,10 @@ void main() {
     uvec3 state = InitRngState(pixelCoords);
     
     // Get random vec3 (range [0, 1])
-    vec3 noise = PCG3d(state);
     // Convert to range [-0.5, 0.5]
+    vec3 noise = PCG3d(state) - 0.5;
     // Use as random ray offset
-    vec2 jitter = noise.xy - 0.5;
+    vec2 jitter = noise.xy * 1.0 * blur;
 
     // Map pixel to Normalized Device Coordinates (-1 to 1)
     vec2 uv = (vec2(pixelCoords) + jitter) / vec2(dims) * 2.0 - 1.0;
@@ -315,11 +321,11 @@ void main() {
     uv.x *= aspect;
 
     float tanHalfFov = tan(radians(Camera.fov) * 0.5);
-    vec3 rayDir = normalize(Camera.front + (uv.x * Camera.right * tanHalfFov) + (uv.y * Camera.up * tanHalfFov));
+    vec3 pinholeDir = normalize(Camera.front + (uv.x * Camera.right * tanHalfFov) + (uv.y * Camera.up * tanHalfFov));
 
     Ray ray;
     ray.orig = Camera.pos;
-    ray.dir = normalize(rayDir);
+    ray.dir = normalize(pinholeDir);
 
     vec3 sampledColor = RayColor(ray, state);
 
