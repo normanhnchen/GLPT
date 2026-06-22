@@ -310,8 +310,8 @@ void main() {
     // Get random vec3 (range [0, 1])
     // Convert to range [-0.5, 0.5]
     vec3 noise = PCG3d(state) - 0.5;
-    // Use as random ray offset
-    vec2 jitter = noise.xy * 1.0 * blur;
+    // Anti-aliasing sub-pixel jitter
+    vec2 jitter = noise.xy * blur;
 
     // Map pixel to Normalized Device Coordinates (-1 to 1)
     vec2 uv = (vec2(pixelCoords) + jitter) / vec2(dims) * 2.0 - 1.0;
@@ -323,9 +323,14 @@ void main() {
     float tanHalfFov = tan(radians(Camera.fov) * 0.5);
     vec3 pinholeDir = normalize(Camera.front + (uv.x * Camera.right * tanHalfFov) + (uv.y * Camera.up * tanHalfFov));
 
+    vec3 focusPoint = Camera.pos + pinholeDir * Camera.focusDist;
+
+    vec2 rd = Camera.aperture * SampleUnitDisk(state);
+    vec3 offset = Camera.right * rd.x + Camera.up * rd.y;
+
     Ray ray;
-    ray.orig = Camera.pos;
-    ray.dir = normalize(pinholeDir);
+    ray.orig = Camera.pos + offset;
+    ray.dir = normalize(focusPoint - ray.orig);
 
     vec3 sampledColor = RayColor(ray, state);
 
