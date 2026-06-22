@@ -22,7 +22,7 @@
     },
     "post_processing": {
         "blur": 1,
-        "aperture": 0.5,
+        "aperture": 0.0,
         "focus_dist": 10,
         "auto_focus": 0
     }
