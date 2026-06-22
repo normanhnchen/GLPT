@@ -220,6 +220,78 @@ vec3 CosineSampleHemisphere(inout uvec3 v, vec3 normal) {
     return dir.x * tangent + dir.y * normal + dir.z * bitangent;
 }
 
+// https://learnopengl.com/PBR/Theory
+float DistributionGGX(vec3 N, vec3 H, float a) {
+    float a2     = a*a;
+    float NdotH  = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH*NdotH;
+	
+    float nom    = a2;
+    float denom  = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom        = PI * denom * denom;
+	
+    return nom / denom;
+}
+
+// https://learnopengl.com/PBR/Theory
+float GeometrySchlickGGX(float NdotV, float k) {
+    float nom   = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+	
+    return nom / denom;
+}
+
+// https://learnopengl.com/PBR/Theory
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float k) {
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx1 = GeometrySchlickGGX(NdotV, k);
+    float ggx2 = GeometrySchlickGGX(NdotL, k);
+	
+    return ggx1 * ggx2;
+}
+
+// https://learnopengl.com/PBR/Theory
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+// https://learnopengl.com/PBR/Theory
+vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir, out float NdotL) {
+    Material mat = rec.mat;
+
+    vec3 N = rec.normal;
+    vec3 V = -ray.dir;
+
+    vec3 F0 = vec3(0.04);
+    F0 = mix(F0, mat.baseCol, mat.metallic);
+
+    vec3 L = CosineSampleHemisphere(v, N);
+    bounceDir = L;
+    vec3 H = normalize(V + L);
+
+    // Cook-Torrance BRDF terms
+    float NDF = DistributionGGX(N, H, mat.roughness);
+    float G = GeometrySmith(N, V, L, mat.roughness);
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+    kD *= 1.0 - mat.metallic;
+
+    vec3 numerator = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+    vec3 specular = numerator / denominator;
+
+    vec3 diffuse = kD * mat.baseCol / PI;
+
+    NdotL = max(dot(N, L), 0.0);
+
+    vec3 brdf = diffuse + specular;
+
+    return brdf;
+}
+
 vec3 RayColor(Ray ray, inout uvec3 v) {
     HitRecord rec;
 
@@ -265,15 +337,18 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
             radiance += throughput * mat.emissive;
         }
 
-        vec3 lambertDir = CosineSampleHemisphere(v, rec.normal);
-        vec3 reflectDir = reflect(ray.dir, rec.normal);
+        rec.mat = mat;
 
-        vec3 bounceDir = mix(reflectDir, lambertDir, mat.roughness);
+        vec3 bounceDir;
+        float NdotL;
+        vec3 brdf = SamplePBR(v, ray, rec, bounceDir, NdotL);
+
+        float pdf = NdotL / PI;
 
         ray.dir = bounceDir;
         ray.orig = rec.point + rec.geoNormal * EPSILON;
 
-        throughput *= mat.baseCol;
+        throughput *= (brdf * NdotL) / pdf;
     }
 
     return radiance;
