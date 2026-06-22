@@ -1,5 +1,7 @@
 import glm
 
+from src.settings import camera_settings
+
 
 # Defines several possible options for camera movement
 # Used as abstraction to stay away from window-system specific input methods
@@ -8,14 +10,8 @@ class CameraMovement:
     BACKWARD = 1
     LEFT = 2
     RIGHT = 3
-
-
-# Default camera values
-YAW = 90
-PITCH = 0
-SPEED = 2.5
-SENSITIVITY = 0.1
-ZOOM = 45
+    UP = 4
+    DOWN = 5
 
 
 # An abstract camera class that processes input
@@ -23,18 +19,18 @@ ZOOM = 45
 class Camera:
     def __init__(
             self,
-            position=glm.vec3(0, 0, 0),
-            front=glm.vec3(0, 0, -1),
-            up=glm.vec3(0, 1, 0),
+            pos=camera_settings.pos,
+            front=camera_settings._front,
+            up=camera_settings._up,
             right=None,
-            world_up=glm.vec3(0, 1, 0),
-            yaw=YAW,
-            pitch=PITCH,
-            movement_speed=SPEED,
-            mouse_sensitivity=SENSITIVITY,
-            zoom=ZOOM
+            world_up=camera_settings._world_up,
+            yaw=camera_settings._yaw,
+            pitch=camera_settings._pitch,
+            movement_speed=camera_settings.movement_speed,
+            mouse_sensitivity=camera_settings.mouse_sensitivity,
+            fov=camera_settings.fov
         ):
-        self.position = position
+        self.pos = pos
         self.front = front
         self.up = up
         self.right = right
@@ -45,23 +41,29 @@ class Camera:
         # Camera options
         self.movement_speed = movement_speed
         self.mouse_sensitivity = mouse_sensitivity
-        self.zoom = zoom
+        self.fov = fov
 
         self._update_camera_vectors()
+
+        self.last_state = self.get_state()
     
     def get_view_matrix(self):
-        return glm.lookAt(self.position, self.position + self.front, self.up)
+        return glm.lookAt(self.pos, self.pos + self.front, self.up)
 
     def process_keyboard(self, direction, delta_time):
         velocity = self.movement_speed * delta_time
         if direction == CameraMovement.FORWARD:
-            self.position += self.front * velocity
+            self.pos += self.front * velocity
         elif direction == CameraMovement.BACKWARD:
-            self.position -= self.front * velocity
+            self.pos -= self.front * velocity
         elif direction == CameraMovement.LEFT:
-            self.position -= self.right * velocity
+            self.pos -= self.right * velocity
         elif direction == CameraMovement.RIGHT:
-            self.position += self.right * velocity
+            self.pos += self.right * velocity
+        elif direction == CameraMovement.UP:
+            self.pos += self.world_up * velocity
+        elif direction == CameraMovement.DOWN:
+            self.pos -= self.world_up * velocity
     
     def process_mouse_movement(self, xoffset, yoffset, constrain_pitch=True):
         xoffset *= self.mouse_sensitivity
@@ -81,11 +83,11 @@ class Camera:
         self._update_camera_vectors()
     
     def process_mouse_scroll(self, yoffset):
-        self.zoom -= yoffset
-        if self.zoom < 1:
-            self.zoom = 1
-        elif self.zoom > 45:
-            self.zoom = 45
+        self.fov -= yoffset
+        if self.fov < 1:
+            self.fov = 1
+        elif self.fov > 100:
+            self.fov = 100
 
     def _update_camera_vectors(self):
         # Calculate the new Front vector
@@ -97,3 +99,14 @@ class Camera:
         # Also re-calculate the Right and Up vector
         self.right = glm.normalize(glm.cross(self.front, self.world_up))
         self.up = glm.normalize(glm.cross(self.right, self.front))
+
+    def get_state(self):
+        # Check for any camera movements which affect static rendering
+        return tuple(self.pos), tuple(self.front), self.fov
+    
+    def has_moved(self):
+        current_state = self.get_state()
+        if self.last_state != current_state:
+            self.last_state = current_state
+            return True
+        return False

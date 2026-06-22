@@ -4,5 +4,26 @@
         "height": 720,
         "vsync": false,
         "fps_cap": 240
+    },
+    "camera": {
+        "_yaw": 90,
+        "_pitch": 0,
+        "movement_speed": 5,
+        "mouse_sensitivity": 0.1,
+        "fov": 45,
+        "pos": [0, 0, 0],
+        "_front": [0, 0, -1],
+        "_up": [0, 1, 0],
+        "_world_up": [0, 1, 0]
+    },
+    "path_tracing": {
+        "max_depth": 10,
+        "max_samples": 1024
+    },
+    "post_processing": {
+        "blur": 1,
+        "aperture": 0.5,
+        "focus_dist": 10,
+        "auto_focus": 0
     }
 }

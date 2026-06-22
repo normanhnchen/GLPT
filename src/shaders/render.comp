@@ -1,17 +1,349 @@
 #version 460 core
 
+
 layout(local_size_x=16, local_size_y=16) in;
 
 layout(rgba32f, binding = 0) uniform image2D imgOutput;
 
+layout(std430, binding = 0) buffer CameraBuffer {
+    vec3 pos;
+    float aperture;
+    vec3 front;
+    float focusDist;
+    vec3 up;
+    int autoFocus;
+    vec3 right;
+    float fov;
+} Camera;
+
+struct Vertex {
+    vec3 pos;
+    float pad1;
+    vec2 uv;
+    vec2 pad2;
+    vec3 normal;
+    float pad3;
+    vec3 tangent;
+    float pad4;
+    vec3 bitangent;
+    float pad5;
+};
+
+struct Material {
+    // Basic material
+    vec3 baseCol;
+    float alpha;
+    vec3 emissive;
+    float metallic;
+    float roughness;
+    // Settings
+    int alphaMode; // 0=OPAQUE, 1=MASK, or 2=BLEND
+    float alphaCutoff;
+    int doubleSided;
+    // Flags
+    int hasEmission;
+    int hasBaseColTex;
+    int hasEmissiveTex;
+    int hasRoughTex;
+    int hasMetalTex;
+    int hasNormalTex;
+    int hasOcclTex;
+    // Texture IDs
+    int baseTexId;
+    int emissiveTexId;
+    int roughTexId;
+    int metalTexId;
+    int normalTexId;
+    int occlTexId;
+    float pad1;
+    float pad2;
+    float pad3;
+};
+
+struct Triangle {
+    Vertex v0, v1, v2;
+    Material mat;
+};
+
+layout(std430, binding = 1) buffer TriangleBuffer {
+    Triangle triangles[];
+};
+
+layout(std430, binding = 2) buffer MaterialBuffer {
+    Material materials[];
+};
+
+layout(binding = 0) uniform sampler2DArray baseColorTextures;
+layout(binding = 1) uniform sampler2DArray emissiveTextures;
+layout(binding = 2) uniform sampler2DArray roughnessTextures;
+layout(binding = 3) uniform sampler2DArray metallicTextures;
+layout(binding = 4) uniform sampler2DArray normalTextures;
+layout(binding = 5) uniform sampler2DArray occlusionTextures;
+
+struct Ray {
+    vec3 orig;
+    vec3 dir;
+    vec3 col;
+};
+
+struct HitRecord {
+    vec3 point;
+    vec3 geoNormal;
+    vec3 normal;
+    vec3 tangent;
+    vec3 bitangent;
+    vec2 uv;
+    Material mat;
+    float t;
+    int triIdx;
+};
+
+#define EPSILON 1e-4
+#define INF 1e20
+#define PI 3.14159265359
+
+uniform uint totalSamples;
+uniform int numTriangles;
+uniform int maxDepth;
+uniform float blur;
+
+vec3 GetRayPoint(Ray ray, float t) {
+    return ray.orig + t * ray.dir;
+}
+
+// Möller-Trumbore ray-triangle intersection algorithm
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
+bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar, inout HitRecord rec) {
+    vec3 e1 = tri.v1.pos - tri.v0.pos;
+    vec3 e2 = tri.v2.pos - tri.v0.pos;
+    vec3 pvec = cross(ray.dir, e2);
+    float det = dot(e1, pvec);
+
+    // If det is close to 0, ray is parallel to the triangle
+    if (abs(det) < EPSILON) return false;
+
+    float invDet = 1.0 / det;
+
+    vec3 tvec = ray.orig - tri.v0.pos;
+    float u = dot(tvec, pvec) * invDet;
+    if (u < 0.0 || u > 1.0) return false;
+
+    vec3 qvec = cross(tvec, e1);
+    float v = dot(ray.dir, qvec) * invDet;
+    if (v < 0.0 || u + v > 1.0) return false;
+    
+    float t = dot(e2, qvec) * invDet;
+    // Check if the hit distance is positive and closer than current closest triangle
+    if (t < EPSILON || t >= closestSoFar) return false;
+
+    vec3 geoNormal = normalize(cross(e1, e2));
+
+    float w = 1.0 - u - v;
+    vec2 texCoords = w * tri.v0.uv + u * tri.v1.uv + v * tri.v2.uv;
+
+    vec3 normal = normalize(w * tri.v0.normal + u * tri.v1.normal + v * tri.v2.normal);
+    vec3 tangent = normalize(w * tri.v0.tangent + u * tri.v1.tangent + v * tri.v2.tangent);
+    vec3 bitangent = normalize(w * tri.v0.bitangent + u * tri.v1.bitangent + v * tri.v2.bitangent);
+
+    // If the ray is hitting the back, flip the normal and tangents
+    if (dot(geoNormal, ray.dir) > 0.0) {
+        geoNormal = -geoNormal;
+    }
+    if (dot(normal, ray.dir) > 0.0) {
+        normal = -normal;
+        tangent = -tangent;
+        bitangent = -bitangent;
+    }
+
+    rec.t = t;
+    rec.point = GetRayPoint(ray, rec.t);
+    rec.geoNormal = geoNormal;
+    rec.normal = normal;
+    rec.tangent = tangent;
+    rec.bitangent = bitangent;
+    rec.uv = texCoords;
+    rec.mat = tri.mat;
+    rec.triIdx = triIdx;
+    return true;
+}
+
+bool Hit(Ray ray, inout HitRecord rec) {
+    HitRecord tempRec;
+    bool hitAnything = false;
+    float closestSoFar = INF;
+
+    for (int i = 0; i < numTriangles; i++) {
+        Triangle tri = triangles[i];
+        if (RayTriangleIntersect(ray, tri, i, closestSoFar, tempRec)) {
+            hitAnything = true;
+            closestSoFar = tempRec.t;
+            rec = tempRec;
+        }
+    }
+
+    return hitAnything;
+}
+
+// PCG 3d hash randomization
+// http://www.jcgt.org/published/0009/03/02/
+vec3 PCG3d(inout uvec3 v) {
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y;
+    v ^= v >> 16u;
+    v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y;
+    // Divide by 2^32 (uint32 limit) to convert to range [0, 1]
+    return vec3(v) / 4294967295.0;
+}
+
+// https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
+vec3 CosineSampleHemisphere(inout uvec3 v, vec3 normal) {
+    vec3 r = PCG3d(v);
+    float r1 = r.x;
+    float r2 = r.y;
+
+    float theta = acos(sqrt(r1));
+    float phi = 2.0 * PI * r2;
+    
+    // Sample in local space
+    vec3 dir = vec3(
+        sin(theta) * cos(phi),
+        cos(theta),
+        sin(theta) * sin(phi)
+    );
+
+    // Create Orthonormal Basis (ONB)
+    vec3 helper = abs(normal.x) > 0.9 ? vec3(0, 1, 0) : vec3(1, 0, 0);
+    vec3 tangent = normalize(cross(normal, helper));
+    vec3 bitangent = cross(normal, tangent);
+
+    // Transform to world space
+    return dir.x * tangent + dir.y * normal + dir.z * bitangent;
+}
+
+vec3 RayColor(Ray ray, inout uvec3 v) {
+    HitRecord rec;
+
+    vec3 throughput = vec3(1.0);
+    vec3 radiance = vec3(0.0);
+
+    for (int i = 0; i < maxDepth; i++) {
+        if (!Hit(ray, rec)) {
+            // Ray has exited the scene
+            vec3 envColor = vec3(0.02);
+            radiance += throughput * envColor;
+            break;
+        }
+
+        Material mat = rec.mat;
+
+        if (mat.hasBaseColTex == 1) {
+            mat.baseCol = texture(baseColorTextures, vec3(rec.uv, mat.baseTexId)).rgb;
+        }
+        if (mat.hasEmissiveTex == 1) {
+            mat.emissive = texture(emissiveTextures, vec3(rec.uv, mat.emissiveTexId)).rgb;
+        }
+        if (mat.hasRoughTex == 1) {
+            mat.roughness = texture(roughnessTextures, vec3(rec.uv, mat.roughTexId)).r;
+        }
+        if (mat.hasMetalTex == 1) {
+            mat.metallic = texture(metallicTextures, vec3(rec.uv, mat.metalTexId)).r;
+        }
+        // https://learnopengl.com/Advanced-Lighting/Normal-Mapping
+        if (mat.hasNormalTex == 1) {
+            mat3 TBN = mat3(rec.tangent, rec.bitangent, rec.normal);
+            // Get normal in world space
+            vec3 normal = texture(normalTextures, vec3(rec.uv, mat.normalTexId)).rgb;
+            normal = normal * 2.0 - 1.0;
+            rec.normal = normalize(TBN * normal);
+        }
+        if (mat.hasOcclTex == 1) {
+            float occlusion = texture(occlusionTextures, vec3(rec.uv, mat.occlTexId)).r;
+            throughput *= occlusion;
+        }
+
+        if (mat.hasEmission == 1) {
+            radiance += throughput * mat.emissive;
+        }
+
+        vec3 lambertDir = CosineSampleHemisphere(v, rec.normal);
+        vec3 reflectDir = reflect(ray.dir, rec.normal);
+
+        vec3 bounceDir = mix(reflectDir, lambertDir, mat.roughness);
+
+        ray.dir = bounceDir;
+        ray.orig = rec.point + rec.geoNormal * EPSILON;
+
+        throughput *= mat.baseCol;
+    }
+
+    return radiance;
+}
+
+uvec3 InitRngState(ivec2 pixelCoords) {
+    uvec3 state = uvec3(
+        (pixelCoords.x) * 1512558u,
+        uint(pixelCoords.y) * 1029858u,
+        uint(totalSamples) * 739391335u
+    );
+
+    state ^= uvec3(1597334677u, 3812015801u, 2798796415u);
+
+    return state;
+}
+
+vec2 SampleUnitDisk(inout uvec3 v) {
+    vec3 r = PCG3d(v);
+    float theta = 2.0 * PI * r.x;
+    float radius = sqrt(r.y);
+    return vec2(radius * cos(theta), radius * sin(theta));
+}
+
 void main() {
     ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 dimensions = imageSize(imgOutput);
+    ivec2 dims = imageSize(imgOutput);
 
     // Only render pixels in frame
-    if (pixelCoords.x >= dimensions.x || pixelCoords.y >= dimensions.y) return;
+    if (pixelCoords.x >= dims.x || pixelCoords.y >= dims.y) return;
 
-    vec3 outColor = vec3(1.0, 0.0, 0.0);
+    uvec3 state = InitRngState(pixelCoords);
+    
+    // Get random vec3 (range [0, 1])
+    // Convert to range [-0.5, 0.5]
+    vec3 noise = PCG3d(state) - 0.5;
+    // Anti-aliasing sub-pixel jitter
+    vec2 jitter = noise.xy * blur;
 
-    imageStore(imgOutput, pixelCoords, vec4(outColor, 1.0));
+    // Map pixel to Normalized Device Coordinates (-1 to 1)
+    vec2 uv = (vec2(pixelCoords) + jitter) / vec2(dims) * 2.0 - 1.0;
+
+    // Adjust for aspect ratio
+    float aspect = float(dims.x) / float(dims.y);
+    uv.x *= aspect;
+
+    float tanHalfFov = tan(radians(Camera.fov) * 0.5);
+    vec3 pinholeDir = normalize(Camera.front + (uv.x * Camera.right * tanHalfFov) + (uv.y * Camera.up * tanHalfFov));
+
+    vec3 focusPoint = Camera.pos + pinholeDir * Camera.focusDist;
+
+    vec2 rd = Camera.aperture * SampleUnitDisk(state);
+    vec3 offset = Camera.right * rd.x + Camera.up * rd.y;
+
+    Ray ray;
+    ray.orig = Camera.pos + offset;
+    ray.dir = normalize(focusPoint - ray.orig);
+
+    vec3 sampledColor = RayColor(ray, state);
+
+    vec3 oldColor = imageLoad(imgOutput, pixelCoords).rgb;
+    float weight = 1.0 / (float(totalSamples) + 1.0);
+    
+    vec3 finalColor;
+    if (totalSamples == 0) {
+        // Ignore old color
+        finalColor = sampledColor;
+    } else {
+        finalColor = mix(oldColor.rgb, sampledColor, weight);
+    }
+    
+    imageStore(imgOutput, pixelCoords, vec4(finalColor, 1.0));
 }

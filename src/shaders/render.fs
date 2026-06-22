@@ -6,7 +6,9 @@ out vec4 fragColor;
 
 uniform sampler2D tex;
 
-void main() {
-    vec4 col = texture(tex, texCoords);
-    fragColor = col;
+void main() {             
+    vec3 color = texture(tex, texCoords).rgb;
+    // Gamma correction
+    vec3 finalColor = pow(color, vec3(1.0 / 2.2));
+    fragColor = vec4(finalColor, 1.0);
 }
