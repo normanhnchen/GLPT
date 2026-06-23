@@ -1,8 +1,6 @@
-# Notes
+# Orthogonalization
 
-## Orthogonalization
-
-### Gram-Schmidt process
+# Gram-Schmidt process
 
 Process of re-orthogonalizing the TBN (tangent, bitangent, normal) vectors to be mutually perpendicular.
 
@@ -18,7 +16,7 @@ vec3 B = cross(N, T);
 mat3 TBN = mat3(T, B, N)
 ```
 
-## Building an Orthonormal Basis
+# Building an Orthonormal Basis
 
 Used to transform from tangent to world space using the normal vector as a basis.
 
@@ -35,21 +33,21 @@ vec3 tangent = normalize(cross(normal, helper));
 vec3 bitangent = cross(normal, tangent);
 ```
 
-## Probability Density Functions (PDF)
+# Probability Density Functions (PDF)
 
 A PDF is a function that describes the likelyhood a random sampled value is going to take on a certain value. This is important in computer graphics, especially in sampling techniques, as using a PDF can mimick the behaviour of light in real life, reduce noise, and increase rendering speed. However, since it creates bias for certain values (which increases density of samples in important areas), we must divide by its PDF value (rate of probability) to guarantee an unbiased result.
 
 Source: https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/monte-carlo-methods-mathematical-foundations/quick-introduction-to-monte-carlo-methods.html
 
-## Sampling Techniques
+# Sampling Techniques
 
-### Uniform Sampling
+## Uniform Sampling
 
 Technique of sampling a uniform random direction over a sphere.
 
 Source: https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
 
-### Cosine weighted sampling
+## Cosine weighted sampling
 
 Technique of sampling a direction over a hemisphere which are more oriented towards the surface normal. This is more accurate and more efficient as light with an angle shallower (angle of incidence) to the normal reflect less energy. This phenomenon is also known as Lambert's Cosine Law.
 
@@ -75,9 +73,9 @@ vec3 CosineSampleHemisphere(float random1, float random2) {
 ```
 
 
-## PBR
+# PBR
 
-### The Microfacet Model
+## The Microfacet Model
 
 The microfacet theory describes that any surface at the microscopic scale can be described by tiny aligned mirrors called microfacets. The alignment of these microfacets depends on the roughness of the surface. On a rougher surface, the alignment will be chaotic, scattering light in more different directions. On a smoother surface, the microfacets will be aligned more, allowing light to bounce more in the same direction.
 
@@ -87,7 +85,7 @@ Source: https://learnopengl.com/PBR/Theory
 
 Energy conservation: outgoing light energy cannot exceed the incoming light energy. When light hits a surface, the rays become split between a refraction part and a reflection part. The reflected light doesn't enter the surface; this is known as specular lighting. The refracted light enters the surface and gets absorbed; this is known as diffuse lighting.
 
-Note: metallic surfaces behave differently than non-metallic surfaces (dialectrics). All refracted light is absorbed immediately without scattering. The specular reflection of a metallic object takes on the material's color rather than being white/colorless in a dielectric.
+**Note**: metallic surfaces behave differently than non-metallic surfaces (dialectrics). All refracted light is absorbed immediately without scattering. The specular reflection of a metallic object takes on the material's color rather than being white/colorless in a dielectric.
 
 In code, we calculate the specular fraction and the diffuse fraction is calculated from that. The fractions must add up to 1 for energy conservation.
 
@@ -101,3 +99,37 @@ float kS = specularComponent;
 // Diffuse
 float kD = 1.0 - kS;
 ```
+
+## The Reflectance Equation
+
+Source: https://learnopengl.com/PBR/Theory
+
+**Radiometry**: measurement of electromagnetic radiation
+
+**Radiant flux $\Phi$**: transmitted energy of a light source measured in Watts
+
+**Solid angle $\omega$**: area of a shape projected onto a unit sphere
+
+**Radiant intensity $I$**: amount of radiant flux per solid angle
+
+**Radiance $L$**: radiometric measure of light in an area (total energy in an area $A$ over $\omega$ of a light with intensity $I$)
+
+**Irradiance**: sum of all incoming light onto a point $p$
+
+### The Equation
+
+In summary, the reflectance equation calculates irradiance at a point $p$ over the hemisphere $\Omega$.
+
+$$
+L_0 (p, \omega_0) = \int_{\Omega} f_r (p, \omega_i, \omega_0) L_i (p, \omega_i) n \cdot \omega_i d \omega_i
+$$
+
+$L_0 (p, \omega_0)$: outgoing radiance
+
+$\int_{\Omega}$: integrating over the hemisphere (gather light from every direction)
+
+$f_r (p, \omega_i, \omega_0)$: the BRDF (Bidirectional Reflectance Distribution Funcion)
+
+$L_i (p, \omega_i)$: incoming radiance
+
+$n \cdot \omega_i$: cosine falloff (Lambert's Cosine Law)
