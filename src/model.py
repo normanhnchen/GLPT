@@ -146,7 +146,10 @@ class Scene:
             # Convert mesh data to world space
             mesh.apply_transform(transform)
 
-            trimesh_material = mesh.visual.material
+            if hasattr(mesh.visual, "material") and mesh.visual.material is not None:
+                trimesh_material = mesh.visual.material
+            else:
+                trimesh_material = None
             material = Material(trimesh_material)
 
             material.base_color_tex_id = self._get_texture_id(material.base_color_tex, self.base_color_textures)
@@ -165,7 +168,10 @@ class Scene:
             vertices = mesh.vertices
             normals = mesh.vertex_normals
             faces = mesh.faces
-            uvs = mesh.visual.uv
+            if hasattr(mesh.visual, "uv") and mesh.visual.uv is not None and len(mesh.visual.uv) == len(vertices):
+                uvs = mesh.visual.uv
+            else:
+                uvs = np.zeros((len(vertices), 2), dtype=f4)
 
             global_faces = faces + vertex_offset
 
