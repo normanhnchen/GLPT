@@ -15,7 +15,7 @@ vec3 B = cross(N, T);
 mat3 TBN = mat3(T, B, N)
 ```
 
-## Building an Orthonormal Basis
+## Building an Orthonormal Basis (ONB)
 
 Used to transform from tangent to world space using the normal vector as a basis.
 
