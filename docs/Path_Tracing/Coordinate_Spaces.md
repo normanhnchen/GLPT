@@ -27,6 +27,14 @@ In screen space,
 - x-coordinates increases **to the right**  
 - y-coordinates increases **downward**
 
+## Tangent Space
+
+This space treats a surface normal as the up vector, while the tangent and bitangent vectors are the right and forward directions respectively along the surface.
+
+To convert between tangent space and world space, the TBN (Tangent, Bitangent, Normal) matrix is used.
+
 # References
 
 - https://learnopengl.com/Getting-started/Coordinate-Systems
+- Artificial Intelligence (Gemini)
+    - Used for explanations on tangent space and converting between tangent sapce and world space
