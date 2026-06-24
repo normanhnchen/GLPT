@@ -23,8 +23,6 @@ $$f_{cookTorrance} = \dfrac{DFG}{4(\omega_0 \cdot n)(\omega_i \cdot n)}$$
 
 $D$, $F$ and $G$ each represent functions approximating different part's of specular part.
 
-Source: https://learnopengl.com/PBR/Theory
-
 ## $D$: Normal Distribution Function
 
 The normal distribution function $D$ approximates the concentration of microfacets aligned to reflect light to the viewer.
@@ -54,8 +52,6 @@ float DistributionGGX(vec3 N, vec3 H, float a) {
     return nom / denom;
 }
 ```
-
-Source: https://learnopengl.com/PBR/Theory
 
 ## $G$: Geometry Function
 
@@ -99,8 +95,6 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float k) {
 }
 ```
 
-Source: https://learnopengl.com/PBR/Theory
-
 ## $F$: Fresnel Equations
 
 The Fresnel equations describe the ratio of reflected/refracted light depending on the view angle. The phenomenon of the reflection of a surface changing depending on the view angle is called Fresnel.
@@ -130,8 +124,6 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0) {
 }
 ```
 
-Source: https://learnopengl.com/PBR/Theory
-
 ## Cook-Torrance Reflectance Equation
 
 Combining all equations together, we get the final Cook-Torrance reflectance equation
@@ -143,4 +135,6 @@ L_0 (p, \omega_0) =
 L_i (p, \omega_i) n \cdot \omega_i d \omega_i
 $$
 
-Source: https://learnopengl.com/PBR/Theory
+# References
+
+- https://learnopengl.com/PBR/Theory

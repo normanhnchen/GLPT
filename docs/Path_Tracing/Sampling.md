@@ -4,8 +4,6 @@
 
 Technique of sampling a uniform random direction over a sphere.
 
-Source: https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
-
 ## Cosine weighted sampling
 
 Technique of sampling a direction over a hemisphere which are more oriented towards the surface normal. This is more accurate and more efficient as light with an angle shallower (angle of incidence) to the normal reflect less energy. This phenomenon is also known as Lambert's Cosine Law.
@@ -27,6 +25,9 @@ vec3 CosineSampleHemisphere(float random1, float random2) {
 }
 ```
 
-Sources:
+# References
+
 - https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
-- AI for further explanation of the code and Lambert's Cosine Law
+
+- Artificial Intelligence (Gemini)
+    - Further explanation of the Cosine weighted sampling code and Lambert's Cosine Law
