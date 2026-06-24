@@ -34,4 +34,6 @@ The halfway vector is a unit vector that is halfway between the view direction a
 
 $$ h = \dfrac{l + v}{\lVert l + v \rVert}$$
 
-Source: https://learnopengl.com/PBR/Theory
+# References
+
+- https://learnopengl.com/PBR/Theory

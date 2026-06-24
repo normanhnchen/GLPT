@@ -1,10 +1,9 @@
 # Orthogonalization
 
-# Gram-Schmidt process
+## Gram-Schmidt process
 
 Process of re-orthogonalizing the TBN (tangent, bitangent, normal) vectors to be mutually perpendicular.
 
-Source: https://learnopengl.com/Advanced-Lighting/Normal-Mapping
 ```
 // GLSL
 
@@ -16,7 +15,7 @@ vec3 B = cross(N, T);
 mat3 TBN = mat3(T, B, N)
 ```
 
-# Building an Orthonormal Basis
+## Building an Orthonormal Basis
 
 Used to transform from tangent to world space using the normal vector as a basis.
 
@@ -30,5 +29,9 @@ vec3 tangent = normalize(cross(normal, helper));
 vec3 bitangent = cross(normal, tangent);
 ```
 
-Source: AI (Classic hack) \
-Learned when I needed to convert from tangent to world space.
+# References
+
+- https://learnopengl.com/Advanced-Lighting/Normal-Mapping
+
+- Artificial Intelligence (Gemini)
+    - Used when I needed to convert from tangent to world space
