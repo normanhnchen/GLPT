@@ -1,29 +1,31 @@
 # Coordinate Spaces
 
-## Screen Space
+## Local Space
 
-**Screen space**: 2d coordinate system of the display screen.
-
-`(0, 0)` is the **top-left corner**  
-X increases **to the right**  
-Y increases **downward**
+Coordinate space that is local to an object, where the object's origin is at (0, 0, 0).
 
 ## World Space
 
-**World space**: 3d coordinate system where the scene exists.
+3d coordinate space where all geometry is relative to a certain world.
 
-Objects, camera, etc. all lie in world space.
+Transformation from local to world space can be achieved the *model* matrix, which transforms geometry to be placed where it belongs in the  world.
 
-Units are arbitrary and depend on mesh scale.
+## View Space
 
-## Projection Plane
+Also referred to as camera space or eye space, the view space is the space seen from the camera's point of view. This is achieved by applying the *view* matrix, which transforms the entire world so that the camera is positioned at (0, 0, 0) looking down the negative z-axis (OpenGL convention).
 
-**Projection plane**: an imaginary 2d plane in front of the camera where the 3d world is projected  
-onto the 2d screen. It bridges the gap between 2d and 3d space.
+## Clip Space
 
-- Screen pixels are mapped to points on this plane
-- Each pixel transforms into a 3d ray based on its point
-- The rays travel into the scene to path trace
+Clip space is a space where coordinates not inside the range [-1, 1] (expected by OpenGL) are clipped and discarded. To transform from view space to clip space, the *projection* matrix is used. It defines a frustum (viewing box created by the projection matrix) which can be a perspective or orthographic projection. The frustum maps coordinates into the clip space range.
+
+## Screen Space
+
+To convert from clip space to screen space, OpenGL performs a *perspective division* if using a perspective projection and then the *viewport transform* to map clip space coordinates to the pixel coordinates of the window.
+
+In screen space,
+- the coordinate `(0, 0)` is the **top-left corner** 
+- x-coordinates increases **to the right**  
+- y-coordinates increases **downward**
 
 # References
 
