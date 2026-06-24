@@ -198,7 +198,7 @@ vec3 PCG3d(inout uvec3 v) {
 }
 
 // https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
-vec3 CosineSampleHemisphere(inout uvec3 v, vec3 normal) {
+vec3 CosineSampleHemisphere(inout uvec3 v, vec3 normal, HitRecord rec) {
     vec3 r = PCG3d(v);
     float r1 = r.x;
     float r2 = r.y;
@@ -209,17 +209,12 @@ vec3 CosineSampleHemisphere(inout uvec3 v, vec3 normal) {
     // Sample in local space
     vec3 dir = vec3(
         sin(theta) * cos(phi),
-        cos(theta),
-        sin(theta) * sin(phi)
+        sin(theta) * sin(phi),
+        cos(theta)
     );
 
-    // Create Orthonormal Basis (ONB)
-    vec3 helper = abs(normal.x) > 0.9 ? vec3(0, 1, 0) : vec3(1, 0, 0);
-    vec3 tangent = normalize(cross(normal, helper));
-    vec3 bitangent = cross(normal, tangent);
-
     // Transform to world space
-    return dir.x * tangent + dir.y * normal + dir.z * bitangent;
+    return normalize(rec.TBN * dir);
 }
 
 // https://learnopengl.com/PBR/Theory
@@ -277,7 +272,7 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0) {
 }
 
 // https://schuttejoe.github.io/post/ggximportancesamplingpart1/
-vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float a) {
+vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float a, HitRecord rec) {
     float a2 = a * a;
 
     // Importance sample GGX normal distribution
@@ -288,17 +283,12 @@ vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float a) {
     // Tangent-space microfacet normal
     vec3 H_Tangent = vec3(
         sin(theta) * cos(phi),
-        cos(theta),
-        sin(theta) * sin(phi)
+        sin(theta) * sin(phi),
+        cos(theta)
     );
 
-    // Create an orthonormal basis (ONB)
-    vec3 helper = abs(N.y) > 0.999 ? vec3(1, 0, 0) : vec3(0, 1, 0);
-    vec3 T = normalize(cross(helper, N));
-    vec3 B = cross(N, T);
-
     // Convert H from tangent to world space
-    return normalize(T * H_Tangent.x + N * H_Tangent.y + B * H_Tangent.z);
+    return normalize(rec.TBN * H_Tangent);
 }
 
 // https://schuttejoe.github.io/post/ggximportancesamplingpart2/
@@ -306,21 +296,21 @@ vec3 ImportanceSampleGGXVNDF(vec2 Xi, vec3 V, float roughness) {
     // Stretch the view vector as if roughness = 1
     vec3 v = normalize(vec3(
         V.x * roughness,
-        V.y,
-        V.z * roughness
+        V.y * roughness,
+        V.z
     ));
 
     // Build an orthonormal basis (ONB)
-    vec3 t1 = (v.y < 0.999) ? normalize(cross(v, vec3(0, 1, 0))): vec3(1, 0, 0);
+    vec3 t1 = (v.z < 0.999) ? normalize(cross(v, vec3(0, 1, 0))): vec3(0, 0, 1);
     vec3 t2 = cross(t1, v);
 
     // Choose a point on a disk with each half of the disk weighted
     // proportionally to its projection onto direction v
-    float a = 1.0 / (1.0 + v.y);
+    float a = 1.0 / (1.0 + v.z);
     float r = sqrt(Xi.x);
     float phi = (Xi.y < a) ? (Xi.y / a) * PI : PI + (Xi.y - a) / (1.0 - a) * PI;
     float p1 = r * cos(phi);
-    float p2 = r * sin(phi) * ((Xi.y < a) ? 1.0 : v.y);
+    float p2 = r * sin(phi) * ((Xi.y < a) ? 1.0 : v.z);
 
     // Calculate the normal in stretched tangent space
     vec3 n = p1 * t1 + p2 * t2 + sqrt(max(0.0, 1.0 - p1 * p1 - p2 * p2)) * v;
@@ -328,8 +318,8 @@ vec3 ImportanceSampleGGXVNDF(vec2 Xi, vec3 V, float roughness) {
     // Unstretch and normalize the normal
     return normalize(vec3(
         roughness * n.x,
-        max(0.0, n.y),
-        roughness * n.z
+        roughness * n.y,
+        max(0.0, n.z)
     ));
 }
 
@@ -359,21 +349,13 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
         float a = mat.roughness * mat.roughness;
         float a2 = a * a;
 
-        // Build an Orthonormal basis (ONB)
-        vec3 helper = abs(N.y) > 0.999 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
-        vec3 T = normalize(cross(helper, N));
-        vec3 B = cross(N, T);
-        
-        mat3 TNB = mat3(T, N, B); 
-
         // Convert V to tangent space for the GGX VNDF importance sample
-        vec3 V_Tangent = transpose(TNB) * V;
+        vec3 V_Tangent = normalize(rec.InvTBN * V);
 
         vec3 H_Tangent = ImportanceSampleGGXVNDF(Xi.xy, V_Tangent, a);
 
         // Transform H back to world space
-        vec3 H = normalize(TNB * H_Tangent);
-
+        vec3 H = normalize(rec.TBN * H_Tangent);
         vec3 L = reflect(-V, H);
         bounceDir = L;
 
@@ -392,7 +374,7 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
     } else {
         // Diffuse lobe
 
-        vec3 L = CosineSampleHemisphere(v, N);
+        vec3 L = CosineSampleHemisphere(v, N, rec);
         bounceDir = L;
 
         // Below surface
@@ -449,6 +431,26 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
             vec3 normal = texture(normalTextures, vec3(rec.uv, mat.normalTexId)).rgb;
             normal = normal * 2.0 - 1.0;
             rec.normal = normalize(TBN * normal);
+
+            vec3 N = rec.normal;
+
+            // Build an Orthonormal basis (ONB)
+            vec3 helper = abs(N.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
+            vec3 T = normalize(cross(helper, N));
+            vec3 B = cross(N, T);
+
+            rec.TBN = mat3(T, B, N);
+            rec.InvTBN = transpose(rec.TBN);
+        } else {
+            vec3 N = rec.normal;
+
+            // Build an Orthonormal basis (ONB)
+            vec3 helper = abs(N.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
+            vec3 T = normalize(cross(helper, N));
+            vec3 B = cross(N, T);
+
+            rec.TBN = mat3(T, B, N);
+            rec.InvTBN = transpose(rec.TBN);
         }
         if (mat.hasOcclTex == 1) {
             float occlusion = texture(occlusionTextures, vec3(rec.uv, mat.occlTexId)).r;
