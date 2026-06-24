@@ -18,7 +18,7 @@
     },
     "path_tracing": {
         "max_depth": 10,
-        "max_samples": 1024
+        "max_samples": 4096
     },
     "post_processing": {
         "blur": 1,

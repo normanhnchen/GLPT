@@ -253,6 +253,24 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float k) {
     return ggx1 * ggx2;
 }
 
+float SmithGGXMasking(vec3 L, vec3 V, vec3 N, float a2) {
+    float dotNL = abs(dot(N, L));
+    float dotNV = abs(dot(N, V));
+    float denomC = sqrt(a2 + (1.0 - a2) * dotNV * dotNV) + dotNV;
+
+    return 2.0 * dotNV / denomC;
+}
+
+float SmithGGXMaskingShadowing(vec3 L, vec3 V, vec3 N, float a2) {
+    float dotNL = abs(dot(N, L));
+    float dotNV = abs(dot(N, V));
+
+    float denomA = dotNV * sqrt(a2 + (1.0 - a2) * dotNL * dotNL);
+    float denomB = dotNL * sqrt(a2 + (1.0 - a2) * dotNV * dotNV);
+
+    return 2.0 * dotNL * dotNV / (denomA + denomB);
+}
+
 // https://learnopengl.com/PBR/Theory
 vec3 FresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
@@ -283,6 +301,38 @@ vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float a) {
     return normalize(T * H_Tangent.x + N * H_Tangent.y + B * H_Tangent.z);
 }
 
+// https://schuttejoe.github.io/post/ggximportancesamplingpart2/
+vec3 ImportanceSampleGGXVNDF(vec2 Xi, vec3 V, float roughness) {
+    // Stretch the view vector as if roughness = 1
+    vec3 v = normalize(vec3(
+        V.x * roughness,
+        V.y,
+        V.z * roughness
+    ));
+
+    // Build an orthonormal basis (ONB)
+    vec3 t1 = (v.y < 0.999) ? normalize(cross(v, vec3(0, 1, 0))): vec3(1, 0, 0);
+    vec3 t2 = cross(t1, v);
+
+    // Choose a point on a disk with each half of the disk weighted
+    // proportionally to its projection onto direction v
+    float a = 1.0 / (1.0 + v.y);
+    float r = sqrt(Xi.x);
+    float phi = (Xi.y < a) ? (Xi.y / a) * PI : PI + (Xi.y - a) / (1.0 - a) * PI;
+    float p1 = r * cos(phi);
+    float p2 = r * sin(phi) * ((Xi.y < a) ? 1.0 : v.y);
+
+    // Calculate the normal in stretched tangent space
+    vec3 n = p1 * t1 + p2 * t2 + sqrt(max(0.0, 1.0 - p1 * p1 - p2 * p2)) * v;
+
+    // Unstretch and normalize the normal
+    return normalize(vec3(
+        roughness * n.x,
+        max(0.0, n.y),
+        roughness * n.z
+    ));
+}
+
 // https://learnopengl.com/PBR/Theory
 // https://schuttejoe.github.io/post/ggximportancesamplingpart1/
 vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
@@ -293,40 +343,75 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
 
     vec3 Xi = PCG3d(v);
 
-    vec3 H = ImportanceSampleGGX(Xi.xy, N, mat.roughness);
-    vec3 L = reflect(-V, H);
-    bounceDir = L;
+    float NdotV = abs(dot(N, V));
 
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, mat.baseCol, mat.metallic);
+    vec3 F_approx = FresnelSchlick(NdotV, F0);
 
-    float LdotH = dot(L, H);
+    // AI method: average the Fresnel approximation for a single float probability
+    float weight = (F_approx.r + F_approx.g + F_approx.b) / 3.0;
 
-    float a = mat.roughness;
-    float k = (a+1)*(a+1) / 8;
+    float specChance = clamp(weight, 0.1, 0.9);
 
-    // Cook-Torrance BRDF terms
-    float D = DistributionGGX(N, H, a);
-    float G = GeometrySmith(N, V, L, k);
-    vec3 F = FresnelSchlick(LdotH, F0);
+    if (Xi.z < specChance) {
+        // Specular lobe
+        float a = mat.roughness * mat.roughness;
+        float a2 = a * a;
 
-    vec3 kS = F;
-    vec3 kD = vec3(1.0) - kS;
-    kD *= 1.0 - mat.metallic;
+        // Build an Orthonormal basis (ONB)
+        vec3 helper = abs(N.y) > 0.999 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
+        vec3 T = normalize(cross(helper, N));
+        vec3 B = cross(N, T);
+        
+        mat3 TNB = mat3(T, N, B); 
 
-    float NdotL = max(dot(N, L), 0.0);
-    float NdotV = max(dot(N, V), 0.0);
-    float VdotH = max(dot(V, H), 0.0);
-    float NdotH = max(dot(N, H), 0.0);
+        // Convert V to tangent space for the GGX VNDF importance sample
+        vec3 V_Tangent = transpose(TNB) * V;
 
-    float pdf = (D * NdotH) / (4.0 * NdotV);
+        vec3 H_Tangent = ImportanceSampleGGXVNDF(Xi.xy, V_Tangent, a);
 
-    vec3 specular = (D * F * G) * abs(dot(V, H)) / (4.0 * abs(dot(L, N)) * abs(dot(V, H)));
-    specular /= pdf;
-    
-    vec3 diffuse = kD * mat.baseCol / PI;
+        // Transform H back to world space
+        vec3 H = normalize(TNB * H_Tangent);
 
-    return specular;
+        vec3 L = reflect(-V, H);
+        bounceDir = L;
+
+        // Below the surface
+        if (dot(N, L) <= 0.0) return vec3(0.0);
+
+        float LdotH = dot(L, H);
+        vec3 F = FresnelSchlick(LdotH, F0);
+
+        float G1 = SmithGGXMasking(L, V, N, a2);
+        float G2 = SmithGGXMaskingShadowing(L, V, N, a2);
+
+        vec3 specular = F * (G2 / G1);
+
+        return specular / specChance;
+    } else {
+        // Diffuse lobe
+
+        vec3 L = CosineSampleHemisphere(v, N);
+        bounceDir = L;
+
+        // Below surface
+        if (dot(N, bounceDir) <= 0.0) return vec3(0.0);
+
+        vec3 H = normalize(V + L);
+
+        float VdotH = abs(dot(V, H));
+
+        vec3 F = FresnelSchlick(VdotH, F0);
+
+        vec3 kS = F;
+        vec3 kD = vec3(1.0) - kS;
+        kD *= 1.0 - mat.metallic;
+
+        vec3 diffuse = kD * mat.baseCol;
+
+        return diffuse / (1.0 - specChance);
+    }
 }
 
 vec3 RayColor(Ray ray, inout uvec3 v) {
