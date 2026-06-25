@@ -17,7 +17,7 @@
         "_world_up": [0, 1, 0]
     },
     "path_tracing": {
-        "max_depth": 10,
+        "max_depth": 5,
         "max_samples": 4096
     },
     "post_processing": {

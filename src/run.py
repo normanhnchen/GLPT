@@ -46,7 +46,7 @@ def main():
 
     ctx = moderngl.create_context()
 
-    scene = Scene("src/assets/texture_test.glb")
+    scene = Scene("src/assets/glass_test.glb")
 
     shader = Shader(
         ctx,
@@ -108,12 +108,6 @@ def main():
         ("pad5", f4),
     ])
 
-    extensions_dtype = np.dtype([
-        ("emissiveStrength", f4),
-        ("transmissionFactor", f4),
-        ("pad1", *vec2)
-    ])
-
     material_dtype = np.dtype([
         ("baseCol", *vec3),
         ("alpha", f4),
@@ -139,10 +133,9 @@ def main():
         ("metalTexId", i4),
         ("normalTexId", i4),
         ("occlTexId", i4),
-        ("pad1", f4),
-        ("pad2", f4),
-        ("pad3", f4),
-        ("extensions", extensions_dtype)
+        ("emissiveStrength", f4),
+        ("transmission", f4),
+        ("ior", f4),
     ])
 
     triangle_dtype = np.dtype([
@@ -178,13 +171,25 @@ def main():
         
         # glTF extensions
         extensions = mat.extensions
+
         KHR_materials_emissive_strength = extensions.get("KHR_materials_emissive_strength")
         if KHR_materials_emissive_strength:
-            material_data[i]["extensions"]["emissiveStrength"] = KHR_materials_emissive_strength["emissiveStrength"]
+            material_data[i]["emissiveStrength"] = KHR_materials_emissive_strength["emissiveStrength"]
+        else:
+            material_data[i]["emissiveStrength"] = 0.0
+
         KHR_materials_transmission = extensions.get("KHR_materials_transmission")
         if KHR_materials_transmission:
-            material_data[i]["extensions"]["transmissionFactor"] = KHR_materials_transmission["transmissionFactor"]
-        
+            material_data[i]["transmission"] = KHR_materials_transmission["transmissionFactor"]
+        else:
+            material_data[i]["transmission"] = set_f4(0.0)
+
+        KHR_materials_ior = extensions.get("KHR_materials_ior")
+        if KHR_materials_ior:
+            material_data[i]["ior"] = KHR_materials_ior["ior"]
+        else:
+            material_data[i]["ior"] = set_f4(1.5)
+            
 
     triangle_data = np.zeros(scene.num_triangles, dtype=triangle_dtype)
     
@@ -296,7 +301,7 @@ def main():
 
         shader.prog["exposure"].value = 1.0
         # Options: Reinhard, Reinhard2, ACESFilm, Uchimura, Lottes
-        shader.set_tonemap("Reinhard2")
+        shader.set_tonemap("ACESFilm")
         
         vao.render(moderngl.TRIANGLE_STRIP)
 
