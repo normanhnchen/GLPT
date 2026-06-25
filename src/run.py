@@ -290,10 +290,14 @@ def main():
             # Run compute shader
             compute_texture.bind_to_image(0, read=True, write=True)
             compute_shader.prog.run(local_size_x, local_size_y)
-
+        
         # Draw to screen
         compute_texture.use(location=0)
 
+        shader.prog["exposure"].value = 1.0
+        # Options: Reinhard, Reinhard2, ACESFilm, Uchimura, Lottes
+        shader.set_tonemap("Reinhard2")
+        
         vao.render(moderngl.TRIANGLE_STRIP)
 
         glfwSwapBuffers(window)
