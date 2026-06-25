@@ -8,22 +8,22 @@ uniform sampler2D tex;
 
 uniform float exposure;
 
+uniform bool None;
 uniform bool Reinhard;
 uniform bool Reinhard2;
 uniform bool ACESFilm;
 uniform bool Uchimura;
 uniform bool Lottes;
+uniform bool Uncharted2;
 
-// https://www-old.cs.utah.edu/docs/techreports/2002/pdf/UUCS-02-001.pdf
 float TonemapReinhard(float x) {
     return x / (1.0 + x);
 }
 
 float TonemapReinhard2(float x, float Lwhite) {
-    return (x * (1 + x / Lwhite * Lwhite)) / (1 + x);
+    return (x * (1.0 + x / Lwhite * Lwhite)) / (1.0 + x);
 }
 
-// https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
 float TonemapACESFilm(float x) {
     float a = 2.51;
     float b = 0.03;
@@ -31,10 +31,9 @@ float TonemapACESFilm(float x) {
     float d = 0.59;
     float e = 0.14;
 
-    return clamp((x*(a*x+b))/(x*(c*x+d)+e), 0.0, 1.0);
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
 }
 
-// https://www.desmos.com/calculator/gslcdxvipg
 float TonemapUchimura(float x, float P, float a, float m, float l, float c, float b) {
     float l0 = ((P - m) * l) / a;
     float L0 = m - m / a;
@@ -42,27 +41,32 @@ float TonemapUchimura(float x, float P, float a, float m, float l, float c, floa
     float S0 = m + l0;
     float S1 = m + a * l0;
     float C2 = (a * P) / (P - S1);
+    float CP = -C2 / P;
 
     float w0 = 1.0 - smoothstep(0.0, m, x);
     float w2 = step(m + l0, x);
     float w1 = 1.0 - w0 - w2;
 
-    float L = m + a * (x - m);
     float T = m * pow(x / m, c) + b;
-    float S = P - (P - S1) * exp(-C2 * (x - S0) / P);
+    float S = P - (P - S1) * exp(CP * (x - S0));
+    float L = m + a * (x - m);
 
     return T * w0 + L * w1 + S * w2;
 }
 
 float TonemapLottes(float x, float a, float d, float hdrMax, float midIn, float midOut) {
-    float b =
+    const float b =
         (-pow(midIn, a) + pow(hdrMax, a) * midOut) /
         ((pow(hdrMax, a * d) - pow(midIn, a * d)) * midOut);
-    float c =
+    const float c =
         (pow(hdrMax, a * d) * pow(midIn, a) - pow(hdrMax, a) * pow(midIn, a * d) * midOut) /
         ((pow(hdrMax, a * d) - pow(midIn, a * d)) * midOut);
 
     return pow(x, a) / (pow(x, a * d) * b + c);
+}
+
+float TonemapUncharted2(float x, float A, float B, float C, float D, float E, float F) {
+    return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
 }
 
 void main() {             
@@ -71,8 +75,10 @@ void main() {
     hdrColor *= exposure;
 
     // Tone mapping
-    vec3 color = hdrColor;
-    if (Reinhard) {
+    vec3 color;
+    if (None) {
+        color = hdrColor;
+    } else if (Reinhard) {
         color.r = TonemapReinhard(hdrColor.r);
         color.g = TonemapReinhard(hdrColor.g);
         color.b = TonemapReinhard(hdrColor.b);
@@ -107,6 +113,24 @@ void main() {
         color.r = TonemapLottes(hdrColor.r, a, d, hdrMax, midIn, midOut);
         color.g = TonemapLottes(hdrColor.g, a, d, hdrMax, midIn, midOut);
         color.b = TonemapLottes(hdrColor.b, a, d, hdrMax, midIn, midOut);
+    } else if (Uncharted2) {
+        float A = 0.15;
+        float B = 0.50;
+        float C = 0.10;
+        float D = 0.20;
+        float E = 0.02;
+        float F = 0.30;
+        float W = 11.2; // White point
+        float exposureBias = 2.0;
+
+        vec3 curr;
+        curr.r = TonemapUncharted2(hdrColor.r, A, B, C, D, E, F);
+        curr.g = TonemapUncharted2(hdrColor.g, A, B, C, D, E, F);
+        curr.b = TonemapUncharted2(hdrColor.b, A, B, C, D, E, F);
+        curr *= exposureBias;
+
+        float whiteScale = 1.0 / TonemapUncharted2(W, A, B, C, D, E, F);
+        color = curr * whiteScale;
     }
 
     // Gamma correction
