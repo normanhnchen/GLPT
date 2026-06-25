@@ -1,6 +1,8 @@
 import glm
 import moderngl
 
+from src.dtypes import *
+
 
 def _load_shader(path):
         try:
@@ -22,7 +24,26 @@ class Shader:
             )
         except Exception as e:
             print(f"Shader files not successfully read: {e}")
+        
+    def set_tonemap(self, name):
+        # Reset selected tonemap
+        self.prog["Reinhard"].value = set_i4(0)
+        self.prog["Reinhard2"].value = set_i4(0)
+        self.prog["ACESFilm"].value = set_i4(0)
+        self.prog["Uchimura"].value = set_i4(0)
+        self.prog["Lottes"].value = set_i4(0)
 
+        if name == "Reinhard":
+            self.prog["Reinhard"].value = set_i4(1)
+        elif name == "Reinhard2":
+            self.prog["Reinhard2"].value = set_i4(1)
+        elif name == "ACES":
+            self.prog["ACES"].value = set_i4(1)
+        elif name == "Uchimura":
+            self.prog["Uchimura"].value = set_i4(1)
+        elif name == "Lottes":
+            self.prog["Lottes"].value = set_i4(1)
+        
 
 class ComputeShader:
     def __init__(self, ctx, comp_path):
