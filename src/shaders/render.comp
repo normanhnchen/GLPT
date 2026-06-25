@@ -345,12 +345,20 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
     } else {
         // Transmission/Diffuse lobe
 
-        if (Xi.x < refractChance) {
+        if (Xi.z < specularChance + refractChance) {
             // Transmission lobe
 
             vec3 L = refract(ray.dir, N, rec.eta);
-            bounceDir = L;
 
+            // Total internal reflection (TIR)
+            // GLSL refract function returns L = 0.0 on TIR
+            if (dot(L, L) < EPSILON) {
+                bounceDir = reflect(ray.dir, N);
+            } else {
+                bounceDir = L;
+            }
+
+            // Limitation: glass tint is not physically correct
             return mat.baseCol / refractChance;
         } else {
             // Diffuse lobe
@@ -466,8 +474,22 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
         ray.orig = rec.point + (isTransmission ? -rec.geoNormal : rec.geoNormal) * EPSILON;
 
         throughput *= brdf;
-        // Clamp to reduce fireflies
-        throughput = min(throughput, vec3(10.0));
+
+        // Russian Roulette
+        // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Russian_Roulette_and_Splitting
+
+        if (i > 3) {
+            // Termination probability
+            float q = 1.0 - max(throughput.r, max(throughput.g, throughput.b));
+            float xi = PCG3d(v).x;
+
+            if (xi < q) {
+                // Return radiance so far
+                break;
+            } else {
+                throughput = throughput / (1.0 - q);
+            }
+        }
     }
 
     return radiance;
