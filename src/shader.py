@@ -27,13 +27,17 @@ class Shader:
         
     def set_tonemap(self, name):
         # Reset selected tonemap
+        self.prog["None"].value = set_i4(0)
         self.prog["Reinhard"].value = set_i4(0)
         self.prog["Reinhard2"].value = set_i4(0)
         self.prog["ACESFilm"].value = set_i4(0)
         self.prog["Uchimura"].value = set_i4(0)
         self.prog["Lottes"].value = set_i4(0)
+        self.prog["Uncharted2"].value = set_i4(0)
 
-        if name == "Reinhard":
+        if name == "None":
+            self.prog["None"].value = set_i4(1)
+        elif name == "Reinhard":
             self.prog["Reinhard"].value = set_i4(1)
         elif name == "Reinhard2":
             self.prog["Reinhard2"].value = set_i4(1)
@@ -43,6 +47,8 @@ class Shader:
             self.prog["Uchimura"].value = set_i4(1)
         elif name == "Lottes":
             self.prog["Lottes"].value = set_i4(1)
+        elif name == "Uncharted2":
+            self.prog["Uncharted2"].value = set_i4(1)
         
 
 class ComputeShader:

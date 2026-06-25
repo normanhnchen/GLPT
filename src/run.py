@@ -300,8 +300,8 @@ def main():
         compute_texture.use(location=0)
 
         shader.prog["exposure"].value = 1.0
-        # Options: Reinhard, Reinhard2, ACESFilm, Uchimura, Lottes
-        shader.set_tonemap("ACESFilm")
+        # Options: None, Reinhard, Reinhard2, ACESFilm, Uchimura, Lottes, Uncharted2
+        shader.set_tonemap("None")
         
         vao.render(moderngl.TRIANGLE_STRIP)
 
