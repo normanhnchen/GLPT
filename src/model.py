@@ -1,5 +1,6 @@
 import trimesh
 import numpy as np
+import json, struct
 
 from src.dtypes import *
 
@@ -106,6 +107,8 @@ class Material:
         self.metallic_tex_id = set_i4(-1)
         self.normal_tex_id = set_i4(-1)
         self.occlusion_tex_id = set_i4(-1)
+
+        self.extensions = {}
     
     def _to_float_rgb(self, color):
         color = np.asarray(color, dtype=f4)
@@ -117,7 +120,11 @@ class Material:
 
 class Scene:
     def __init__(self, file_path):
+        self.file_path = file_path
+
         scene = trimesh.load(file_path)
+
+        all_extensions = self._get_extensions()
 
         all_vertices = []
         all_triangles = []
@@ -139,7 +146,7 @@ class Scene:
         vertex_offset = 0
 
         # Iterate through all scene geometries
-        for node_name in scene.graph.nodes_geometry:
+        for i, node_name in enumerate(scene.graph.nodes_geometry):
             transform, geometry_name = scene.graph[node_name]
             mesh = scene.geometry[geometry_name]
 
@@ -151,6 +158,12 @@ class Scene:
             else:
                 trimesh_material = None
             material = Material(trimesh_material)
+
+            material_name = getattr(trimesh_material, "name", None)
+            mat_extensions = all_extensions.get(material_name)
+
+            if mat_extensions:
+                material.extensions.update(mat_extensions)
 
             material.base_color_tex_id = self._get_texture_id(material.base_color_tex, self.base_color_textures)
             material.emissive_tex_id = self._get_texture_id(material.emissive_tex, self.emissive_textures)
@@ -201,6 +214,38 @@ class Scene:
         self.num_triangles = len(self.triangles)
         self.num_materials = len(self.materials)
     
+    # Logic for parsing GLB files assisted by AI
+    def _get_extensions(self):
+        with open(self.file_path, "rb") as f:
+            # GLB header is 12 bytes
+            header = f.read(12)
+            # Interpret binary bytes
+            magic, version, length = struct.unpack("<4sII", header)
+            # Check the validity
+            if magic != b"glTF":
+                raise ValueError("Not a GLB file")
+
+            # Continue until file is processed
+            while f.tell() < length:
+                chunk_len, chunk_type = struct.unpack("<I4s", f.read(8))
+                chunk_data = f.read(chunk_len)
+                # Stop until the JSON chunk (scene metadata)
+                if chunk_type == b"JSON":
+                    glb_json = json.loads(chunk_data.decode("utf-8"))
+                    break
+            else:
+                raise ValueError("No JSON chunk found")
+
+        all_extensions = {}
+        for mat in glb_json.get("materials", []):
+            name = mat.get("name")
+            ext = mat.get("extensions", {})
+            if name and ext:
+                all_extensions[name] = ext
+        
+        return all_extensions
+
+        
     def _get_texture_id(self, tex, tex_list):
         if tex.is_empty:
             return set_i4(-1)

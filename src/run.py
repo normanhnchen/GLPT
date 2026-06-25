@@ -108,6 +108,12 @@ def main():
         ("pad5", f4),
     ])
 
+    extensions_dtype = np.dtype([
+        ("emissiveStrength", f4),
+        ("transmissionFactor", f4),
+        ("pad1", *vec2)
+    ])
+
     material_dtype = np.dtype([
         ("baseCol", *vec3),
         ("alpha", f4),
@@ -135,7 +141,8 @@ def main():
         ("occlTexId", i4),
         ("pad1", f4),
         ("pad2", f4),
-        ("pad3", f4)
+        ("pad3", f4),
+        ("extensions", extensions_dtype)
     ])
 
     triangle_dtype = np.dtype([
@@ -168,6 +175,16 @@ def main():
         material_data[i]["metalTexId"] = mat.metallic_tex_id
         material_data[i]["normalTexId"] = mat.normal_tex_id
         material_data[i]["occlTexId"] = mat.occlusion_tex_id
+        
+        # glTF extensions
+        extensions = mat.extensions
+        KHR_materials_emissive_strength = extensions.get("KHR_materials_emissive_strength")
+        if KHR_materials_emissive_strength:
+            material_data[i]["extensions"]["emissiveStrength"] = KHR_materials_emissive_strength["emissiveStrength"]
+        KHR_materials_transmission = extensions.get("KHR_materials_transmission")
+        if KHR_materials_transmission:
+            material_data[i]["extensions"]["transmissionFactor"] = KHR_materials_transmission["transmissionFactor"]
+        
 
     triangle_data = np.zeros(scene.num_triangles, dtype=triangle_dtype)
     
