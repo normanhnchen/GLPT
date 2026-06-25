@@ -436,8 +436,7 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
             rec.InvTBN = transpose(rec.TBN);
         }
         if (mat.hasOcclTex == 1) {
-            float occlusion = texture(occlusionTextures, vec3(rec.uv, mat.occlTexId)).r;
-            throughput *= occlusion;
+            // No implementation in path tracing
         }
 
         // glTF extensions
@@ -460,10 +459,10 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
 
         ray.dir = bounceDir;
 
-        // For transmission, offset inward
-        // For reflection/diffuse, offset outward
+        // For transmissive objects, offset ray inward
+        // For reflection/diffuse objects, offset ray outward
         // Prevents re-hitting a surface
-        bool isTransmission = dot(bounceDir, rec.geoNormal) < 0.0;
+        bool isTransmission = dot(bounceDir, rec.geoNormal) < 0.0 && rec.mat.transmission > 0.0;
         ray.orig = rec.point + (isTransmission ? -rec.geoNormal : rec.geoNormal) * EPSILON;
 
         throughput *= brdf;
