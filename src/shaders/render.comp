@@ -29,6 +29,12 @@ struct Vertex {
     float pad5;
 };
 
+struct Extensions {
+    float emissiveStrength;
+    float transmissionFactor;
+    vec2 pad1;
+};
+
 struct Material {
     // Basic material
     vec3 baseCol;
@@ -58,6 +64,7 @@ struct Material {
     float pad1;
     float pad2;
     float pad3;
+    Extensions extensions;
 };
 
 struct Triangle {
@@ -350,7 +357,7 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
         float a2 = a * a;
 
         // Convert V to tangent space for the GGX VNDF importance sample
-        vec3 V_Tangent = normalize(rec.InvTBN * V);
+        vec3 V_Tangent = rec.InvTBN * V;
 
         vec3 H_Tangent = ImportanceSampleGGXVNDF(Xi.xy, V_Tangent, a);
 
@@ -457,6 +464,12 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
             throughput *= occlusion;
         }
 
+        // Get glTF extension
+        float emissiveStrength = mat.extensions.emissiveStrength;
+        if (emissiveStrength > 0.0) {
+            mat.emissive *= emissiveStrength;
+        }
+
         if (mat.hasEmission == 1) {
             radiance += throughput * mat.emissive;
         }
@@ -470,6 +483,8 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
         ray.orig = rec.point + rec.geoNormal * EPSILON;
 
         throughput *= brdf;
+        // Clamp to reduce fireflies
+        throughput = min(throughput, vec3(10.0));
     }
 
     return radiance;
