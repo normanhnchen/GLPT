@@ -46,7 +46,7 @@ def main():
 
     ctx = moderngl.create_context()
 
-    scene = Scene("src/assets/texture_test.glb", hdri_path="src/assets/day_sky_hdri.exr")
+    scene = Scene("src/assets/glass_test.glb", hdri_path="src/assets/day_sky_hdri.exr")
 
     shader = Shader(
         ctx,
@@ -292,6 +292,8 @@ def main():
             compute_shader.prog["maxDepth"].value = pt_settings.max_depth
 
             compute_shader.prog["blur"].value = post_process_settings.blur
+
+            compute_shader.prog["hdriExposure"].value = set_f4(5)
 
             # Apply ceiling function
             # Allows the GPU to reach the entire screen despite different screen resolutions
