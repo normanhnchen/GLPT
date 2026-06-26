@@ -287,30 +287,28 @@ vec3 ImportanceSampleGGXVNDF(vec2 Xi, vec3 V, float roughness) {
     ));
 }
 
-vec3 BeerLambert() {
-    // // For transmissive objects, offset ray inward
-    // // For reflection/diffuse objects, offset ray outward
-    // // Prevents re-hitting a surface
-    // bool isTransmission = dot(bounceDir, rec.geoNormal) < 0.0 && rec.mat.transmission > 0.0;
-    // return vec3(isTransmission);
-    // ray.orig = rec.point + (isTransmission ? -rec.geoNormal : rec.geoNormal) * EPSILON;
+// Beer-Lambert law: light attenuates exponentially with distance traveled through a medium
+// https://www.pbr-book.org/3ed-2018/Volume_Scattering/Volume_Scattering_Processes
+void BeerLambert(inout bool insideMedium, inout vec3 entryPoint, HitRecord rec, out vec3 transmittance, bool didRefract) {
+    transmittance = vec3(1.0);
 
-    // // Beer-Lambert law: light attenuates exponentially with distance traveled through a medium
-    // // https://www.pbr-book.org/3ed-2018/Volume_Scattering/Volume_Scattering_Processes
-    // // Only apply when the material is transmissive and the ray is exiting the medium
-    // if (rec.mat.transmission > 0.0) {
-    //     if (isEntering && !insideMedium) {
-    //         entryPoint = rec.point;
-    //         insideMedium = true;
-    //     } else if (isExiting && insideMedium) {
-    //         float distTravelled = length(rec.point - entryPoint);
-    //         vec3 absorption = -log(rec.mat.baseCol);
-    //         throughput *= exp(-absorption * distTravelled);
+    bool isTransmission = rec.mat.transmission > 0.0;
+    bool isEntering = !rec.backFace;
+    bool isExiting = rec.backFace;
 
-    //         insideMedium = false;
-    //     }
-    // }
-    return vec3(0.0);
+    // Only apply when the material is transmissive and the ray is exiting the medium
+    if (isTransmission) {
+        if (isEntering && !insideMedium) {
+            entryPoint = rec.point;
+            insideMedium = true;
+        } else if (isExiting && didRefract && insideMedium) {
+            float distTravelled = length(rec.point - entryPoint);
+            vec3 absorption = -log(rec.mat.baseCol);
+            transmittance = exp(-absorption * distTravelled);
+
+            insideMedium = false;
+        }
+    }
 }
 
 // https://learnopengl.com/PBR/Theory
@@ -321,10 +319,6 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
     bool enteringMedium = !rec.backFace;
 
     vec3 N = rec.normal;
-
-    // if (dot(N, ray.dir) > 0.0) {
-    //     N = -N;
-    // }
 
     vec3 V = -ray.dir;
 
@@ -523,19 +517,21 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
 
         rec.mat = mat;
 
-        // Booleans for entering/exiting a medium
-        bool isExiting = dot(ray.dir, rec.geoNormal) > 0.0;
-        bool isEntering = !isExiting;
-
         vec3 bounceDir;
         vec3 brdf = SamplePBR(v, ray, rec, bounceDir);
+
+        bool didRefract = dot(bounceDir, rec.geoNormal) < 0.0;
+
+        vec3 transmittance;
+        BeerLambert(insideMedium, entryPoint, rec, transmittance, didRefract);
+
+        throughput *= transmittance;
+        throughput *= brdf;
 
         ray.dir = bounceDir;
 
         vec3 offsetNormal = dot(bounceDir, rec.geoNormal) > 0.0 ? rec.geoNormal : -rec.geoNormal;
         ray.orig = rec.point + offsetNormal * EPSILON;
-
-        throughput *= brdf;
 
         // Russian Roulette
         // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Russian_Roulette_and_Splitting
