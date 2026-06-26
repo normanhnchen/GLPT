@@ -46,7 +46,7 @@ def main():
 
     ctx = moderngl.create_context()
 
-    scene = Scene("src/assets/glass_test.glb")
+    scene = Scene("src/assets/texture_test.glb", hdri_path="src/assets/day_sky_hdri.exr")
 
     shader = Shader(
         ctx,
@@ -152,6 +152,10 @@ def main():
         material_data[i]["emissive"] = mat.emissive_color
         material_data[i]["metallic"] = mat.metallic
 
+        material_data[i]["alphaMode"] = mat.alpha_mode
+        material_data[i]["alphaCutoff"] = mat.alpha_cutoff
+        material_data[i]["doubleSided"] = mat.double_sided
+
         # Flags
         material_data[i]["hasEmission"] = mat.has_emission
         material_data[i]["hasBaseColTex"] = mat.has_base_color_tex
@@ -230,6 +234,8 @@ def main():
 
     scene.create_texture_arrays(ctx, 1024, 1024)
     scene.bind_texture_arrays()
+
+    scene.hdri.bind(ctx, 6)
     
     last_frame_start = 0
     stats_start_time = time.perf_counter()
@@ -312,7 +318,7 @@ def main():
         #   - Uchimura
         #   - Uncharted2
         #   - Unreal
-        shader.set_tonemap("None")
+        shader.set_tonemap("AgXPunchy")
         
         vao.render(moderngl.TRIANGLE_STRIP)
 

@@ -1,6 +1,7 @@
 import trimesh
 import numpy as np
 import json, struct
+import cv2
 
 from src.dtypes import *
 
@@ -26,7 +27,13 @@ class Texture:
 
 class Material:
     def __init__(self, trimesh_material):
-        self.alpha_mode = getattr(trimesh_material, "alphaMode", "OPAQUE")
+        alpha_mode = getattr(trimesh_material, "alphaMode", "OPAQUE")
+        if alpha_mode == "MASK":
+            self.alpha_mode = 1
+        elif alpha_mode == "BLEND":
+            self.alpha_mode = 2
+        else: # OPAQUE
+            self.alpha_mode = 0
         self.alpha_cutoff = getattr(trimesh_material, "alphaCutoff", 0.5)
         self.double_sided = bool(getattr(trimesh_material, "doubleSided", False))
 
@@ -118,11 +125,30 @@ class Material:
         return color
 
 
-class Scene:
-    def __init__(self, file_path):
-        self.file_path = file_path
+class HDRI:
+    def __init__(self, hdri_path):
+        img = cv2.imread(hdri_path, cv2.IMREAD_UNCHANGED)
+        # Convert from OpenCV default format of BGR color to RGB color
+        self.img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        
+        self.height, self.width, self.channels = self.img.shape
+        self.img_bytes = self.img.tobytes()
+    
+    def bind(self, ctx, loc):
+        hdri_tex = ctx.texture(
+            (self.width, self.height),
+            self.channels,
+            self.img_bytes,
+            dtype=f4
+            )
+        hdri_tex.use(location=loc)
 
-        scene = trimesh.load(file_path)
+
+class Scene:
+    def __init__(self, scene_path, hdri_path=None):
+        self.scene_path = scene_path
+
+        scene = trimesh.load(scene_path)
 
         all_extensions = self._get_extensions()
 
@@ -213,10 +239,14 @@ class Scene:
 
         self.num_triangles = len(self.triangles)
         self.num_materials = len(self.materials)
+
+        self.hdri = None
+        if hdri_path is not None:
+            self.hdri = HDRI(hdri_path)
     
     # Logic for parsing GLB files assisted by AI
     def _get_extensions(self):
-        with open(self.file_path, "rb") as f:
+        with open(self.scene_path, "rb") as f:
             # GLB header is 12 bytes
             header = f.read(12)
             # Interpret binary bytes
