@@ -300,7 +300,18 @@ def main():
         compute_texture.use(location=0)
 
         shader.prog["exposure"].value = 1.0
-        # Options: None, Reinhard, Reinhard2, ACESFilm, Uchimura, Lottes, Uncharted2
+        
+        # Options:
+        #   - None
+        #   - ACESFilm
+        #   - AgX, AgXGolden, AgXPunchy
+        #   - Filmic
+        #   - Lottes
+        #   - Neutral
+        #   - Reinhard, Reinhard2
+        #   - Uchimura
+        #   - Uncharted2
+        #   - Unreal
         shader.set_tonemap("None")
         
         vao.render(moderngl.TRIANGLE_STRIP)
