@@ -3,10 +3,12 @@ import numpy as np
 
 # https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
 
+
 class BVHNode:
     aabb_min = None
     aabb_max = None
-    node_idx = None
+    left_child_idx = -1
+    right_child_idx = -1
     first_tri_idx = None
     tri_count = None
     is_leaf = False
@@ -17,13 +19,11 @@ class BVH:
         self.scene = scene
 
         self.root = BVHNode()
-        self.root.node_idx = 0
         self.root.aabb_max = np.max(scene.vertices, axis=0)
         self.root.aabb_min = np.min(scene.vertices, axis=0)
         self.root.first_tri_idx = 0
         self.root.tri_count = scene.num_triangles
 
-        self.curr_node_idx = 0
         self.nodes = [self.root]
         self.tri_indices = np.arange(scene.num_triangles)
 
@@ -55,29 +55,33 @@ class BVH:
         # Stop if one of the sides are empty
         left_count = i - node.first_tri_idx
         if left_count == 0 or left_count == node.tri_count:
+            node.is_leaf = True
             return
 
         left_child = BVHNode()
-        right_child = BVHNode()
 
         left_child.first_tri_idx = node.first_tri_idx
         left_child.tri_count = left_count
+        self.update_node_bounds(left_child)
+
+        left_idx = len(self.nodes)
+        self.nodes.append(left_child)
+
+        node.left_child_idx = left_idx
+
+        self.subdivide(left_child)
+
+        right_child = BVHNode()
+
         right_child.first_tri_idx = i
         right_child.tri_count = node.tri_count - left_count
-
-        self.update_node_bounds(left_child)
         self.update_node_bounds(right_child)
 
-        left_child.node_idx = self.curr_node_idx + 1
-        right_child.node_idx = self.curr_node_idx + 2
-
-        self.curr_node_idx += 2
-        
-        self.nodes.append(left_child)
+        right_idx = len(self.nodes)
         self.nodes.append(right_child)
 
-        # Recurse
-        self.subdivide(left_child)
+        node.right_child_idx = right_idx
+
         self.subdivide(right_child)
         
     def update_node_bounds(self, node):

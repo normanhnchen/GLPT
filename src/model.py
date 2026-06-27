@@ -248,6 +248,7 @@ class Scene:
             self.hdri = HDRI(hdri_path)
         
         self.bvh = BVH(self)
+        self.num_bvh_nodes = len(self.bvh.nodes)
     
     # Logic for parsing GLB files assisted by AI
     def _get_extensions(self):

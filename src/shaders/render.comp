@@ -66,12 +66,31 @@ struct Triangle {
     Material mat;
 };
 
+struct BVHNode {
+    vec3 aabbMin;
+    int leftChildIdx;
+    vec3 aabbMax;
+    int rightChildIdx;
+    int firstTriIdx;
+    int triCount;
+    int isLeaf;
+    float pad1;
+};
+
 layout(std430, binding = 1) buffer TriangleBuffer {
     Triangle triangles[];
 };
 
 layout(std430, binding = 2) buffer MaterialBuffer {
     Material materials[];
+};
+
+layout(std430, binding = 3) buffer BVHNodesBuffer {
+    BVHNode BVHNodes[];
+};
+
+layout(std430, binding = 4) buffer TriIndicesBuffer {
+    int triIndices[];
 };
 
 layout(binding = 0) uniform sampler2DArray baseColorTextures;
@@ -109,8 +128,7 @@ struct HitRecord {
 #define INF 1e20
 #define PI 3.14159265359
 
-uniform uint totalSamples;
-uniform int numTriangles;
+uniform int totalSamples;
 uniform int maxDepth;
 uniform float blur;
 uniform float hdriExposure;
@@ -128,85 +146,6 @@ vec3 PCG3d(inout uvec3 v) {
 
 vec3 GetRayPoint(Ray ray, float t) {
     return ray.orig + t * ray.dir;
-}
-
-// Möller-Trumbore ray-triangle intersection algorithm
-// https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
-bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar, inout HitRecord rec) {
-    vec3 e1 = tri.v1.pos - tri.v0.pos;
-    vec3 e2 = tri.v2.pos - tri.v0.pos;
-    vec3 pvec = cross(ray.dir, e2);
-    float det = dot(e1, pvec);
-
-    // If det is close to 0, ray is parallel to the triangle
-    if (abs(det) < EPSILON) return false;
-
-    float invDet = 1.0 / det;
-
-    vec3 tvec = ray.orig - tri.v0.pos;
-    float u = dot(tvec, pvec) * invDet;
-    if (u < 0.0 || u > 1.0) return false;
-
-    vec3 qvec = cross(tvec, e1);
-    float v = dot(ray.dir, qvec) * invDet;
-    if (v < 0.0 || u + v > 1.0) return false;
-    
-    float t = dot(e2, qvec) * invDet;
-    // Check if the hit distance is positive and closer than current closest triangle
-    if (t < EPSILON || t >= closestSoFar) return false;
-
-    float w = 1.0 - u - v;
-    vec2 texCoords = w * tri.v0.uv + u * tri.v1.uv + v * tri.v2.uv;
-
-    vec3 geoNormal = normalize(cross(e1, e2));
-    vec3 normal = normalize(w * tri.v0.normal + u * tri.v1.normal + v * tri.v2.normal);
-    vec3 tangent = normalize(w * tri.v0.tangent + u * tri.v1.tangent + v * tri.v2.tangent);
-    vec3 bitangent = normalize(w * tri.v0.bitangent + u * tri.v1.bitangent + v * tri.v2.bitangent);
-    
-    bool backFace = dot(geoNormal, ray.dir) > 0.0;
-
-    if (backFace) {
-        geoNormal = -geoNormal;
-        normal = -normal;
-        tangent = -tangent;
-        bitangent = -bitangent;
-    }
-
-    rec.TBN = mat3(tangent, bitangent, normal);
-    rec.InvTBN = transpose(rec.TBN);
-
-    float eta = backFace ? tri.mat.ior / 1.0 : 1.0 / tri.mat.ior;
-
-    rec.t = t;
-    rec.point = GetRayPoint(ray, t);
-    rec.geoNormal = geoNormal;
-    rec.normal = normal;
-    rec.tangent = tangent;
-    rec.bitangent = bitangent;
-    rec.uv = texCoords;
-    rec.mat = tri.mat;
-    rec.eta = eta;
-    rec.triIdx = triIdx;
-    rec.backFace = backFace;
-    return true;
-}
-
-bool Hit(Ray ray, inout HitRecord rec) {
-    HitRecord tempRec = rec;
-    bool hitAnything = false;
-    float closestSoFar = INF;
-
-    for (int i = 0; i < numTriangles; i++) {
-        Triangle tri = triangles[i];
-        tempRec.mat.ior = rec.mat.ior;
-        if (RayTriangleIntersect(ray, tri, i, closestSoFar, tempRec)) {
-            hitAnything = true;
-            closestSoFar = tempRec.t;
-            rec = tempRec;
-        }
-    }
-
-    return hitAnything;
 }
 
 // https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
@@ -438,6 +377,124 @@ vec3 SampleHDRI(vec3 dir) {
     // Convert to uv coordinates
     vec2 uv = vec2(phi / (2.0 * PI) + 0.5, theta / PI);
     return texture(hdri, uv).rgb;
+}
+
+// Möller-Trumbore ray-triangle intersection algorithm
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
+bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar, inout HitRecord rec) {
+    vec3 e1 = tri.v1.pos - tri.v0.pos;
+    vec3 e2 = tri.v2.pos - tri.v0.pos;
+    vec3 pvec = cross(ray.dir, e2);
+    float det = dot(e1, pvec);
+
+    // If det is close to 0, ray is parallel to the triangle
+    if (abs(det) < EPSILON) return false;
+
+    float invDet = 1.0 / det;
+
+    vec3 tvec = ray.orig - tri.v0.pos;
+    float u = dot(tvec, pvec) * invDet;
+    if (u < 0.0 || u > 1.0) return false;
+
+    vec3 qvec = cross(tvec, e1);
+    float v = dot(ray.dir, qvec) * invDet;
+    if (v < 0.0 || u + v > 1.0) return false;
+    
+    float t = dot(e2, qvec) * invDet;
+    // Check if the hit distance is positive and closer than current closest triangle
+    if (t < EPSILON || t >= closestSoFar) return false;
+
+    float w = 1.0 - u - v;
+    vec2 texCoords = w * tri.v0.uv + u * tri.v1.uv + v * tri.v2.uv;
+
+    vec3 geoNormal = normalize(cross(e1, e2));
+    vec3 normal = normalize(w * tri.v0.normal + u * tri.v1.normal + v * tri.v2.normal);
+    vec3 tangent = normalize(w * tri.v0.tangent + u * tri.v1.tangent + v * tri.v2.tangent);
+    vec3 bitangent = normalize(w * tri.v0.bitangent + u * tri.v1.bitangent + v * tri.v2.bitangent);
+    
+    bool backFace = dot(geoNormal, ray.dir) > 0.0;
+
+    if (backFace) {
+        geoNormal = -geoNormal;
+        normal = -normal;
+        tangent = -tangent;
+        bitangent = -bitangent;
+    }
+
+    rec.TBN = mat3(tangent, bitangent, normal);
+    rec.InvTBN = transpose(rec.TBN);
+
+    float eta = backFace ? tri.mat.ior / 1.0 : 1.0 / tri.mat.ior;
+
+    rec.t = t;
+    rec.point = GetRayPoint(ray, t);
+    rec.geoNormal = geoNormal;
+    rec.normal = normal;
+    rec.tangent = tangent;
+    rec.bitangent = bitangent;
+    rec.uv = texCoords;
+    rec.mat = tri.mat;
+    rec.eta = eta;
+    rec.triIdx = triIdx;
+    rec.backFace = backFace;
+    return true;
+}
+
+bool AABBIntersect(Ray ray, BVHNode node, float closestSoFar) {
+    vec3 invRayDir = 1.0 / ray.dir;
+
+    vec3 t0 = (node.aabbMin - ray.orig) * invRayDir;
+    vec3 t1 = (node.aabbMax - ray.orig) * invRayDir;
+    
+    vec3 tMin = min(t0, t1);
+    vec3 tMaxAxis = max(t0, t1);
+
+    float tNear = max(max(tMin.x, tMin.y), tMin.z);
+    float tFar  = min(min(tMaxAxis.x, tMaxAxis.y), tMaxAxis.z);
+    
+    return tNear <= tFar && tFar > 0.0 && tNear < closestSoFar;
+}
+
+// https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
+bool Hit(Ray ray, inout HitRecord rec) {
+    HitRecord tempRec = rec;
+    bool hitAnything = false;
+    float closestSoFar = INF;
+
+    int nodeStack[64];
+    int stackIdx = 0;
+    // Push root node index onto the stack
+    nodeStack[stackIdx++] = 0;
+
+    while (stackIdx > 0) {
+        // Pop the latest node index off
+        int currIdx = nodeStack[--stackIdx];
+        BVHNode currNode = BVHNodes[currIdx];
+
+        if (AABBIntersect(ray, currNode, closestSoFar)) {
+            if (currNode.isLeaf == 1) {
+                for (int i = 0; i < currNode.triCount; i++) {
+                    Triangle tri = triangles[triIndices[currNode.firstTriIdx + i]];
+                    if (RayTriangleIntersect(ray, tri, i, closestSoFar, tempRec)) {
+                        hitAnything = true;
+                        closestSoFar = tempRec.t;
+                        rec = tempRec;
+                    }
+                }
+            } else {
+                // Push children onto the stack if there are children
+                
+                if (currNode.leftChildIdx != -1) {
+                    nodeStack[stackIdx++] = currNode.leftChildIdx;
+                }
+                if (currNode.rightChildIdx != -1) {
+                    nodeStack[stackIdx++] = currNode.rightChildIdx;
+                }
+            }
+        }
+    }
+
+    return hitAnything;
 }
 
 vec3 RayColor(Ray ray, inout uvec3 v) {
