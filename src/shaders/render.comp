@@ -258,7 +258,7 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
     bool enteringMedium = !rec.backFace;
 
     vec3 N = rec.normal;
-
+    vec3 geoN = rec.geoNormal;
     vec3 V = -ray.dir;
 
     vec3 Xi = PCG3d(v);
@@ -273,16 +273,15 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
     // AI method: average the Fresnel approximation for a single float probability
     float weight = (F_approx.r + F_approx.g + F_approx.b) / 3.0;
     
-    float specularChance = weight;
+    float specularChance = clamp(weight, 0.05, 0.95);
     float refractChance = mat.transmission * (1.0 - specularChance);
     // Fully metal objects cannot refract
     refractChance *= (1.0 - mat.metallic);
     float diffuseChance = 1.0 - specularChance - refractChance;
 
     if (Xi.z < specularChance) {
-        return vec3(0.0);
-        
         // Specular lobe
+
         float a = mat.roughness * mat.roughness;
         float a2 = a * a;
 
@@ -320,7 +319,7 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
 
             // Total internal reflection (TIR)
             // GLSL refract function returns vec3(0.0) on TIR
-            if (dot(L, L) < EPSILON) {
+            if (L == vec3(0.0)) {
                 bounceDir = reflect(ray.dir, N);
                 return vec3(1.0) / refractChance;
             } else {
@@ -329,8 +328,6 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
 
             return mat.baseCol / refractChance;
         } else {
-            return vec3(0.0);
-        
             // Diffuse lobe
 
             vec3 L = CosineSampleHemisphere(v, N, rec);
@@ -399,7 +396,7 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar,
     vec3 tangent = normalize(w * tri.v0.tangent + u * tri.v1.tangent + v * tri.v2.tangent);
     vec3 bitangent = normalize(w * tri.v0.bitangent + u * tri.v1.bitangent + v * tri.v2.bitangent);
     
-    bool backFace = dot(geoNormal, ray.dir) > 0.0;
+    bool backFace = dot(normal, ray.dir) > 0.0;
 
     if (backFace) {
         geoNormal = -geoNormal;
@@ -593,8 +590,7 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
 
         ray.dir = bounceDir;
 
-        vec3 offsetNormal = dot(bounceDir, rec.geoNormal) > 0.0 ? rec.geoNormal : -rec.geoNormal;
-        ray.orig = rec.point + offsetNormal * EPSILON * 10.0;
+        ray.orig = rec.point + bounceDir * EPSILON;
 
         // Russian Roulette
         // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Russian_Roulette_and_Splitting
