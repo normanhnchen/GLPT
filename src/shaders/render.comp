@@ -373,6 +373,25 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
         if (Xi.z < specularChance + refractChance) {
             // Transmission lobe
 
+            /*
+            * Written with help from AI
+            * =============================================================================
+            * KNOWN LIMITATION: Silhouette & Grazing Angle Artifacts
+            * =============================================================================
+            * This renderer currently exhibits dark/artifacted silhouettes on spherical
+            * transmissive geometry at grazing angles.
+            *
+            * Potential causes:
+            * 1. Precision/Self-Intersection: At grazing angles, ray origin offsets might
+            * cause rays to re-intersect the current surface (causing black patches).
+            * 2. Refraction/TIR: Problems with the math calculations and the architecture.
+            * 3. Interpolated Normals: Miscalculated normals, tangents, bitangents can cause
+            * artifacts in refractions.
+            * 4. Importance Sampling GGX VNDF: Possible miscalculations or bugs in the
+            * function.
+            * =============================================================================
+            */
+
             vec3 L = refract(ray.dir, N, rec.eta);
 
             // Total internal reflection (TIR)
