@@ -13,7 +13,6 @@ from src.model import *
 
 camera = Camera()
 
-
 first_mouse = True
 last_x = screen.width / 2
 last_y = screen.height / 2
@@ -46,16 +45,16 @@ def main():
 
     ctx = moderngl.create_context()
 
-    scene = Scene("src/assets/glass_test.glb", hdri_path="src/assets/day_sky_hdri.exr")
+    scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
 
     shader = Shader(
         ctx,
-        "src/shaders/render.vs",
-        "src/shaders/render.fs"
+        file_paths.vert,
+        file_paths.frag
     )
     compute_shader = ComputeShader(
         ctx,
-        "src/shaders/render.comp"
+        file_paths.comp
     )
 
     compute_texture = ctx.texture(screen.resolution, 4, dtype=f4)
@@ -293,7 +292,7 @@ def main():
 
             compute_shader.prog["blur"].value = post_process_settings.blur
 
-            compute_shader.prog["hdriExposure"].value = set_f4(5)
+            compute_shader.prog["hdriExposure"].value = post_process_settings.hdri_exposure
 
             # Apply ceiling function
             # Allows the GPU to reach the entire screen despite different screen resolutions
@@ -304,25 +303,25 @@ def main():
             compute_texture.bind_to_image(0, read=True, write=True)
             compute_shader.prog.run(local_size_x, local_size_y)
         
-        # Draw to screen
-        compute_texture.use(location=0)
+            # Draw to screen
+            compute_texture.use(location=0)
 
-        shader.prog["exposure"].value = 1.0
-        
-        # Options:
-        #   - None
-        #   - ACESFilm
-        #   - AgX, AgXGolden, AgXPunchy
-        #   - Filmic
-        #   - Lottes
-        #   - Neutral
-        #   - Reinhard, Reinhard2
-        #   - Uchimura
-        #   - Uncharted2
-        #   - Unreal
-        shader.set_tonemap("AgXPunchy")
-        
-        vao.render(moderngl.TRIANGLE_STRIP)
+            shader.prog["exposure"].value = post_process_settings.exposure
+            
+            # Options:
+            #   - None
+            #   - ACESFilm
+            #   - AgX, AgXGolden, AgXPunchy
+            #   - Filmic
+            #   - Lottes
+            #   - Neutral
+            #   - Reinhard, Reinhard2
+            #   - Uchimura
+            #   - Uncharted2
+            #   - Unreal
+            shader.set_tonemap(post_process_settings.tonemap)
+            
+            vao.render(moderngl.TRIANGLE_STRIP)
 
         glfwSwapBuffers(window)
         glfwPollEvents()
