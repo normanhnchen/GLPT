@@ -4,6 +4,7 @@ import json, struct
 import cv2
 
 from src.dtypes import *
+from src.bvh import *
 
 
 class Texture:
@@ -245,6 +246,8 @@ class Scene:
         self.hdri = None
         if hdri_path is not None:
             self.hdri = HDRI(hdri_path)
+        
+        self.bvh = BVH(self)
     
     # Logic for parsing GLB files assisted by AI
     def _get_extensions(self):
