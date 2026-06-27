@@ -154,6 +154,7 @@ class Scene:
 
         all_vertices = []
         all_triangles = []
+        all_centroids = []
         all_normals = []
         all_faces = []
         all_uvs = []
@@ -205,6 +206,7 @@ class Scene:
             mat_id = materials_list.index(material)
 
             vertices = mesh.vertices
+            centroids = mesh.triangles_center
             normals = mesh.vertex_normals
             faces = mesh.faces
             if hasattr(mesh.visual, "uv") and mesh.visual.uv is not None and len(mesh.visual.uv) == len(vertices):
@@ -218,8 +220,8 @@ class Scene:
 
             all_vertices.append(vertices)
             all_triangles.append(global_faces)
+            all_centroids.append(centroids)
             all_normals.append(normals)
-            all_faces.append(faces)
             all_uvs.append(uvs)
             all_material_ids.append(mesh_material_ids)
 
@@ -227,8 +229,8 @@ class Scene:
         
         self.vertices = np.vstack(all_vertices).astype(f4)
         self.triangles = np.vstack(all_triangles).astype(i4)
+        self.centroids = np.concatenate(all_centroids).astype(f4)
         self.normals = np.vstack(all_normals).astype(f4)
-        self.faces = np.vstack(all_faces).astype(f4)
         self.uvs = np.vstack(all_uvs).astype(f4)
         self.material_ids = np.concatenate(all_material_ids).astype(i4)
         self.materials = np.array(materials)
