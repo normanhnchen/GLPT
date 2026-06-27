@@ -1,7 +1,4 @@
-from src.model import *
-
-
-scene = Scene("src/assets/cornell_box.glb")
+import numpy as np
 
 
 # https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
@@ -9,8 +6,7 @@ scene = Scene("src/assets/cornell_box.glb")
 class BVHNode:
     aabb_min = None
     aabb_max = None
-    left_node = None
-    right_node = None
+    node_idx = None
     first_tri_idx = None
     tri_count = None
     is_leaf = False
@@ -21,12 +17,13 @@ class BVH:
         self.scene = scene
 
         self.root = BVHNode()
+        self.root.node_idx = 0
         self.root.aabb_max = np.max(scene.vertices, axis=0)
         self.root.aabb_min = np.min(scene.vertices, axis=0)
         self.root.first_tri_idx = 0
         self.root.tri_count = scene.num_triangles
 
-        self.node_idx = 0
+        self.curr_node_idx = 0
         self.nodes = [self.root]
         self.tri_indices = np.arange(scene.num_triangles)
 
@@ -34,7 +31,8 @@ class BVH:
     
     def subdivide(self, node):
         if node.tri_count <= 2:
-            print(f"LEAF: tri_count={node.tri_count}")
+            # print(f"LEAF: tri_count={node.tri_count}")
+            node.is_leaf = True
             return
 
         extent = node.aabb_max - node.aabb_min
@@ -53,6 +51,8 @@ class BVH:
                 # Swap triangle indices
                 self.tri_indices[[i, j]] = self.tri_indices[[j, i]]
                 j -= 1
+        
+        # Stop if one of the sides are empty
         left_count = i - node.first_tri_idx
         if left_count == 0 or left_count == node.tri_count:
             return
@@ -68,9 +68,15 @@ class BVH:
         self.update_node_bounds(left_child)
         self.update_node_bounds(right_child)
 
-        node.left_node = left_child
-        node.right_node = right_child
+        left_child.node_idx = self.curr_node_idx + 1
+        right_child.node_idx = self.curr_node_idx + 2
 
+        self.curr_node_idx += 2
+        
+        self.nodes.append(left_child)
+        self.nodes.append(right_child)
+
+        # Recurse
         self.subdivide(left_child)
         self.subdivide(right_child)
         
@@ -79,6 +85,3 @@ class BVH:
         tri_verts = self.scene.vertices[self.scene.triangles[indices]]
         node.aabb_min = np.min(tri_verts, axis=(0, 1))
         node.aabb_max = np.max(tri_verts, axis=(0, 1))
-
-
-bvh = BVH(scene)
