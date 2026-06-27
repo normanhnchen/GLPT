@@ -191,8 +191,7 @@ def main():
         if KHR_materials_ior:
             material_data[i]["ior"] = KHR_materials_ior["ior"]
         else:
-            material_data[i]["ior"] = set_f4(1.5)
-            
+            material_data[i]["ior"] = set_f4(1.5) 
 
     triangle_data = np.zeros(scene.num_triangles, dtype=triangle_dtype)
     
@@ -222,6 +221,30 @@ def main():
 
     triangle_data["mat"] = material_data[scene.material_ids]
 
+    bvh_node_dtype = np.dtype([
+        ("aabbMin", *vec3),
+        ("leftChildIdx", i4),
+        ("aabbMax", *vec3),
+        ("rightChildIdx", i4),
+        ("firstTriIdx", i4),
+        ("triCount", i4),
+        ("isLeaf", i4),
+        ("pad1", f4)
+    ])
+
+    bvh_node_data = np.zeros(scene.num_bvh_nodes, bvh_node_dtype)
+
+    for i, node in enumerate(scene.bvh.nodes):
+        bvh_node_data[i]["aabbMin"] = node.aabb_min
+        bvh_node_data[i]["aabbMax"] = node.aabb_max
+        bvh_node_data[i]["leftChildIdx"] = node.left_child_idx
+        bvh_node_data[i]["rightChildIdx"] = node.right_child_idx
+        bvh_node_data[i]["firstTriIdx"] = node.first_tri_idx
+        bvh_node_data[i]["triCount"] = node.tri_count
+        bvh_node_data[i]["isLeaf"] = node.is_leaf
+    
+    tri_indices_data = scene.bvh.tri_indices.astype(i4)
+
     camera_buffer = ctx.buffer(camera_data.tobytes())
     camera_buffer.bind_to_storage_buffer(0)
 
@@ -230,6 +253,12 @@ def main():
 
     material_buffer = ctx.buffer(material_data.tobytes())
     material_buffer.bind_to_storage_buffer(2)
+
+    bvh_node_buffer = ctx.buffer(bvh_node_data.tobytes())
+    bvh_node_buffer.bind_to_storage_buffer(3)
+
+    tri_indices_buffer = ctx.buffer(tri_indices_data.tobytes())
+    tri_indices_buffer.bind_to_storage_buffer(4)
 
     scene.create_texture_arrays(ctx, 1024, 1024)
     scene.bind_texture_arrays()
@@ -287,7 +316,6 @@ def main():
             camera_buffer.write(camera_data.tobytes())
 
             compute_shader.prog["totalSamples"].value = total_samples
-            compute_shader.prog["numTriangles"].value = scene.num_triangles
             compute_shader.prog["maxDepth"].value = pt_settings.max_depth
 
             compute_shader.prog["blur"].value = post_process_settings.blur
