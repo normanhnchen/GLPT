@@ -1,5 +1,7 @@
 import trimesh
 import numpy as np
+import json, struct
+import cv2
 
 from src.dtypes import *
 
@@ -25,7 +27,13 @@ class Texture:
 
 class Material:
     def __init__(self, trimesh_material):
-        self.alpha_mode = getattr(trimesh_material, "alphaMode", "OPAQUE")
+        alpha_mode = getattr(trimesh_material, "alphaMode", "OPAQUE")
+        if alpha_mode == "MASK":
+            self.alpha_mode = 1
+        elif alpha_mode == "BLEND":
+            self.alpha_mode = 2
+        else: # OPAQUE
+            self.alpha_mode = 0
         self.alpha_cutoff = getattr(trimesh_material, "alphaCutoff", 0.5)
         self.double_sided = bool(getattr(trimesh_material, "doubleSided", False))
 
@@ -106,6 +114,8 @@ class Material:
         self.metallic_tex_id = set_i4(-1)
         self.normal_tex_id = set_i4(-1)
         self.occlusion_tex_id = set_i4(-1)
+
+        self.extensions = {}
     
     def _to_float_rgb(self, color):
         color = np.asarray(color, dtype=f4)
@@ -115,9 +125,32 @@ class Material:
         return color
 
 
+class HDRI:
+    def __init__(self, hdri_path):
+        img = cv2.imread(hdri_path, cv2.IMREAD_UNCHANGED)
+        # Convert from OpenCV default format of BGR color to RGB color
+        self.img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        
+        self.height, self.width, self.channels = self.img.shape
+        self.img_bytes = self.img.tobytes()
+    
+    def bind(self, ctx, loc):
+        hdri_tex = ctx.texture(
+            (self.width, self.height),
+            self.channels,
+            self.img_bytes,
+            dtype=f4
+            )
+        hdri_tex.use(location=loc)
+
+
 class Scene:
-    def __init__(self, file_path):
-        scene = trimesh.load(file_path)
+    def __init__(self, scene_path, hdri_path=None):
+        self.scene_path = scene_path
+
+        scene = trimesh.load(scene_path)
+
+        all_extensions = self._get_extensions()
 
         all_vertices = []
         all_triangles = []
@@ -139,15 +172,24 @@ class Scene:
         vertex_offset = 0
 
         # Iterate through all scene geometries
-        for node_name in scene.graph.nodes_geometry:
+        for i, node_name in enumerate(scene.graph.nodes_geometry):
             transform, geometry_name = scene.graph[node_name]
             mesh = scene.geometry[geometry_name]
 
             # Convert mesh data to world space
             mesh.apply_transform(transform)
 
-            trimesh_material = mesh.visual.material
+            if hasattr(mesh.visual, "material") and mesh.visual.material is not None:
+                trimesh_material = mesh.visual.material
+            else:
+                trimesh_material = None
             material = Material(trimesh_material)
+
+            material_name = getattr(trimesh_material, "name", None)
+            mat_extensions = all_extensions.get(material_name)
+
+            if mat_extensions:
+                material.extensions.update(mat_extensions)
 
             material.base_color_tex_id = self._get_texture_id(material.base_color_tex, self.base_color_textures)
             material.emissive_tex_id = self._get_texture_id(material.emissive_tex, self.emissive_textures)
@@ -165,7 +207,10 @@ class Scene:
             vertices = mesh.vertices
             normals = mesh.vertex_normals
             faces = mesh.faces
-            uvs = mesh.visual.uv
+            if hasattr(mesh.visual, "uv") and mesh.visual.uv is not None and len(mesh.visual.uv) == len(vertices):
+                uvs = mesh.visual.uv
+            else:
+                uvs = np.zeros((len(vertices), 2), dtype=f4)
 
             global_faces = faces + vertex_offset
 
@@ -194,7 +239,43 @@ class Scene:
 
         self.num_triangles = len(self.triangles)
         self.num_materials = len(self.materials)
+
+        self.hdri = None
+        if hdri_path is not None:
+            self.hdri = HDRI(hdri_path)
     
+    # Logic for parsing GLB files assisted by AI
+    def _get_extensions(self):
+        with open(self.scene_path, "rb") as f:
+            # GLB header is 12 bytes
+            header = f.read(12)
+            # Interpret binary bytes
+            magic, version, length = struct.unpack("<4sII", header)
+            # Check the validity
+            if magic != b"glTF":
+                raise ValueError("Not a GLB file")
+
+            # Continue until file is processed
+            while f.tell() < length:
+                chunk_len, chunk_type = struct.unpack("<I4s", f.read(8))
+                chunk_data = f.read(chunk_len)
+                # Stop until the JSON chunk (scene metadata)
+                if chunk_type == b"JSON":
+                    glb_json = json.loads(chunk_data.decode("utf-8"))
+                    break
+            else:
+                raise ValueError("No JSON chunk found")
+
+        all_extensions = {}
+        for mat in glb_json.get("materials", []):
+            name = mat.get("name")
+            ext = mat.get("extensions", {})
+            if name and ext:
+                all_extensions[name] = ext
+        
+        return all_extensions
+
+        
     def _get_texture_id(self, tex, tex_list):
         if tex.is_empty:
             return set_i4(-1)
