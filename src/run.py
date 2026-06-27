@@ -46,7 +46,7 @@ def main():
 
     ctx = moderngl.create_context()
 
-    scene = Scene("src/assets/texture_test.glb")
+    scene = Scene("src/assets/glass_test.glb", hdri_path="src/assets/day_sky_hdri.exr")
 
     shader = Shader(
         ctx,
@@ -133,9 +133,9 @@ def main():
         ("metalTexId", i4),
         ("normalTexId", i4),
         ("occlTexId", i4),
-        ("pad1", f4),
-        ("pad2", f4),
-        ("pad3", f4)
+        ("emissiveStrength", f4),
+        ("transmission", f4),
+        ("ior", f4),
     ])
 
     triangle_dtype = np.dtype([
@@ -151,6 +151,10 @@ def main():
         material_data[i]["roughness"] = mat.roughness
         material_data[i]["emissive"] = mat.emissive_color
         material_data[i]["metallic"] = mat.metallic
+
+        material_data[i]["alphaMode"] = mat.alpha_mode
+        material_data[i]["alphaCutoff"] = mat.alpha_cutoff
+        material_data[i]["doubleSided"] = mat.double_sided
 
         # Flags
         material_data[i]["hasEmission"] = mat.has_emission
@@ -168,6 +172,28 @@ def main():
         material_data[i]["metalTexId"] = mat.metallic_tex_id
         material_data[i]["normalTexId"] = mat.normal_tex_id
         material_data[i]["occlTexId"] = mat.occlusion_tex_id
+        
+        # glTF extensions
+        extensions = mat.extensions
+
+        KHR_materials_emissive_strength = extensions.get("KHR_materials_emissive_strength")
+        if KHR_materials_emissive_strength:
+            material_data[i]["emissiveStrength"] = KHR_materials_emissive_strength["emissiveStrength"]
+        else:
+            material_data[i]["emissiveStrength"] = 0.0
+
+        KHR_materials_transmission = extensions.get("KHR_materials_transmission")
+        if KHR_materials_transmission:
+            material_data[i]["transmission"] = KHR_materials_transmission["transmissionFactor"]
+        else:
+            material_data[i]["transmission"] = set_f4(0.0)
+
+        KHR_materials_ior = extensions.get("KHR_materials_ior")
+        if KHR_materials_ior:
+            material_data[i]["ior"] = KHR_materials_ior["ior"]
+        else:
+            material_data[i]["ior"] = set_f4(1.5)
+            
 
     triangle_data = np.zeros(scene.num_triangles, dtype=triangle_dtype)
     
@@ -208,6 +234,8 @@ def main():
 
     scene.create_texture_arrays(ctx, 1024, 1024)
     scene.bind_texture_arrays()
+
+    scene.hdri.bind(ctx, 6)
     
     last_frame_start = 0
     stats_start_time = time.perf_counter()
@@ -265,6 +293,8 @@ def main():
 
             compute_shader.prog["blur"].value = post_process_settings.blur
 
+            compute_shader.prog["hdriExposure"].value = set_f4(5)
+
             # Apply ceiling function
             # Allows the GPU to reach the entire screen despite different screen resolutions
             local_size_x = (screen.width + 15) // 16
@@ -273,10 +303,25 @@ def main():
             # Run compute shader
             compute_texture.bind_to_image(0, read=True, write=True)
             compute_shader.prog.run(local_size_x, local_size_y)
-
+        
         # Draw to screen
         compute_texture.use(location=0)
 
+        shader.prog["exposure"].value = 1.0
+        
+        # Options:
+        #   - None
+        #   - ACESFilm
+        #   - AgX, AgXGolden, AgXPunchy
+        #   - Filmic
+        #   - Lottes
+        #   - Neutral
+        #   - Reinhard, Reinhard2
+        #   - Uchimura
+        #   - Uncharted2
+        #   - Unreal
+        shader.set_tonemap("AgXPunchy")
+        
         vao.render(moderngl.TRIANGLE_STRIP)
 
         glfwSwapBuffers(window)
