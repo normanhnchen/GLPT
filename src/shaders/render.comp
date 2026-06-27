@@ -280,6 +280,8 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
     float diffuseChance = 1.0 - specularChance - refractChance;
 
     if (Xi.z < specularChance) {
+        return vec3(0.0);
+        
         // Specular lobe
         float a = mat.roughness * mat.roughness;
         float a2 = a * a;
@@ -305,31 +307,14 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
 
         vec3 specular = F * (G2 / G1);
 
+        specular = clamp(specular, 0.0, 1.0);
+
         return specular / specularChance;
     } else {
         // Transmission/Diffuse lobe
 
         if (Xi.z < specularChance + refractChance) {
             // Transmission lobe
-
-            /*
-            * Written with help from AI
-            * =============================================================================
-            * KNOWN LIMITATION: Silhouette & Grazing Angle Artifacts
-            * =============================================================================
-            * This renderer currently exhibits dark/artifacted silhouettes on spherical
-            * transmissive geometry at grazing angles.
-            *
-            * Potential causes:
-            * 1. Precision/Self-Intersection: At grazing angles, ray origin offsets might
-            * cause rays to re-intersect the current surface (causing black patches).
-            * 2. Refraction/TIR: Problems with the math calculations and the architecture.
-            * 3. Interpolated Normals: Miscalculated normals, tangents, bitangents can cause
-            * artifacts in refractions.
-            * 4. Importance Sampling GGX VNDF: Possible miscalculations or bugs in the
-            * function.
-            * =============================================================================
-            */
 
             vec3 L = refract(ray.dir, N, rec.eta);
 
@@ -344,6 +329,8 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
 
             return mat.baseCol / refractChance;
         } else {
+            return vec3(0.0);
+        
             // Diffuse lobe
 
             vec3 L = CosineSampleHemisphere(v, N, rec);
@@ -607,7 +594,7 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
         ray.dir = bounceDir;
 
         vec3 offsetNormal = dot(bounceDir, rec.geoNormal) > 0.0 ? rec.geoNormal : -rec.geoNormal;
-        ray.orig = rec.point + offsetNormal * EPSILON;
+        ray.orig = rec.point + offsetNormal * EPSILON * 10.0;
 
         // Russian Roulette
         // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Russian_Roulette_and_Splitting
