@@ -30,8 +30,7 @@ class BVH:
         self.subdivide(self.root)
     
     def subdivide(self, node):
-        if node.tri_count <= 2:
-            # print(f"LEAF: tri_count={node.tri_count}")
+        if node.tri_count <= 4:
             node.is_leaf = True
             return
 
