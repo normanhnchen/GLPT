@@ -334,22 +334,22 @@ def main():
             # Draw to screen
             compute_texture.use(location=0)
 
-            shader.prog["exposure"].value = post_process_settings.exposure
-            
-            # Options:
-            #   - None
-            #   - ACESFilm
-            #   - AgX, AgXGolden, AgXPunchy
-            #   - Filmic
-            #   - Lottes
-            #   - Neutral
-            #   - Reinhard, Reinhard2
-            #   - Uchimura
-            #   - Uncharted2
-            #   - Unreal
-            shader.set_tonemap(post_process_settings.tonemap)
-            
-            vao.render(moderngl.TRIANGLE_STRIP)
+        shader.prog["exposure"].value = post_process_settings.exposure
+        
+        # Options:
+        #   - None
+        #   - ACESFilm
+        #   - AgX, AgXGolden, AgXPunchy
+        #   - Filmic
+        #   - Lottes
+        #   - Neutral
+        #   - Reinhard, Reinhard2
+        #   - Uchimura
+        #   - Uncharted2
+        #   - Unreal
+        shader.set_tonemap(post_process_settings.tonemap)
+        
+        vao.render(moderngl.TRIANGLE_STRIP)
 
         glfwSwapBuffers(window)
         glfwPollEvents()
