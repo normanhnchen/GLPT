@@ -45,6 +45,21 @@ class PostProcessSettings:
         self.aperture = post_process_config["aperture"]
         self.focus_dist = post_process_config["focus_dist"]
         self.auto_focus = post_process_config["auto_focus"]
+        self.exposure = post_process_config["exposure"]
+        self.tonemap = post_process_config["tonemap"]
+        self.hdri_exposure = post_process_config["hdri_exposure"]
+
+
+class FilePaths:
+    def __init__(self, json_settings):
+        file_paths_config = json_settings["file_paths"]
+
+        self.scene = file_paths_config["scene"]
+        self.hdri = file_paths_config["hdri"]
+        
+        self.vert = file_paths_config["vert"]
+        self.frag = file_paths_config["frag"]
+        self.comp = file_paths_config["comp"]        
 
 
 with open("src/settings.json") as f:
@@ -54,3 +69,4 @@ screen = Screen(json_settings)
 camera_settings = CameraSettings(json_settings)
 pt_settings = PTSettings(json_settings)
 post_process_settings = PostProcessSettings(json_settings)
+file_paths = FilePaths(json_settings)

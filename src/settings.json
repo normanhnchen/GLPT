@@ -1,4 +1,12 @@
-{
+{   
+    "file_paths": {
+        "scene": "src/assets/texture_test.glb",
+        "hdri": "src/assets/day_sky_hdri.exr",
+        
+        "vert": "src/shaders/render.vs",
+        "frag": "src/shaders/render.fs",
+        "comp": "src/shaders/render.comp"
+    },
     "screen": {
         "width": 1080,
         "height": 720,
@@ -24,6 +32,9 @@
         "blur": 1.0,
         "aperture": 0.0,
         "focus_dist": 10,
-        "auto_focus": 0
+        "auto_focus": 0,
+        "exposure": 1.0,
+        "tonemap": "ACESFilm",
+        "hdri_exposure": 1.0
     }
 }
