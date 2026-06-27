@@ -3,6 +3,7 @@ import numpy as np
 
 # https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
 # https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
+# https://jacco.ompf2.com/2022/04/21/how-to-build-a-bvh-part-3-quick-builds/
 
 
 class BVHNode:
@@ -34,27 +35,12 @@ class BVH:
         if node.tri_count <= 4:
             node.is_leaf = True
             return
+        
+        best_cost, best_pos, best_axis = self.find_best_split(node)
 
-        best_axis = -1
-        best_pos = 0
-        best_cost = np.inf
+        parent_cost = self.calculate_node_cost(node)
 
-        # Determine best split position using SAH
-        for axis in range(3):
-            for i in range(node.tri_count):
-                tri_idx = self.tri_indices[i]
-                centroid_pos = self.scene.centroids[tri_idx][axis]
-                cost = self.evaluate_SAH(node, axis, centroid_pos)
-                if cost < best_cost:
-                    best_pos = centroid_pos
-                    best_axis = axis
-                    best_cost = cost
-
-        # Extent of the parent
-        e = node.aabb_max - node.aabb_min
-        parent_area = e[0] * e[1] + e[1] * e[2] + e[2] * e[0]
-        parent_cost = node.tri_count * parent_area
-
+        # Less cost to not split; terminate
         if (best_cost >= parent_cost):
             node.is_leaf = True
             return
@@ -111,6 +97,29 @@ class BVH:
         node.aabb_min = np.min(tri_verts, axis=(0, 1))
         node.aabb_max = np.max(tri_verts, axis=(0, 1))
     
+    def find_best_split(self, node):
+        best_axis = -1
+        best_pos = 0
+        best_cost = np.inf
+
+        # Determine best split position using SAH
+        for axis in range(3):
+            for i in range(node.tri_count):
+                tri_idx = self.tri_indices[i]
+                centroid_pos = self.scene.centroids[tri_idx][axis]
+                cost = self.evaluate_SAH(node, axis, centroid_pos)
+                if cost < best_cost:
+                    best_pos = centroid_pos
+                    best_axis = axis
+                    best_cost = cost
+        
+        return best_cost, best_pos, best_axis
+    
+    def calculate_node_cost(self, node):
+        e = node.aabb_max - node.aabb_min
+        area = e[0] * e[1] + e[1] * e[2] + e[2] * e[0]
+        return node.tri_count * area
+    
     def evaluate_SAH(self, node, axis, pos):
         left_box = AABB()
         right_box = AABB()
@@ -129,6 +138,11 @@ class BVH:
             else:
                 right_box.grow(vertices)
                 right_count += 1
+        
+        # Check if one side is empty
+        # Prevent NaN / INF
+        if left_count == 0 or right_count == 0:
+            return np.inf
         
         cost = left_count * left_box.get_area() + right_count * right_box.get_area()
 
