@@ -157,7 +157,6 @@ class Scene:
         all_triangles = []
         all_centroids = []
         all_normals = []
-        all_faces = []
         all_uvs = []
         all_material_ids = []
         
