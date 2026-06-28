@@ -165,8 +165,8 @@ class BVH:
 
                 right_sum += bin_tri_counts[BINS - 1 - i]
                 right_count[BINS - 2 - i] = right_sum
-                rb_mins = np.minimum(rb_mins, bin_mins[BINS - 1 - i])
-                rb_maxs = np.maximum(rb_maxs, bin_maxs[BINS - 1 - i])
+                rb_mins = np.minimum(rb_mins, bin_mins[BINS - 2 - i])
+                rb_maxs = np.maximum(rb_maxs, bin_maxs[BINS - 2 - i])
                 right_area[BINS - 2 - i] = self.get_aabb_area(rb_mins, rb_maxs)
             
             # Calculate the SAH cost for the BINS - 1 planes

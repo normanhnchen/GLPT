@@ -251,7 +251,7 @@ class Scene:
         
         end_time = time.perf_counter()
 
-        print(f"Scene built in {end_time - start_time}s")
+        print(f"Scene built in {end_time - start_time:.4f}s")
         print("Building BVH...")
         
         self.bvh = BVH(self)
@@ -343,7 +343,7 @@ class Scene:
         # Re-orthogonalize T with respect to N
         self.tangents -= np.sum(self.tangents * self.normals, axis=1, keepdims=True) * self.normals
         # Add small offset to prevent division by zero
-        self.tangents /= np.linalg.norm(self.tangents) + 1e-6
+        self.tangents /= np.linalg.norm(self.tangents, axis=1, keepdims=True) + 1e-6
 
         # Retrieve perpendicular vector B with the cross product of T and N
         self.bitangents = np.cross(self.tangents, self.normals)

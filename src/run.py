@@ -3,6 +3,7 @@ from glfw.GLFW import *
 import moderngl
 import sys
 import time
+import pickle
 
 from src.settings import *
 from src.dtypes import *
@@ -45,7 +46,15 @@ def main():
 
     ctx = moderngl.create_context()
 
-    scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+    try:
+        with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
+            scene = pickle.load(f)
+    except:
+        scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+        with open("src/assets/cache/dragon_scene.pkl", "wb") as f:
+            pickle.dump(scene, f)
+
+    # scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
 
     shader = Shader(
         ctx,
@@ -274,6 +283,8 @@ def main():
     stats_frame_count = 0
 
     should_render = True
+
+    print(scene.num_bvh_nodes)
 
     # Render loop
     while not glfwWindowShouldClose(window):
