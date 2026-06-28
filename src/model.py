@@ -296,36 +296,34 @@ class Scene:
         vertices = self.vertices
         triangles = self.triangles
         uvs = self.uvs
+        
+        v0 = vertices[triangles[:, 0]]
+        v1 = vertices[triangles[:, 1]]
+        v2 = vertices[triangles[:, 2]]
+        uv0 = uvs[triangles[:, 0]]
+        uv1 = uvs[triangles[:, 1]]
+        uv2 = uvs[triangles[:, 2]]
 
-        self.tangents = np.zeros_like(vertices)
-        self.bitangents = np.zeros_like(vertices)
+        edge1 = v1 - v0
+        edge2 = v2 - v0
+        delta_uv1 = uv1 - uv0
+        delta_uv2 = uv2 - uv0
 
-        for face in triangles:
-            idx0, idx1, idx2 = face
+        det = delta_uv1[:, 0] * delta_uv2[:, 1] - delta_uv2[:, 0] * delta_uv1[:, 1]
 
-            v0, v1, v2 = vertices[idx0], vertices[idx1], vertices[idx2]
-            uv0, uv1, uv2 = uvs[idx0], uvs[idx1], uvs[idx2]
+        # Find the inverse determinahnt
+        # Prevent division by zero
+        f = np.divide(1, det, out=np.zeros_like(det), where=np.abs(det) > 1e-6)
 
-            edge1 = v1 - v0
-            edge2 = v2 - v0
-            delta_uv1 = uv1 - uv0
-            delta_uv2 = uv2 - uv0
+        tangent = f[:, None] * (delta_uv2[:, 1, None] * edge1 - delta_uv1[:, 1, None] * edge2)
+        bitangent = f[:, None] * (-delta_uv2[:, 0, None] * edge1 + delta_uv1[:, 0, None] * edge2)
 
-            det = (delta_uv1[0] * delta_uv2[1] - delta_uv2[0] * delta_uv1[1])
-            
-            # Prevent division by zero
-            if abs(det) < 1e-6:
-                continue
-                
-            f = 1 / det
+        self.tangents = np.zeros_like(self.vertices)
+        self.bitangents = np.zeros_like(self.vertices)
 
-            tangent = f * (delta_uv2[1] * edge1 - delta_uv1[1] * edge2)
-            bitangent = f * (-delta_uv2[0] * edge1 + delta_uv1[0] * edge2)
-
-            # Accumulate onto vertices
-            for idx in face:
-                self.tangents[idx] += tangent
-                self.bitangents[idx] += bitangent
+        # Acculumate onto vertices
+        np.add.at(self.tangents, self.triangles.flatten(), np.repeat(tangent, 3, axis=0))
+        np.add.at(self.bitangents, self.triangles.flatten(), np.repeat(bitangent, 3, axis=0))
         
         # Normalize to get unit vectors
         # Add small offset to prevent division by zero
@@ -334,20 +332,14 @@ class Scene:
 
         # Gram-Schmidt process
         # Re-orthogonalize TBN vectors to be mutually perpendicular
-        for i in range(len(self.vertices)):
-            T = self.tangents[i]
-            N = self.normals[i]
 
-            # Re-orthogonalize T with respect to N
-            T = T - np.dot(T, N) * N
-            # Add small offset to prevent division by zero
-            T /= np.linalg.norm(T) + 1e-6
+        # Re-orthogonalize T with respect to N
+        self.tangents -= np.sum(self.tangents * self.normals, axis=1, keepdims=True) * self.normals
+        # Add small offset to prevent division by zero
+        self.tangents /= np.linalg.norm(self.tangents) + 1e-6
 
-            # Retrieve perpendicular vector B with the cross product of T and N
-            B = np.cross(T, N)
-
-            self.tangents[i] = T
-            self.bitangents[i] = B
+        # Retrieve perpendicular vector B with the cross product of T and N
+        self.bitangents = np.cross(self.tangents, self.normals)
 
     def create_texture_arrays(self, ctx, width, height):
         self.texture_arrays = {}
