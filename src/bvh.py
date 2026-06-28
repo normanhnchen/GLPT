@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 
 # https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
@@ -28,8 +29,13 @@ class BVH:
 
         self.nodes = [self.root]
         self.tri_indices = np.arange(scene.num_triangles)
+        
+        start_time = time.perf_counter()
 
         self.subdivide(self.root)
+
+        end_time = time.perf_counter()
+        print(f"BVH built in {end_time - start_time:.4f}s")
     
     def subdivide(self, node):
         if node.tri_count <= 4:
@@ -102,14 +108,20 @@ class BVH:
         best_pos = 0
         best_cost = np.inf
 
+        intervals = 16
         # Determine best split position using SAH
         for axis in range(3):
-            for i in range(node.tri_count):
-                tri_idx = self.tri_indices[i]
-                centroid_pos = self.scene.centroids[tri_idx][axis]
-                cost = self.evaluate_SAH(node, axis, centroid_pos)
+            aabb_min = node.aabb_min[axis]
+            aabb_max = node.aabb_max[axis]
+            if aabb_min == aabb_max:
+                continue
+            
+            scale = (aabb_max - aabb_min) / intervals
+            for i in range(intervals):
+                pos = aabb_min + i * scale
+                cost = self.evaluate_SAH(node, axis, pos)
                 if cost < best_cost:
-                    best_pos = centroid_pos
+                    best_pos = pos
                     best_axis = axis
                     best_cost = cost
         
