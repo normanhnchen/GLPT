@@ -108,36 +108,37 @@ class BVH:
         best_pos = 0
         best_cost = np.inf
 
+        indices = self.tri_indices[node.first_tri_idx : node.first_tri_idx + node.tri_count]
+        triangles = self.scene.triangles[indices]
+        centroids = self.scene.centroids[indices]
+        vertices = self.scene.vertices[triangles]
+
         BINS = 8
         # Determine best split position using SAH
         for axis in range(3):
-            bounds_min, bounds_max = np.inf, -np.inf
+            c = centroids[:, axis]
 
-            for i in range(node.tri_count):
-                tri_idx = self.tri_indices[node.first_tri_idx + i]
-                tri = self.scene.triangles[tri_idx]
-                centroids = self.scene.centroids[tri_idx]
-                
-                bounds_min = np.minimum(bounds_min, centroids[axis])
-                bounds_max = np.maximum(bounds_max, centroids[axis])
+            bounds_min = np.min(c)
+            bounds_max = np.max(c)
             
             if bounds_min == bounds_max:
                 continue
-            
-            bins = [Bin() for _ in range(BINS)]
 
             scale = BINS / (bounds_max - bounds_min)
+            
+            bin_ids = np.minimum(BINS - 1, (c - bounds_min) * scale).astype(np.int32)
+            # AABBs
+            bin_mins = np.full((BINS, 3), np.inf)
+            bin_maxs = np.full((BINS, 3), -np.inf)
 
-            # Populate the bins
-            for i in range(node.tri_count):
-                tri_idx = self.tri_indices[node.first_tri_idx + i]
-                tri = self.scene.triangles[tri_idx]
-                vertices = self.scene.vertices[tri]
-                centroid = self.scene.centroids[tri_idx]
+            bin_tri_counts = np.bincount(bin_ids, minlength=BINS)
 
-                bin_idx = int(min(BINS - 1, (centroid[axis] - bounds_min) * scale))
-                bins[bin_idx].tri_count += 1
-                bins[bin_idx].aabb.grow(vertices)
+            # Get the minimum within each vertex
+            vertices_min = np.min(vertices, axis=1)
+            vertices_max = np.max(vertices, axis=1)
+
+            np.minimum.at(bin_mins, bin_ids, vertices_min)
+            np.maximum.at(bin_maxs, bin_ids, vertices_max)
             
             left_area = np.zeros(BINS - 1)
             right_area = np.zeros(BINS - 1)
@@ -145,23 +146,28 @@ class BVH:
             left_count = np.zeros(BINS - 1)
             right_count = np.zeros(BINS - 1)
 
-            left_box = AABB()
-            right_box = AABB()
+            # AABB boxes
+            lb_mins = np.full(3,  np.inf)
+            lb_maxs = np.full(3, -np.inf)
+            rb_mins = np.full(3,  np.inf)
+            rb_maxs = np.full(3, -np.inf)
 
             left_sum = 0
             right_sum = 0
             
             # Gather data for the BINS - 1 planes
             for i in range(BINS - 1):
-                left_sum += bins[i].tri_count
+                left_sum += bin_tri_counts[i]
                 left_count[i] = left_sum
-                left_box.grow_aabb(bins[i].aabb)
-                left_area[i] = left_box.get_area()
+                lb_mins = np.minimum(lb_mins, bin_mins[i])
+                lb_maxs = np.maximum(lb_maxs, bin_maxs[i])
+                left_area[i] = self.get_aabb_area(lb_mins, lb_maxs)
 
-                right_sum += bins[BINS - 1 - i].tri_count
+                right_sum += bin_tri_counts[BINS - 1 - i]
                 right_count[BINS - 2 - i] = right_sum
-                right_box.grow_aabb(bins[BINS - 2 - i].aabb)
-                right_area[BINS - 2 - i] = right_box.get_area()
+                rb_mins = np.minimum(rb_mins, bin_mins[BINS - 1 - i])
+                rb_maxs = np.maximum(rb_maxs, bin_maxs[BINS - 1 - i])
+                right_area[BINS - 2 - i] = self.get_aabb_area(rb_mins, rb_maxs)
             
             # Calculate the SAH cost for the BINS - 1 planes
             scale = (bounds_max - bounds_min) / BINS
@@ -181,6 +187,10 @@ class BVH:
         e = node.aabb_max - node.aabb_min
         area = e[0] * e[1] + e[1] * e[2] + e[2] * e[0]
         return node.tri_count * area
+
+    def get_aabb_area(self, aabb_min, aabb_max):
+        e = aabb_max - aabb_min
+        return e[0] * e[1] + e[1] * e[2] + e[2] * e[0]
 
 
 class AABB:
