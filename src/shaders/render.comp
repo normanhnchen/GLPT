@@ -315,12 +315,23 @@ vec3 SamplePBR(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir) {
         if (Xi.z < specularChance + refractChance) {
             // Transmission lobe
 
-            vec3 L = refract(ray.dir, N, rec.eta);
+            float a = mat.roughness * mat.roughness;
+            float a2 = a * a;
+
+            // Convert V to tangent space for the GGX VNDF importance sample
+            vec3 V_Tangent = rec.InvTBN * V;
+
+            vec3 H_Tangent = ImportanceSampleGGXVNDF(Xi.xy, V_Tangent, a);
+
+            // Transform H back to world space
+            vec3 H = normalize(rec.TBN * H_Tangent);
+
+            vec3 L = refract(ray.dir, H, rec.eta);
 
             // Total internal reflection (TIR)
             // GLSL refract function returns vec3(0.0) on TIR
             if (L == vec3(0.0)) {
-                bounceDir = reflect(ray.dir, N);
+                bounceDir = reflect(ray.dir, H);
                 return vec3(1.0) / refractChance;
             } else {
                 bounceDir = L;
@@ -443,7 +454,7 @@ bool Hit(Ray ray, inout HitRecord rec) {
     bool hitAnything = false;
     float closestSoFar = INF;
 
-    int nodeStack[32];
+    int nodeStack[64];
     int stackIdx = 0;
     // Push root node index onto the stack
     nodeStack[stackIdx++] = 0;
@@ -591,7 +602,8 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
 
         ray.dir = bounceDir;
 
-        ray.orig = rec.point + bounceDir * EPSILON;
+        vec3 offsetDir = didRefract ? -rec.geoNormal : rec.geoNormal;
+        ray.orig = rec.point + offsetDir * EPSILON;
 
         // Russian Roulette
         // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Russian_Roulette_and_Splitting
