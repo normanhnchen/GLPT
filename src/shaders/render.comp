@@ -443,23 +443,24 @@ bool Hit(Ray ray, inout HitRecord rec) {
     bool hitAnything = false;
     float closestSoFar = INF;
 
-    int nodeStack[64];
+    int nodeStack[32];
     int stackIdx = 0;
     // Push root node index onto the stack
     nodeStack[stackIdx++] = 0;
+
+    vec3 invRayDir = 1.0 / ray.dir;
 
     while (stackIdx > 0) {
         // Pop the latest node index off
         int currIdx = nodeStack[--stackIdx];
         BVHNode currNode = BVHNodes[currIdx];
 
-        vec3 invRayDir = 1.0 / ray.dir;
-
         if (AABBIntersect(ray, invRayDir, currNode, closestSoFar)) {
             if (currNode.isLeaf == 1) {
                 for (int i = 0; i < currNode.triCount; i++) {
-                    Triangle tri = triangles[triIndices[currNode.firstTriIdx + i]];
-                    if (RayTriangleIntersect(ray, tri, i, closestSoFar, tempRec)) {
+                    int triIndex = triIndices[currNode.firstTriIdx + i];
+                    Triangle tri = triangles[triIndex];
+                    if (RayTriangleIntersect(ray, tri, triIndex, closestSoFar, tempRec)) {
                         hitAnything = true;
                         closestSoFar = tempRec.t;
                         rec = tempRec;
