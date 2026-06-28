@@ -130,10 +130,12 @@ class BVH:
 
             # Populate the bins
             for i in range(node.tri_count):
-                tri = self.tri_indices[node.first_tri_idx + i]
+                tri_idx = self.tri_indices[node.first_tri_idx + i]
+                tri = self.scene.triangles[tri_idx]
                 vertices = self.scene.vertices[tri]
+                centroid = self.scene.centroids[tri_idx]
 
-                bin_idx = int(min(BINS - 1, (centroids[axis] - bounds_min) * scale))
+                bin_idx = int(min(BINS - 1, (centroid[axis] - bounds_min) * scale))
                 bins[bin_idx].tri_count += 1
                 bins[bin_idx].aabb.grow(vertices)
             
@@ -179,36 +181,6 @@ class BVH:
         e = node.aabb_max - node.aabb_min
         area = e[0] * e[1] + e[1] * e[2] + e[2] * e[0]
         return node.tri_count * area
-    
-    def evaluate_SAH(self, node, axis, pos):
-        left_box = AABB()
-        right_box = AABB()
-
-        left_count = 0
-        right_count = 0
-
-        for i in range(node.tri_count):
-            tri_idx = self.tri_indices[node.first_tri_idx + i]
-            tri = self.scene.triangles[tri_idx]
-            vertices = self.scene.vertices[tri]
-            centroid = self.scene.centroids[tri_idx]
-            if centroid[axis] < pos:
-                left_box.grow(vertices)
-                left_count += 1
-            else:
-                right_box.grow(vertices)
-                right_count += 1
-        
-        # Check if one side is empty
-        # Prevent NaN / INF
-        if left_count == 0 or right_count == 0:
-            return np.inf
-        
-        cost = left_count * left_box.get_area() + right_count * right_box.get_area()
-
-        if cost > 0:
-            return cost
-        return np.inf
 
 
 class AABB:
