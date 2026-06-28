@@ -42,7 +42,7 @@ class BVH:
             node.is_leaf = True
             return
         
-        best_cost, best_pos, best_axis = self.find_best_split(node)
+        best_axis, best_pos, best_cost = self.find_best_split(node)
 
         parent_cost = self.calculate_node_cost(node)
 
@@ -108,24 +108,72 @@ class BVH:
         best_pos = 0
         best_cost = np.inf
 
-        intervals = 16
+        BINS = 8
         # Determine best split position using SAH
         for axis in range(3):
-            aabb_min = node.aabb_min[axis]
-            aabb_max = node.aabb_max[axis]
-            if aabb_min == aabb_max:
+            bounds_min, bounds_max = np.inf, -np.inf
+
+            for i in range(node.tri_count):
+                tri_idx = self.tri_indices[node.first_tri_idx + i]
+                tri = self.scene.triangles[tri_idx]
+                centroids = self.scene.centroids[tri_idx]
+                
+                bounds_min = np.minimum(bounds_min, centroids[axis])
+                bounds_max = np.maximum(bounds_max, centroids[axis])
+            
+            if bounds_min == bounds_max:
                 continue
             
-            scale = (aabb_max - aabb_min) / intervals
-            for i in range(intervals):
-                pos = aabb_min + i * scale
-                cost = self.evaluate_SAH(node, axis, pos)
-                if cost < best_cost:
-                    best_pos = pos
+            bins = [Bin() for _ in range(BINS)]
+
+            scale = BINS / (bounds_max - bounds_min)
+
+            # Populate the bins
+            for i in range(node.tri_count):
+                tri = self.tri_indices[node.first_tri_idx + i]
+                vertices = self.scene.vertices[tri]
+
+                bin_idx = int(min(BINS - 1, (centroids[axis] - bounds_min) * scale))
+                bins[bin_idx].tri_count += 1
+                bins[bin_idx].aabb.grow(vertices)
+            
+            left_area = np.zeros(BINS - 1)
+            right_area = np.zeros(BINS - 1)
+
+            left_count = np.zeros(BINS - 1)
+            right_count = np.zeros(BINS - 1)
+
+            left_box = AABB()
+            right_box = AABB()
+
+            left_sum = 0
+            right_sum = 0
+            
+            # Gather data for the BINS - 1 planes
+            for i in range(BINS - 1):
+                left_sum += bins[i].tri_count
+                left_count[i] = left_sum
+                left_box.grow_aabb(bins[i].aabb)
+                left_area[i] = left_box.get_area()
+
+                right_sum += bins[BINS - 1 - i].tri_count
+                right_count[BINS - 2 - i] = right_sum
+                right_box.grow_aabb(bins[BINS - 2 - i].aabb)
+                right_area[BINS - 2 - i] = right_box.get_area()
+            
+            # Calculate the SAH cost for the BINS - 1 planes
+            scale = (bounds_max - bounds_min) / BINS
+            for i in range(BINS - 1):
+                if left_count[i] == 0 or right_count[i] == 0:
+                    plane_cost = np.inf
+                else:
+                    plane_cost = left_count[i] * left_area[i] + right_count[i] * right_area[i]
+                if plane_cost < best_cost:
                     best_axis = axis
-                    best_cost = cost
+                    best_pos = bounds_min + scale * (i + 1)
+                    best_cost = plane_cost
         
-        return best_cost, best_pos, best_axis
+        return best_axis, best_pos, best_cost
     
     def calculate_node_cost(self, node):
         e = node.aabb_max - node.aabb_min
@@ -172,6 +220,16 @@ class AABB:
         self.min = np.minimum(self.min, np.min(triangle, axis=0))
         self.max = np.maximum(self.max, np.max(triangle, axis=0))
     
+    def grow_aabb(self, other_aabb):
+        self.min = np.minimum(self.min, other_aabb.min)
+        self.max = np.maximum(self.max, other_aabb.max)
+    
     def get_area(self):
         e = self.max - self.min
         return e[0] * e[1] + e[1] * e[2] + e[2] * e[0]
+
+
+class Bin:
+    def __init__(self):
+        self.aabb = AABB()
+        self.tri_count = 0
