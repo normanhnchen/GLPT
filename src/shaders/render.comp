@@ -383,7 +383,7 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar,
     float det = dot(e1, pvec);
 
     // If det is close to 0, ray is parallel to the triangle
-    if (abs(det) < EPSILON) return false;
+    if (abs(det) < 1e-7) return false;
 
     float invDet = 1.0 / det;
 
@@ -454,7 +454,7 @@ bool Hit(Ray ray, inout HitRecord rec) {
     bool hitAnything = false;
     float closestSoFar = INF;
 
-    int nodeStack[64];
+    int nodeStack[256];
     int stackIdx = 0;
     // Push root node index onto the stack
     nodeStack[stackIdx++] = 0;

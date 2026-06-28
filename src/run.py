@@ -284,8 +284,6 @@ def main():
 
     should_render = True
 
-    print(scene.num_bvh_nodes)
-
     # Render loop
     while not glfwWindowShouldClose(window):
         frame_start = time.perf_counter()
