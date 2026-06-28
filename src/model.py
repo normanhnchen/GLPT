@@ -147,6 +147,9 @@ class HDRI:
 
 class Scene:
     def __init__(self, scene_path, hdri_path=None):
+        print("Building scene...")
+        start_time = time.perf_counter()
+
         self.scene_path = scene_path
 
         scene = trimesh.load(scene_path)
@@ -246,6 +249,11 @@ class Scene:
         if hdri_path is not None:
             self.hdri = HDRI(hdri_path)
         
+        end_time = time.perf_counter()
+
+        print(f"Scene built in {end_time - start_time}s")
+        print("Building BVH...")
+        
         self.bvh = BVH(self)
         self.num_bvh_nodes = len(self.bvh.nodes)
     
@@ -279,7 +287,6 @@ class Scene:
                 all_extensions[name] = ext
         
         return all_extensions
-
         
     def _get_texture_id(self, tex, tex_list):
         if tex.is_empty:
