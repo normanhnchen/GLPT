@@ -54,7 +54,7 @@ layout(binding = 5) uniform sampler2DArray occlusionTextures;
 
 #define PI 3.14159265359
 
-// uniform vec3 cameraPos;
+uniform vec3 cameraPos;
 
 void main() {
     Material mat = materials[matId];
@@ -101,6 +101,9 @@ void main() {
 
         TBN = mat3(T, B, N);
         invTBN = transpose(TBN);
+    }
+    if (mat.hasOcclTex == 1) {
+        // No implementation currently
     }
 
     fragColor.rgb = mat.baseCol * normal * TBN;

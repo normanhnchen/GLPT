@@ -56,6 +56,8 @@ def main():
 
     scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
 
+    print(scene.materials[0].extensions)
+
     pbr_shader = Shader(
         ctx,
         file_paths.pbr.vert,
@@ -96,7 +98,7 @@ def main():
     pbr_data["uv"] = uvs
     pbr_data["normal"] = normals
     pbr_data["tangent"] = tangents
-    pbr_data["bitangent"] = bitangents    
+    pbr_data["bitangent"] = bitangents
     pbr_data["matId"] = ids
 
     pbr_vbo = ctx.buffer(pbr_data.tobytes())
