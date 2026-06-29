@@ -1,7 +1,8 @@
 import trimesh
 import numpy as np
-import json, struct
 import cv2
+import pygltflib
+import glm
 
 from src.dtypes import *
 from src.bvh import *
@@ -154,7 +155,7 @@ class Scene:
 
         scene = trimesh.load(scene_path)
 
-        all_extensions = self._get_extensions()
+        all_extensions, all_lights = self._get_extensions()
 
         all_vertices = []
         all_triangles = []
@@ -245,6 +246,8 @@ class Scene:
         self.num_triangles = len(self.triangles)
         self.num_materials = len(self.materials)
 
+        self.lights = all_lights
+
         self.hdri = None
         if hdri_path is not None:
             self.hdri = HDRI(hdri_path)
@@ -259,34 +262,47 @@ class Scene:
     
     # Logic for parsing GLB files assisted by AI
     def _get_extensions(self):
-        with open(self.scene_path, "rb") as f:
-            # GLB header is 12 bytes
-            header = f.read(12)
-            # Interpret binary bytes
-            magic, version, length = struct.unpack("<4sII", header)
-            # Check the validity
-            if magic != b"glTF":
-                raise ValueError("Not a GLB file")
+        gltf = pygltflib.GLTF2().load(self.scene_path)
 
-            # Continue until file is processed
-            while f.tell() < length:
-                chunk_len, chunk_type = struct.unpack("<I4s", f.read(8))
-                chunk_data = f.read(chunk_len)
-                # Stop until the JSON chunk (scene metadata)
-                if chunk_type == b"JSON":
-                    glb_json = json.loads(chunk_data.decode("utf-8"))
-                    break
-            else:
-                raise ValueError("No JSON chunk found")
-
-        all_extensions = {}
-        for mat in glb_json.get("materials", []):
-            name = mat.get("name")
-            ext = mat.get("extensions", {})
-            if name and ext:
-                all_extensions[name] = ext
+        material_extensions = {}
+        for mat in gltf.materials:
+            name = mat.name
+            exts = mat.extensions
+            if name and exts:
+                material_extensions[name] = exts
         
-        return all_extensions
+        extensions = gltf.extensions or {}
+        lights_ext = extensions.get("KHR_lights_punctual", {})
+        raw_lights = lights_ext.get("lights", [])
+
+        lights = []
+        for node in gltf.nodes:
+            node_ext = (node.extensions or {}).get("KHR_lights_punctual")
+            if not node_ext:
+                continue
+
+            light_def = raw_lights[node_ext["light"]]
+
+            t = node.translation or [0, 0, 0]
+            r = node.rotation or [0, 0, 0, 1]
+
+            # Convert from a quaternion direction to a cartesian direction
+            position  = glm.vec3(*t)
+            direction = glm.normalize(glm.vec3(
+                glm.mat4_cast(glm.quat(r[3], r[0], r[1], r[2])) * glm.vec4(0, 0, -1, 0)
+            ))
+
+            lights.append({
+                "type":      light_def.get("type", "point"),
+                "color":     light_def.get("color", [1, 1, 1]),
+                "intensity": light_def.get("intensity", 1.0),
+                "range":     light_def.get("range", 0.0),
+                "spot":      light_def.get("spot", {}),
+                "position":  position,
+                "direction": direction,
+            })
+        
+        return material_extensions, lights
         
     def _get_texture_id(self, tex, tex_list):
         if tex.is_empty:

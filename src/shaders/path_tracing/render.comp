@@ -558,7 +558,7 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
             rec.InvTBN = transpose(rec.TBN);
         }
         if (mat.hasOcclTex == 1) {
-            // No implementation currently
+            // No implementation in path tracing
         }
         
         // Add light contribution

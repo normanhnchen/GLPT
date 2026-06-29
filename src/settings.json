@@ -1,6 +1,6 @@
 {   
     "file_paths": {
-        "scene": "src/assets/cornell_box.glb",
+        "scene": "src/assets/rasterizer_test.glb",
         "hdri": "src/assets/day_sky_hdri.exr",
         
         "path_tracing": {
