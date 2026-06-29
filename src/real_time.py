@@ -70,17 +70,23 @@ def main():
     vertices = scene.vertices[scene.triangles]
     uvs = scene.uvs[scene.triangles]
     normals = scene.normals[scene.triangles]
+    tangents = scene.tangents[scene.triangles]
+    bitangents = scene.bitangents[scene.triangles]
     ids = np.repeat(scene.material_ids, 3)
 
     vertices = vertices.reshape(-1, 3)
     uvs = uvs.reshape(-1, 2)
     normals = normals.reshape(-1, 3)
+    tangents = tangents.reshape(-1, 3)
+    bitangents = bitangents.reshape(-1, 3)
     ids = ids.reshape(-1,)
 
     pbr_dtype = np.dtype([
         ("pos", *vec3),
         ("uv", *vec2),
         ("normal", *vec3),
+        ("tangent", *vec3),
+        ("bitangent", *vec3),
         ("matId", i4)
     ])
 
@@ -89,6 +95,8 @@ def main():
     pbr_data["pos"] = vertices
     pbr_data["uv"] = uvs
     pbr_data["normal"] = normals
+    pbr_data["tangent"] = tangents
+    pbr_data["bitangent"] = bitangents    
     pbr_data["matId"] = ids
 
     pbr_vbo = ctx.buffer(pbr_data.tobytes())
@@ -98,8 +106,8 @@ def main():
         [
             (
                 pbr_vbo,
-                "3f 2f 3f 1i",
-                "aPos", "aTexCoords", "aNormal", "aMatId"
+                "3f 2f 3f 3f 3f 1i",
+                "aPos", "aTexCoords", "aNormal", "aTangent", "aBitangent", "aMatId"
             )
         ]
     )
@@ -274,14 +282,14 @@ def main():
 
         # --- PBR shader ---
 
-        # # Vertex shader uniforms
-        # pbr_shader.prog["view"].write(camera.get_view().to_bytes())
-        # pbr_shader.prog["projection"].write(camera.get_perspective().to_bytes())
+        # Vertex shader uniforms
+        pbr_shader.prog["view"].write(camera.get_view().to_bytes())
+        pbr_shader.prog["projection"].write(camera.get_perspective().to_bytes())
 
-        # # Fragment shader uniforms
-        # # pbr_shader.prog["cameraPos"].value = camera.pos
+        # Fragment shader uniforms
+        # pbr_shader.prog["cameraPos"].value = camera.pos
 
-        # pbr_vao.render(moderngl.TRIANGLES)
+        pbr_vao.render(moderngl.TRIANGLES)
 
         glfwSwapBuffers(window)
         glfwPollEvents()
