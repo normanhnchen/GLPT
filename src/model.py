@@ -259,6 +259,7 @@ class Scene:
         
         self.bvh = BVH(self)
         self.num_bvh_nodes = len(self.bvh.nodes)
+        self.num_lights = len(self.lights)
     
     # Logic for parsing GLB files assisted by AI
     def _get_extensions(self):

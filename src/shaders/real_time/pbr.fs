@@ -41,8 +41,25 @@ struct Material {
     float ior;
 };
 
+struct Light {
+    vec3 col;
+    int type; // Point: 0, directional: 1, spot: 2
+    vec3 pos;
+    float intensity;
+    vec3 dir;
+    float range;
+    int isSpot;
+    float innerConeAngle;
+    float outerConeAngle;
+    float pad1;
+};
+
 layout (std430, binding = 0) buffer MaterialBuffer {
     Material materials[];
+};
+
+layout (std430, binding = 0) buffer LightBuffer {
+    Light lights[];
 };
 
 layout(binding = 0) uniform sampler2DArray baseColorTextures;

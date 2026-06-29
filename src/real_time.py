@@ -56,8 +56,6 @@ def main():
 
     scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
 
-    print(scene.materials[0].extensions)
-
     pbr_shader = Shader(
         ctx,
         file_paths.pbr.vert,
@@ -229,9 +227,52 @@ def main():
             material_data[i]["ior"] = KHR_materials_ior["ior"]
         else:
             material_data[i]["ior"] = set_f4(1.5)
+    
+    light_dtype = np.dtype([
+        ("col", *vec3),
+        ("type", i4), # Point: 0, directional: 1, spot: 2
+        ("pos", *vec3),
+        ("intensity", f4),
+        ("dir", *vec3),
+        ("range", f4),
+        ("isSpot", i4),
+        ("innerConeAngle", f4), # Radians
+        ("outerConeAngle", f4), # Radians
+        ("pad1", f4)
+    ])
+
+    light_data = np.zeros(scene.num_lights, dtype=light_dtype)
+
+    for i, light in enumerate(scene.lights):
+        light_type = light["type"]
+        if light_type == "directional":
+            light_data[i]["type"] = 1
+        elif light_type == "spot":
+            light_data[i]["type"] = 2
+        else:
+            light_data[i]["type"] = 0
+
+        light_data[i]["col"]       = light["color"]
+        light_data[i]["intensity"] = light["intensity"]
+        light_data[i]["range"]     = light["range"]
+
+        spot = light["spot"]
+        if spot:
+            light_data[i]["isSpot"] = 1
+            light_data[i]["innerConeAngle"] = spot["innerConeAngle"]
+            light_data[i]["outerConeAngle"] = spot["outerConeAngle"]
+        else:
+            light_data[i]["isSpot"] = 0
         
+        # Convert to list then array as they are glm.vec3 objects
+        light_data[i]["pos"] = np.array(list(light["position"]))
+        light_data[i]["dir"] = np.array(list(light["direction"]))
+
     material_buffer = ctx.buffer(material_data.tobytes())
     material_buffer.bind_to_storage_buffer(0)
+
+    light_buffer = ctx.buffer(light_data.tobytes())
+    light_buffer.bind_to_storage_buffer(1)
 
     scene.create_texture_arrays(ctx, 1024, 1024)
     scene.bind_texture_arrays()
