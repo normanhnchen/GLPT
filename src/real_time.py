@@ -62,22 +62,24 @@ def main():
         file_paths.real_time.frag
     )
 
-    triangle_indices = scene.triangles
-    vertices = scene.vertices
-    triangles = vertices[triangle_indices]
+    vertices = scene.vertices[scene.triangles]
+    uvs = scene.uvs[scene.triangles]
 
-    data = triangles
+    vertices = vertices.reshape(-1, 3)
+    uvs = uvs.reshape(-1, 2)
+
+    data = np.hstack((vertices, uvs), dtype=f4)
 
     vbo = ctx.buffer(data.tobytes())
 
     vao = ctx.vertex_array(
         shader.prog,
         [
-            (vbo, "3f", "aPos")
+            (vbo, "3f 2f", "aPos", "aTexCoords")
         ]
     )
 
-    # ctx.enable(moderngl.DEPTH_TEST)
+    ctx.enable(moderngl.DEPTH_TEST)
     
     last_frame_start = 0
     stats_start_time = time.perf_counter()
