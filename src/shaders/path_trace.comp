@@ -454,7 +454,7 @@ bool Hit(Ray ray, inout HitRecord rec) {
     bool hitAnything = false;
     float closestSoFar = INF;
 
-    int nodeStack[256];
+    int nodeStack[64];
     int stackIdx = 0;
     // Push root node index onto the stack
     nodeStack[stackIdx++] = 0;

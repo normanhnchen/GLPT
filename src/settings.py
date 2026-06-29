@@ -50,16 +50,20 @@ class PostProcessSettings:
         self.hdri_exposure = post_process_config["hdri_exposure"]
 
 
+class ShaderGroup:
+    def __init__(self, config):
+        for key, value in config.items():
+            setattr(self, key, value)
+
 class FilePaths:
     def __init__(self, json_settings):
-        file_paths_config = json_settings["file_paths"]
+        config = json_settings["file_paths"]
 
-        self.scene = file_paths_config["scene"]
-        self.hdri = file_paths_config["hdri"]
+        self.scene = config["scene"]
+        self.hdri = config["hdri"]
         
-        self.vert = file_paths_config["vert"]
-        self.frag = file_paths_config["frag"]
-        self.comp = file_paths_config["comp"]        
+        self.path_trace = ShaderGroup(config["path_trace"])
+        self.real_time = ShaderGroup(config["real_time"])
 
 
 with open("src/settings.json") as f:

@@ -24,7 +24,7 @@ def main():
         return "Failed to initialize GLFW"
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4)
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4)
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6)
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE)
     # Apple system required config
     if sys.platform == "darwin":
@@ -46,24 +46,24 @@ def main():
 
     ctx = moderngl.create_context()
 
-    try:
-        with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
-            scene = pickle.load(f)
-    except:
-        scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
-        with open("src/assets/cache/dragon_scene.pkl", "wb") as f:
-            pickle.dump(scene, f)
+    # try:
+    #     with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
+    #         scene = pickle.load(f)
+    # except:
+    #     scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+    #     with open("src/assets/cache/dragon_scene.pkl", "wb") as f:
+    #         pickle.dump(scene, f)
 
-    # scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+    scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
 
     shader = Shader(
         ctx,
-        file_paths.vert,
-        file_paths.frag
+        file_paths.path_trace.vert,
+        file_paths.path_trace.frag
     )
     compute_shader = ComputeShader(
         ctx,
-        file_paths.comp
+        file_paths.path_trace.comp
     )
 
     compute_texture = ctx.texture(screen.resolution, 4, dtype=f4)
@@ -80,7 +80,7 @@ def main():
     vao = ctx.vertex_array(
         shader.prog,
         [
-            [quad_buffer, "2f 2f", "aPos", "aTexCoords"]
+            (quad_buffer, "2f 2f", "aPos", "aTexCoords")
         ]
     )
 
