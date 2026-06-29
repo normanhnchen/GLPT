@@ -1,6 +1,6 @@
 {   
     "file_paths": {
-        "scene": "src/assets/texture_test.glb",
+        "scene": "src/assets/dragon_scene.glb",
         "hdri": "src/assets/day_sky_hdri.exr",
         
         "vert": "src/shaders/render.vs",
@@ -8,9 +8,9 @@
         "comp": "src/shaders/render.comp"
     },
     "screen": {
-        "width": 1080,
-        "height": 720,
-        "vsync": false,
+        "width": 1920,
+        "height": 1080,
+        "vsync": true,
         "fps_cap": 240
     },
     "camera": {
@@ -25,7 +25,7 @@
         "_world_up": [0, 1, 0]
     },
     "path_tracing": {
-        "max_depth": 16,
+        "max_depth": 8,
         "max_samples": 4096
     },
     "post_processing": {
@@ -33,8 +33,8 @@
         "aperture": 0.0,
         "focus_dist": 10,
         "auto_focus": 0,
-        "exposure": 1.0,
-        "tonemap": "ACESFilm",
+        "exposure": 3.0,
+        "tonemap": "AgX",
         "hdri_exposure": 1.0
     }
 }

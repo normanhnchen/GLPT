@@ -10,7 +10,23 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 Third-party code and assets remain under their respective licenses and copyrights.
 
----
+## Assets
+
+All 3d scenes were created by me using Blender 4.4.
+
+### External Assets
+
+- Textures and hdri environments are from [ambientCG.com](ambientCG.com),
+licensed under the Creative Commons CC0 1.0 Universal License.
+
+- Models from the Stanford 3D Scanning Repository: 
+    - Stanford Dragon
+
+Stanford Dragon
+Source: Stanford Computer Graphics Laboratory
+https://graphics.stanford.edu/data/3Dscanrep/
+
+Please see the Stanford 3D Scanning Repository for licensing and usage terms.
 
 ## Third-Party Code
 
