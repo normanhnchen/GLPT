@@ -122,6 +122,7 @@ def main():
         ("emissive", *vec3),
         ("metallic", f4),
         ("roughness", f4),
+        ("ao", f4),
         # Settings
         ("alphaMode", i4), # 0=OPAQUE, 1=MASK, or 2=BLEND
         ("alphaCutoff", f4),
@@ -144,6 +145,9 @@ def main():
         ("emissiveStrength", f4),
         ("transmission", f4),
         ("ior", f4),
+        ("pad1", f4),
+        ("pad2", f4),
+        ("pad3", f4)
     ])
 
     triangle_dtype = np.dtype([
@@ -159,6 +163,9 @@ def main():
         material_data[i]["roughness"] = mat.roughness
         material_data[i]["emissive"] = mat.emissive_color
         material_data[i]["metallic"] = mat.metallic
+        # Ambient occlusion is changed only from material textures
+        # Set default to 1.0 for a fully lit material
+        material_data[i]["ao"] = set_f4(1)
 
         material_data[i]["alphaMode"] = mat.alpha_mode
         material_data[i]["alphaCutoff"] = mat.alpha_cutoff
