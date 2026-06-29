@@ -62,24 +62,121 @@ def main():
         file_paths.real_time.frag
     )
 
-    vertices = scene.vertices[scene.triangles]
-    uvs = scene.uvs[scene.triangles]
+    vertices = scene.vertices[scene.triangles].astype(f4)
+    uvs = scene.uvs[scene.triangles].astype(f4)
+    ids = np.repeat(scene.material_ids, 3).astype(i4)
 
     vertices = vertices.reshape(-1, 3)
     uvs = uvs.reshape(-1, 2)
+    ids = ids.reshape(-1,)
 
-    data = np.hstack((vertices, uvs), dtype=f4)
+    combined_dtype = np.dtype([
+        ("pos", *vec3),
+        ("uv", *vec2),
+        ("matId", i4)
+    ])
 
-    vbo = ctx.buffer(data.tobytes())
+    combined_data = np.zeros(len(vertices), dtype=combined_dtype)
+
+    combined_data["pos"] = vertices
+    combined_data["uv"] = uvs
+    combined_data["matId"] = ids
+
+    vbo = ctx.buffer(combined_data.tobytes())
 
     vao = ctx.vertex_array(
         shader.prog,
         [
-            (vbo, "3f 2f", "aPos", "aTexCoords")
+            (vbo, "3f 2f 1i", "aPos", "aTexCoords", "aMatId")
         ]
     )
 
-    ctx.enable(moderngl.DEPTH_TEST)
+    material_dtype = np.dtype([
+        ("baseCol", *vec3),
+        ("alpha", f4),
+        ("emissive", *vec3),
+        ("metallic", f4),
+        ("roughness", f4),
+        # Settings
+        ("alphaMode", i4), # 0=OPAQUE, 1=MASK, or 2=BLEND
+        ("alphaCutoff", f4),
+        ("doubleSided", i4),
+        # Flags
+        ("hasEmission", i4),
+        ("hasBaseColTex", i4),
+        ("hasEmissiveTex", i4),
+        ("hasRoughTex", i4),
+        ("hasMetalTex", i4),
+        ("hasNormalTex", i4),
+        ("hasOcclTex", i4),
+        # Texture IDs
+        ("baseTexId", i4),
+        ("emissiveTexId", i4),
+        ("roughTexId", i4),
+        ("metalTexId", i4),
+        ("normalTexId", i4),
+        ("occlTexId", i4),
+        ("emissiveStrength", f4),
+        ("transmission", f4),
+        ("ior", f4),
+    ])
+
+    material_data = np.zeros(scene.num_materials, dtype=material_dtype)
+
+    for i, mat in enumerate(scene.materials):
+        material_data[i]["baseCol"] = mat.base_color[:3]
+        material_data[i]["alpha"] = mat.base_color[-1]
+        material_data[i]["roughness"] = mat.roughness
+        material_data[i]["emissive"] = mat.emissive_color
+        material_data[i]["metallic"] = mat.metallic
+
+        material_data[i]["alphaMode"] = mat.alpha_mode
+        material_data[i]["alphaCutoff"] = mat.alpha_cutoff
+        material_data[i]["doubleSided"] = mat.double_sided
+
+        # Flags
+        material_data[i]["hasEmission"] = mat.has_emission
+        material_data[i]["hasBaseColTex"] = mat.has_base_color_tex
+        material_data[i]["hasEmissiveTex"] = mat.has_emissive_tex
+        material_data[i]["hasRoughTex"] = mat.has_roughness_tex
+        material_data[i]["hasMetalTex"] = mat.has_metallic_tex
+        material_data[i]["hasNormalTex"] = mat.has_normal_tex
+        material_data[i]["hasOcclTex"] = mat.has_occlusion_tex
+        
+        # Texture IDs
+        material_data[i]["baseTexId"] = mat.base_color_tex_id
+        material_data[i]["emissiveTexId"] = mat.emissive_tex_id
+        material_data[i]["roughTexId"] = mat.roughness_tex_id
+        material_data[i]["metalTexId"] = mat.metallic_tex_id
+        material_data[i]["normalTexId"] = mat.normal_tex_id
+        material_data[i]["occlTexId"] = mat.occlusion_tex_id
+        
+        # glTF extensions
+        extensions = mat.extensions
+
+        KHR_materials_emissive_strength = extensions.get("KHR_materials_emissive_strength")
+        if KHR_materials_emissive_strength:
+            material_data[i]["emissiveStrength"] = KHR_materials_emissive_strength["emissiveStrength"]
+        else:
+            material_data[i]["emissiveStrength"] = 0.0
+
+        KHR_materials_transmission = extensions.get("KHR_materials_transmission")
+        if KHR_materials_transmission:
+            material_data[i]["transmission"] = KHR_materials_transmission["transmissionFactor"]
+        else:
+            material_data[i]["transmission"] = set_f4(0.0)
+
+        KHR_materials_ior = extensions.get("KHR_materials_ior")
+        if KHR_materials_ior:
+            material_data[i]["ior"] = KHR_materials_ior["ior"]
+        else:
+            material_data[i]["ior"] = set_f4(1.5)
+        
+    material_buffer = ctx.buffer(material_data.tobytes())
+    material_buffer.bind_to_storage_buffer(0)
+
+    scene.create_texture_arrays(ctx, 1024, 1024)
+    scene.bind_texture_arrays()
     
     last_frame_start = 0
     stats_start_time = time.perf_counter()
@@ -87,6 +184,8 @@ def main():
     avg_fps = 0
 
     stats_frame_count = 0
+
+    ctx.enable(moderngl.DEPTH_TEST)
 
     # Render loop
     while not glfwWindowShouldClose(window):
