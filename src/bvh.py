@@ -191,27 +191,3 @@ class BVH:
     def get_aabb_area(self, aabb_min, aabb_max):
         e = aabb_max - aabb_min
         return e[0] * e[1] + e[1] * e[2] + e[2] * e[0]
-
-
-class AABB:
-    def __init__(self):
-        self.min = np.full(3, np.inf)
-        self.max = np.full(3, -np.inf)
-    
-    def grow(self, triangle):
-        self.min = np.minimum(self.min, np.min(triangle, axis=0))
-        self.max = np.maximum(self.max, np.max(triangle, axis=0))
-    
-    def grow_aabb(self, other_aabb):
-        self.min = np.minimum(self.min, other_aabb.min)
-        self.max = np.maximum(self.max, other_aabb.max)
-    
-    def get_area(self):
-        e = self.max - self.min
-        return e[0] * e[1] + e[1] * e[2] + e[2] * e[0]
-
-
-class Bin:
-    def __init__(self):
-        self.aabb = AABB()
-        self.tri_count = 0
