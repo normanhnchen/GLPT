@@ -54,7 +54,7 @@ def main():
     #     with open("src/assets/cache/dragon_scene.pkl", "wb") as f:
     #         pickle.dump(scene, f)
 
-    # scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+    scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
 
     shader = Shader(
         ctx,
@@ -62,21 +62,18 @@ def main():
         file_paths.real_time.frag
     )
 
-    # Full-screen quad
-    triangle_data = np.array([
-        # Vertices    # TexCoords
-        -1.0,  1.0,   0.0, 1.0,
-        -1.0, -1.0,   0.0, 0.0,
-         1.0,  1.0,   1.0, 1.0,
-         1.0, -1.0,   1.0, 0.0,
-    ], dtype=f4)
+    triangle_indices = scene.triangles
+    vertices = scene.vertices
+    triangles = vertices[triangle_indices]
 
-    vbo = ctx.buffer(triangle_data.tobytes())
+    data = triangles
+
+    vbo = ctx.buffer(data.tobytes())
 
     vao = ctx.vertex_array(
         shader.prog,
         [
-            (vbo, "2f 2f", "aPos", "aTexCoords")
+            (vbo, "3f", "aPos")
         ]
     )
 
@@ -112,9 +109,10 @@ def main():
 
         ctx.clear(0, 0, 0, 1)
 
-        # shader.prog["cameraFront"].value = camera.front
+        shader.prog["view"].write(camera.get_view().to_bytes())
+        shader.prog["projection"].write(camera.get_perspective().to_bytes())
         
-        vao.render(moderngl.TRIANGLE_STRIP)
+        vao.render(moderngl.TRIANGLES)
 
         glfwSwapBuffers(window)
         glfwPollEvents()
