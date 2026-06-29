@@ -50,18 +50,9 @@ layout(binding = 3) uniform sampler2DArray metallicTextures;
 layout(binding = 4) uniform sampler2DArray normalTextures;
 layout(binding = 5) uniform sampler2DArray occlusionTextures;
 
-layout(binding = 6) uniform sampler2D hdri;
-
 #define PI 3.14159265359
 
-vec3 SampleHDRI(vec3 dir) {
-    // Convert to spherical coordinates
-    float phi = atan(dir.z, dir.x);
-    float theta = acos(dir.y);
-    // Convert to uv coordinates
-    vec2 uv = vec2(phi / (2.0 * PI) + 0.5, theta / PI);
-    return texture(hdri, uv).rgb;
-}
+// uniform vec3 cameraPos;
 
 void main() {
     Material mat = materials[matId];
@@ -70,5 +61,6 @@ void main() {
         mat.baseCol = baseCol.rgb;
         mat.alpha = baseCol.w;
     }
+
     fragColor.rgb = mat.baseCol * normal;
 }

@@ -56,10 +56,15 @@ def main():
 
     scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
 
-    shader = Shader(
+    pbr_shader = Shader(
         ctx,
-        file_paths.real_time.vert,
-        file_paths.real_time.frag
+        file_paths.pbr.vert,
+        file_paths.pbr.frag
+    )
+    bg_shader = Shader(
+        ctx,
+        file_paths.background.vert,
+        file_paths.background.frag
     )
 
     vertices = scene.vertices[scene.triangles]
@@ -72,32 +77,67 @@ def main():
     normals = normals.reshape(-1, 3)
     ids = ids.reshape(-1,)
 
-    combined_dtype = np.dtype([
+    pbr_dtype = np.dtype([
         ("pos", *vec3),
         ("uv", *vec2),
         ("normal", *vec3),
         ("matId", i4)
     ])
 
-    combined_data = np.zeros(len(vertices), dtype=combined_dtype)
+    pbr_data = np.zeros(len(vertices), dtype=pbr_dtype)
 
-    combined_data["pos"] = vertices
-    combined_data["uv"] = uvs
-    combined_data["normal"] = normals
-    combined_data["matId"] = ids
+    pbr_data["pos"] = vertices
+    pbr_data["uv"] = uvs
+    pbr_data["normal"] = normals
+    pbr_data["matId"] = ids
 
-    vbo = ctx.buffer(combined_data.tobytes())
+    pbr_vbo = ctx.buffer(pbr_data.tobytes())
 
-    vao = ctx.vertex_array(
-        shader.prog,
+    pbr_vao = ctx.vertex_array(
+        pbr_shader.prog,
         [
             (
-                vbo,
+                pbr_vbo,
                 "3f 2f 3f 1i",
                 "aPos", "aTexCoords", "aNormal", "aMatId"
             )
         ]
     )
+
+    cubemap_data = np.array([
+        -1, -1, -1,   -1, -1,  1,   -1,  1,  1,
+        -1, -1, -1,   -1,  1,  1,   -1,  1, -1,
+
+        1, -1,  1,    1, -1, -1,    1,  1, -1,
+        1, -1,  1,    1,  1, -1,    1,  1,  1,
+
+        -1, -1, -1,    1, -1, -1,    1, -1,  1,
+        -1, -1, -1,    1, -1,  1,   -1, -1,  1,
+
+        -1,  1,  1,    1,  1,  1,    1,  1, -1,
+        -1,  1,  1,    1,  1, -1,   -1,  1, -1,
+
+        1, -1, -1,   -1, -1, -1,   -1,  1, -1,
+        1, -1, -1,   -1,  1, -1,    1,  1, -1,
+
+        -1, -1,  1,    1, -1,  1,    1,  1,  1,
+        -1, -1,  1,    1,  1,  1,   -1,  1,  1,
+    ], dtype=f4)
+
+    bg_vbo = ctx.buffer(cubemap_data.tobytes())
+
+    bg_vao = ctx.vertex_array(
+        bg_shader.prog,
+        [
+            (
+                bg_vbo,
+                "3f",
+                "aPos"
+            )
+        ]
+    )
+
+    # NOTE: std140 or std430 blocks are padded to multiples of 16 bytes
 
     material_dtype = np.dtype([
         ("baseCol", *vec3),
@@ -220,10 +260,28 @@ def main():
 
         ctx.clear(0, 0, 0, 1)
 
-        shader.prog["view"].write(camera.get_view().to_bytes())
-        shader.prog["projection"].write(camera.get_perspective().to_bytes())
+        # --- Background shader ---
         
-        vao.render(moderngl.TRIANGLES)
+        ctx.depth_func = "<="
+
+        # Vertex shader uniforms
+        bg_shader.prog["view"].write(camera.get_view().to_bytes())
+        bg_shader.prog["projection"].write(camera.get_perspective().to_bytes())
+
+        bg_vao.render(moderngl.TRIANGLES)
+
+        ctx.depth_func = "<"
+
+        # --- PBR shader ---
+
+        # # Vertex shader uniforms
+        # pbr_shader.prog["view"].write(camera.get_view().to_bytes())
+        # pbr_shader.prog["projection"].write(camera.get_perspective().to_bytes())
+
+        # # Fragment shader uniforms
+        # # pbr_shader.prog["cameraPos"].value = camera.pos
+
+        # pbr_vao.render(moderngl.TRIANGLES)
 
         glfwSwapBuffers(window)
         glfwPollEvents()
