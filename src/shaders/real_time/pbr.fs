@@ -16,6 +16,7 @@ struct Material {
     vec3 emissive;
     float metallic;
     float roughness;
+    float ao;
     // Settings
     int alphaMode; // 0=OPAQUE, 1=MASK, or 2=BLEND
     float alphaCutoff;
@@ -39,6 +40,9 @@ struct Material {
     float emissiveStrength;
     float transmission;
     float ior;
+    float pad1;
+    float pad2;
+    float pad3;
 };
 
 struct Light {
@@ -58,7 +62,7 @@ layout (std430, binding = 0) buffer MaterialBuffer {
     Material materials[];
 };
 
-layout (std430, binding = 0) buffer LightBuffer {
+layout (std430, binding = 1) buffer LightBuffer {
     Light lights[];
 };
 
@@ -71,7 +75,93 @@ layout(binding = 5) uniform sampler2DArray occlusionTextures;
 
 #define PI 3.14159265359
 
+uniform int numLights;
+
 uniform vec3 cameraPos;
+
+// https://learnopengl.com/PBR/Theory
+float DistributionGGX(vec3 N, vec3 H, float a) {
+    float a2     = a*a;
+    float NdotH  = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH*NdotH;
+	
+    float nom    = a2;
+    float denom  = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom        = PI * denom * denom;
+	
+    return nom / denom;
+}
+
+// https://learnopengl.com/PBR/Theory
+float GeometrySchlickGGX(float NdotV, float k) {
+    float nom   = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+	
+    return nom / denom;
+}
+
+// https://learnopengl.com/PBR/Theory
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float k) {
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx1 = GeometrySchlickGGX(NdotV, k);
+    float ggx2 = GeometrySchlickGGX(NdotL, k);
+	
+    return ggx1 * ggx2;
+}
+
+// https://learnopengl.com/PBR/Theory
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+// https://learnopengl.com/PBR/Theory
+vec3 SamplePBR(vec3 N, Material mat) {
+    vec3 V = normalize(vec3(cameraPos - worldPos));
+
+    vec3 F0 = vec3(0.04);
+    F0 = mix(F0, mat.baseCol, mat.metallic);
+
+    // Total radiance
+    vec3 Lo = vec3(0.0);
+    // Reflectance equation for direct lighting
+    for (int i = 0; i < numLights; i++) {
+        Light light = lights[i];
+        // Calculate radiance
+        vec3 L = normalize(light.pos - worldPos);
+        float dist = length(light.pos - worldPos);
+        float attenuation = 1.0 / (dist * dist);
+        vec3 radiance = light.col * attenuation;
+        vec3 H = normalize(V + L);
+
+        float a = mat.roughness * mat.roughness;
+        float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
+
+        // Cook-Torrance BRDF terms
+        float NDF = DistributionGGX(N, H, a);
+        float G = GeometrySmith(N, V, L, k);
+        vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+        vec3 kS = F;
+        vec3 kD = vec3(1.0) - kS;
+        kD *= 1.0 - mat.metallic;
+
+        vec3 numerator = NDF * G * F;
+        float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+        vec3 specular = numerator / denominator;
+
+        vec3 diffuse = kD * mat.baseCol / PI;
+
+        float NdotL = max(dot(N, L), 0.0);
+
+        vec3 brdf = diffuse + specular;
+
+        Lo += brdf * radiance * NdotL;
+    }
+    vec3 ambient = vec3(0.02) * mat.baseCol * mat.ao;
+
+    return Lo + ambient;
+}
 
 void main() {
     Material mat = materials[matId];
@@ -89,17 +179,16 @@ void main() {
     if (mat.hasMetalTex == 1) {
         mat.metallic = texture(metallicTextures, vec3(texCoords, mat.metalTexId)).r;
     }
-    mat3 TBN;
-    mat3 invTBN;
+    vec3 N;
     // https://learnopengl.com/Advanced-Lighting/Normal-Mapping
     if (mat.hasNormalTex == 1) {
-        TBN = mat3(tangent, bitangent, normal);
+        mat3 TBN = mat3(tangent, bitangent, normal);
         // Get normal in world space
         vec3 normal = texture(normalTextures, vec3(texCoords, mat.normalTexId)).rgb;
         normal = normal * 2.0 - 1.0;
         normal = normalize(TBN * normal);
 
-        vec3 N = normal;
+        N = normal;
 
         // Build an Orthonormal basis (ONB)
         vec3 helper = abs(N.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
@@ -107,21 +196,27 @@ void main() {
         vec3 B = cross(N, T);
 
         TBN = mat3(T, B, N);
-        invTBN = transpose(TBN);
+        mat3 invTBN = transpose(TBN);
     } else {
-        vec3 N = normal;
+        N = normal;
 
         // Build an Orthonormal basis (ONB)
         vec3 helper = abs(N.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
         vec3 T = normalize(cross(helper, N));
         vec3 B = cross(N, T);
 
-        TBN = mat3(T, B, N);
-        invTBN = transpose(TBN);
+        mat3 TBN = mat3(T, B, N);
+        mat3 invTBN = transpose(TBN);
     }
     if (mat.hasOcclTex == 1) {
-        // No implementation currently
+        float ao = texture(occlusionTextures, vec3(texCoords, mat.occlTexId)).r;
+
+        mat.ao = ao;
     }
 
-    fragColor.rgb = mat.baseCol * normal * TBN;
+    vec3 color = SamplePBR(N, mat);
+
+    // Gamma correction
+    vec3 finalColor = pow(color, vec3(1.0 / 2.2));
+    fragColor = vec4(finalColor, 1.0);
 }
