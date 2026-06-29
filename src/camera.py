@@ -1,6 +1,6 @@
 import glm
 
-from src.settings import camera_settings
+from src.settings import camera_settings, screen
 
 
 # Defines several possible options for camera movement
@@ -110,3 +110,11 @@ class Camera:
             self.last_state = current_state
             return True
         return False
+
+    def get_perspective(self):
+        near = 0.1
+        far = 100
+        return glm.perspective(glm.radians(self.fov), screen.width / screen.height, near, far)
+
+    def get_view(self):
+        return glm.lookAt(self.pos, self.pos + self.front, self.up)
