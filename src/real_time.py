@@ -62,17 +62,20 @@ def main():
         file_paths.real_time.frag
     )
 
-    vertices = scene.vertices[scene.triangles].astype(f4)
-    uvs = scene.uvs[scene.triangles].astype(f4)
-    ids = np.repeat(scene.material_ids, 3).astype(i4)
+    vertices = scene.vertices[scene.triangles]
+    uvs = scene.uvs[scene.triangles]
+    normals = scene.normals[scene.triangles]
+    ids = np.repeat(scene.material_ids, 3)
 
     vertices = vertices.reshape(-1, 3)
     uvs = uvs.reshape(-1, 2)
+    normals = normals.reshape(-1, 3)
     ids = ids.reshape(-1,)
 
     combined_dtype = np.dtype([
         ("pos", *vec3),
         ("uv", *vec2),
+        ("normal", *vec3),
         ("matId", i4)
     ])
 
@@ -80,6 +83,7 @@ def main():
 
     combined_data["pos"] = vertices
     combined_data["uv"] = uvs
+    combined_data["normal"] = normals
     combined_data["matId"] = ids
 
     vbo = ctx.buffer(combined_data.tobytes())
@@ -87,7 +91,11 @@ def main():
     vao = ctx.vertex_array(
         shader.prog,
         [
-            (vbo, "3f 2f 1i", "aPos", "aTexCoords", "aMatId")
+            (
+                vbo,
+                "3f 2f 3f 1i",
+                "aPos", "aTexCoords", "aNormal", "aMatId"
+            )
         ]
     )
 
@@ -177,6 +185,8 @@ def main():
 
     scene.create_texture_arrays(ctx, 1024, 1024)
     scene.bind_texture_arrays()
+
+    scene.hdri.bind(ctx, 6)
     
     last_frame_start = 0
     stats_start_time = time.perf_counter()
