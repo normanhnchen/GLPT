@@ -8,14 +8,14 @@
             "frag": "src/shaders/path_tracing/render.fs",
             "comp": "src/shaders/path_tracing/render.comp"
         },
-        "rasterization": {
+        "real_time": {
             "pbr": {
-                "vert": "src/shaders/rasterization/pbr.vs",
-                "frag": "src/shaders/rasterization/pbr.fs"
+                "vert": "src/shaders/real_time/pbr.vs",
+                "frag": "src/shaders/real_time/pbr.fs"
             },
             "background": {
-                "vert": "src/shaders/rasterization/background.vs",
-                "frag": "src/shaders/rasterization/background.fs"
+                "vert": "src/shaders/real_time/background.vs",
+                "frag": "src/shaders/real_time/background.fs"
             }
         }
     },

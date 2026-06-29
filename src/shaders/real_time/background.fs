@@ -20,5 +20,7 @@ vec3 SampleHDRI(vec3 dir) {
 void main() {
     vec3 color = SampleHDRI(normalize(localPos));
 
-    fragColor = vec4(color, 1.0);
+    vec3 finalColor = pow(color, vec3(1.0 / 2.2));
+
+    fragColor = vec4(finalColor, 1.0);
 }

@@ -3,6 +3,8 @@
 in vec2 texCoords;
 in vec3 worldPos;
 in vec3 normal;
+in vec3 tangent;
+in vec3 bitangent;
 flat in int matId;
 
 out vec4 fragColor;
@@ -61,6 +63,45 @@ void main() {
         mat.baseCol = baseCol.rgb;
         mat.alpha = baseCol.w;
     }
+    if (mat.hasEmissiveTex == 1) {
+        mat.emissive = texture(emissiveTextures, vec3(texCoords, mat.emissiveTexId)).rgb;
+    }
+    if (mat.hasRoughTex == 1) {
+        mat.roughness = texture(roughnessTextures, vec3(texCoords, mat.roughTexId)).r;
+    }
+    if (mat.hasMetalTex == 1) {
+        mat.metallic = texture(metallicTextures, vec3(texCoords, mat.metalTexId)).r;
+    }
+    mat3 TBN;
+    mat3 invTBN;
+    // https://learnopengl.com/Advanced-Lighting/Normal-Mapping
+    if (mat.hasNormalTex == 1) {
+        TBN = mat3(tangent, bitangent, normal);
+        // Get normal in world space
+        vec3 normal = texture(normalTextures, vec3(texCoords, mat.normalTexId)).rgb;
+        normal = normal * 2.0 - 1.0;
+        normal = normalize(TBN * normal);
 
-    fragColor.rgb = mat.baseCol * normal;
+        vec3 N = normal;
+
+        // Build an Orthonormal basis (ONB)
+        vec3 helper = abs(N.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
+        vec3 T = normalize(cross(helper, N));
+        vec3 B = cross(N, T);
+
+        TBN = mat3(T, B, N);
+        invTBN = transpose(TBN);
+    } else {
+        vec3 N = normal;
+
+        // Build an Orthonormal basis (ONB)
+        vec3 helper = abs(N.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
+        vec3 T = normalize(cross(helper, N));
+        vec3 B = cross(N, T);
+
+        TBN = mat3(T, B, N);
+        invTBN = transpose(TBN);
+    }
+
+    fragColor.rgb = mat.baseCol * normal * TBN;
 }

@@ -63,8 +63,8 @@ class FilePaths:
         self.hdri = config["hdri"]
         
         self.path_tracing = ShaderGroup(config["path_tracing"])
-        self.background = ShaderGroup(config["rasterization"]["background"])
-        self.pbr = ShaderGroup(config["rasterization"]["pbr"])
+        self.background = ShaderGroup(config["real_time"]["background"])
+        self.pbr = ShaderGroup(config["real_time"]["pbr"])
 
 
 with open("src/settings.json") as f:
