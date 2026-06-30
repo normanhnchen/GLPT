@@ -5,49 +5,49 @@ import glm
 
 class Screen:
     def __init__(self, json_settings):
-        screen_config = json_settings["screen"]
+        config = json_settings["screen"]
 
-        self.width = screen_config["width"]
-        self.height = screen_config["height"]
+        self.width = config["width"]
+        self.height = config["height"]
         self.resolution = np.array([self.width, self.height])
-        self.vsync = screen_config["vsync"]
-        self.fps_cap = screen_config["fps_cap"]
+        self.vsync = config["vsync"]
+        self.fps_cap = config["fps_cap"]
 
 
 class CameraSettings:
     def __init__(self, json_settings):
-        camera_config = json_settings["camera"]
+        config = json_settings["camera"]
 
-        self._yaw = camera_config["_yaw"]
-        self._pitch = camera_config["_pitch"]
-        self.movement_speed = camera_config["movement_speed"]
-        self.mouse_sensitivity = camera_config["mouse_sensitivity"]
-        self.fov = camera_config["fov"]
-        self.pos = glm.vec3(camera_config["pos"])
-        self._front = glm.vec3(camera_config["_front"])
-        self._up = glm.vec3(camera_config["_up"])
-        self._world_up = glm.vec3(camera_config["_world_up"])
+        self._yaw = config["_yaw"]
+        self._pitch = config["_pitch"]
+        self.movement_speed = config["movement_speed"]
+        self.mouse_sensitivity = config["mouse_sensitivity"]
+        self.fov = config["fov"]
+        self.pos = glm.vec3(config["pos"])
+        self._front = glm.vec3(config["_front"])
+        self._up = glm.vec3(config["_up"])
+        self._world_up = glm.vec3(config["_world_up"])
 
 
 class PTSettings:
     def __init__(self, json_settings):
-        pt_config = json_settings["path_tracing"]
+        config = json_settings["path_tracing"]
 
-        self.max_depth = pt_config["max_depth"]
-        self.max_samples = pt_config["max_samples"]
+        self.max_depth = config["max_depth"]
+        self.max_samples = config["max_samples"]
 
 
 class PostProcessSettings:
     def __init__(self, json_settings):
-        post_process_config = json_settings["post_processing"]
+        config = json_settings["post_processing"]
 
-        self.blur = post_process_config["blur"]
-        self.aperture = post_process_config["aperture"]
-        self.focus_dist = post_process_config["focus_dist"]
-        self.auto_focus = post_process_config["auto_focus"]
-        self.exposure = post_process_config["exposure"]
-        self.tonemap = post_process_config["tonemap"]
-        self.hdri_exposure = post_process_config["hdri_exposure"]
+        self.blur = config["blur"]
+        self.aperture = config["aperture"]
+        self.focus_dist = config["focus_dist"]
+        self.auto_focus = config["auto_focus"]
+        self.exposure = config["exposure"]
+        self.tonemap = config["tonemap"]
+        self.hdri_exposure = config["hdri_exposure"]
 
 
 class ShaderGroup:
@@ -63,8 +63,16 @@ class FilePaths:
         self.hdri = config["hdri"]
         
         self.path_tracing = ShaderGroup(config["path_tracing"])
-        self.background = ShaderGroup(config["real_time"]["background"])
-        self.pbr = ShaderGroup(config["real_time"]["pbr"])
+        self.background = ShaderGroup(config["rasterization"]["background"])
+        self.pbr = ShaderGroup(config["rasterization"]["pbr"])
+
+
+class RenderSettings:
+    def __init__(self, json_settings):
+        config = json_settings["render"]
+
+        self.render_mode = config["render_mode"]
+        self.texture_size = config["texture_size"]
 
 
 with open("src/settings.json") as f:
@@ -75,3 +83,4 @@ camera_settings = CameraSettings(json_settings)
 pt_settings = PTSettings(json_settings)
 post_process_settings = PostProcessSettings(json_settings)
 file_paths = FilePaths(json_settings)
+render_settings = RenderSettings(json_settings)
