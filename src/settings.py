@@ -74,6 +74,8 @@ class RenderSettings:
 
         self.render_mode = config["render_mode"]
         self.texture_size = config["texture_size"]
+        self.tiles_x = config["tiles_x"]
+        self.tiles_y = config["tiles_y"]
 
 
 with open("src/settings.json") as f:

@@ -15,7 +15,7 @@ class CameraMovement:
 
 
 # An abstract camera class that processes input
-# calculates the corresponding Euler Angles, Vectors and Matrices for use in OpenGL
+# Calculates the corresponding Euler Angles, Vectors and Matrices for use in OpenGL
 class Camera:
     def __init__(
             self,
@@ -79,7 +79,7 @@ class Camera:
             elif self.pitch < -89.99:
                 self.pitch = -89.99
         
-        # Update Front, Right and Up Vectors using the updated Euler angles
+        # Update front, right and up Vectors using the updated Euler angles
         self._update_camera_vectors()
     
     def process_mouse_scroll(self, yoffset):
@@ -90,7 +90,7 @@ class Camera:
             self.fov = 100
 
     def _update_camera_vectors(self):
-        # Calculate the new Front vector
+        # Calculate the new front vector
         self.front = glm.vec3()
         self.front.x = glm.cos(glm.radians(self.yaw)) * glm.cos(glm.radians(self.pitch))
         self.front.y = glm.sin(glm.radians(self.pitch))

@@ -22,6 +22,8 @@ last_y = screen.height / 2
 
 middle_mouse_down = False
 
+need_resize = False
+
 
 def main():
     if not glfwInit():
@@ -132,6 +134,17 @@ def main():
     global settings_window
     settings_window = False
 
+    global need_resize
+
+    # Current tile top left position in pixels
+    curr_tile_x = 0
+    curr_tile_y = 0
+
+    # Apply ceiling function
+    # Allows the compute shader to reach the entire screen
+    tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
+    tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
+
     # Render loop
     while not glfwWindowShouldClose(window):
         frame_start = time.perf_counter()
@@ -148,6 +161,39 @@ def main():
             # Reset stats counters
             stats_start_time = time.perf_counter()
             stats_frame_count = 0
+        
+        if need_resize:
+            compute_texture.release()
+
+            compute_texture = ctx.texture(screen.resolution, 4, dtype=f4)
+            compute_texture.write(np.zeros((*screen.resolution, 4), dtype=f4))
+
+            raster_color_tex.release()
+            raster_depth_texture.release()
+            raster_fbo.release()
+
+            raster_color_tex = ctx.texture(screen.resolution, 4, dtype=f4)
+            raster_depth_texture = ctx.depth_texture(screen.resolution)
+            raster_fbo = ctx.framebuffer(
+                color_attachments=[raster_color_tex],
+                depth_attachment=raster_depth_texture
+            )
+
+            total_samples = 0
+
+            # Reset tiling
+            curr_tile_x = 0
+            curr_tile_y = 0
+
+            # Recalculate tile sizes
+            tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
+            tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
+
+            ctx.viewport = (0, 0, screen.width, screen.height)
+
+            pt_shaders.pt.prog["aspectRatio"].value = set_f4(screen.width / screen.height)
+
+            need_resize = False
         
         update_stats(window, avg_fps, total_samples)
 
@@ -175,9 +221,19 @@ def main():
 
                             if curr_mode == "Path Tracing":
                                 render_settings.render_mode = "path_tracing"
+                                
                                 camera_buffer.update_data()
+
                                 total_samples = 0
                                 should_render = True
+                                
+                                # Reset tiling
+                                curr_tile_x = 0
+                                curr_tile_y = 0
+
+                                # Reset accumulation buffer
+                                compute_texture.write(np.zeros((*screen.resolution, 4), dtype=f4))
+                            
                             else:
                                 render_settings.render_mode = "rasterization"
 
@@ -195,6 +251,8 @@ def main():
                 should_render = False
             
             if should_render:
+                pt_shaders.pt.prog["aspectRatio"].value = set_f4(screen.width / screen.height)
+                
                 pt_shaders.pt.prog["totalSamples"].value = total_samples
                 pt_shaders.pt.prog["maxDepth"].value = pt_settings.max_depth
 
@@ -203,9 +261,23 @@ def main():
                 pt_shaders.pt.prog["hdriExposure"].value = post_process_settings.hdri_exposure
 
                 # Apply ceiling function
-                # Allows the GPU to reach the entire screen despite different screen resolutions
-                local_size_x = (screen.width + 15) // 16
-                local_size_y = (screen.height + 15) // 16
+                # Allows the compute shader to reach the entire screen
+                local_size_x = (tile_width + 15) // 16
+                local_size_y = (tile_height + 15) // 16
+
+                offset_x = curr_tile_x
+                offset_y = curr_tile_y
+
+                pt_shaders.pt.prog["uOffset"].value = np.array([offset_x, offset_y], dtype=i4)
+
+                curr_tile_x += tile_width
+                if curr_tile_x > screen.width:
+                    curr_tile_x = 0
+                    curr_tile_y += tile_height
+                
+                if curr_tile_y > screen.height:
+                    curr_tile_y = 0
+                    total_samples += 1
                 
                 # Run compute shader
                 compute_texture.bind_to_image(0, read=True, write=True)
@@ -290,8 +362,6 @@ def main():
 
         glfwSwapBuffers(window)
 
-        if should_render:
-            total_samples += 1
         stats_frame_count += 1
 
         cap_fps(frame_start, screen.fps_cap)
@@ -342,6 +412,16 @@ def glfw_set_callbacks(window):
     glfwSetScrollCallback(window, scroll_callback)
     glfwSetMouseButtonCallback(window, mouse_button_callback)
     glfwSetKeyCallback(window, key_callback)
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback)
+
+
+def framebuffer_size_callback(window, width, height):
+    global need_resize, screen
+
+    need_resize = True
+
+    screen.width = width
+    screen.height = height
 
 
 def process_input(window, delta_time):
