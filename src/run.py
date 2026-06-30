@@ -471,22 +471,22 @@ def main():
 
     ctx = moderngl.create_context()
 
-    # try:
-    #     with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
-    #         scene = pickle.load(f)
-    # except:
-    #     scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
-    #     with open("src/assets/cache/dragon_scene.pkl", "wb") as f:
-    #         pickle.dump(scene, f)
+    try:
+        with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
+            scene = pickle.load(f)
+    except:
+        scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+        with open("src/assets/cache/dragon_scene.pkl", "wb") as f:
+            pickle.dump(scene, f)
 
-    scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+    # scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
 
     shaders = Shaders(ctx, render_settings.render_mode)
     
     compute_texture = ctx.texture(screen.resolution, 4, dtype=f4)
 
     full_screen_quad = FullScreenQuad(ctx, shaders.final)
-    
+
     if render_settings.render_mode == "rasterization":
         pbr_pass = PBRPass(ctx, scene, shaders.pbr)
         bg_pass = BGPass(ctx, shaders.bg)
