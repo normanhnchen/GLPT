@@ -216,30 +216,33 @@ void main() {
         mat.metallic = texture(metallicTextures, vec3(texCoords, mat.metalTexId)).r;
     }
     vec3 N;
+    vec3 T;
+    vec3 B;
     // https://learnopengl.com/Advanced-Lighting/Normal-Mapping
     if (mat.hasNormalTex == 1) {
-        mat3 TBN = mat3(tangent, bitangent, normal);
+        N = normalize(normal);
+        T = normalize(tangent);
+        B = normalize(bitangent);
+        mat3 TBN = mat3(T, B, N);
         // Get normal in world space
-        vec3 normal = texture(normalTextures, vec3(texCoords, mat.normalTexId)).rgb;
-        normal = normal * 2.0 - 1.0;
-        normal = normalize(TBN * normal);
-
-        N = normal;
+        N = texture(normalTextures, vec3(texCoords, mat.normalTexId)).rgb;
+        N = N * 2.0 - 1.0;
+        N = normalize(TBN * N);
 
         // Build an Orthonormal basis (ONB)
         vec3 helper = abs(N.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
-        vec3 T = normalize(cross(helper, N));
-        vec3 B = cross(N, T);
+        T = normalize(cross(helper, N));
+        B = cross(N, T);
 
         TBN = mat3(T, B, N);
         mat3 invTBN = transpose(TBN);
     } else {
-        N = normal;
+        N = normalize(normal);
 
         // Build an Orthonormal basis (ONB)
         vec3 helper = abs(N.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
-        vec3 T = normalize(cross(helper, N));
-        vec3 B = cross(N, T);
+        T = normalize(cross(helper, N));
+        B = cross(N, T);
 
         mat3 TBN = mat3(T, B, N);
         mat3 invTBN = transpose(TBN);

@@ -46,15 +46,15 @@ def main():
 
     ctx = moderngl.create_context()
 
-    # try:
-    #     with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
-    #         scene = pickle.load(f)
-    # except:
-    #     scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
-    #     with open("src/assets/cache/dragon_scene.pkl", "wb") as f:
-    #         pickle.dump(scene, f)
+    try:
+        with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
+            scene = pickle.load(f)
+    except:
+        scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+        with open("src/assets/cache/dragon_scene.pkl", "wb") as f:
+            pickle.dump(scene, f)
 
-    scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+    # scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
 
     pbr_shader = Shader(
         ctx,
@@ -248,7 +248,10 @@ def main():
         ("pad1", f4)
     ])
 
-    light_data = np.zeros(scene.num_lights, dtype=light_dtype)
+    # Ensure there is atleast a buffer size
+    buffer_size = max(1, scene.num_lights)
+
+    light_data = np.zeros(buffer_size, dtype=light_dtype)
 
     for i, light in enumerate(scene.lights):
         light_type = light["type"]

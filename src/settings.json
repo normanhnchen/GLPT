@@ -1,6 +1,6 @@
 {   
     "file_paths": {
-        "scene": "src/assets/rasterizer_test.glb",
+        "scene": "src/assets/dragon_scene.glb",
         "hdri": "src/assets/day_sky_hdri.exr",
         
         "path_tracing": {
