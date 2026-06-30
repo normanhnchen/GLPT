@@ -189,9 +189,8 @@ def main():
             tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
             tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
 
+            ctx.screen.use()
             ctx.viewport = (0, 0, screen.width, screen.height)
-
-            pt_shaders.pt.prog["aspectRatio"].value = set_f4(screen.width / screen.height)
 
             need_resize = False
         
@@ -252,7 +251,7 @@ def main():
             
             if should_render:
                 pt_shaders.pt.prog["aspectRatio"].value = set_f4(screen.width / screen.height)
-                
+
                 pt_shaders.pt.prog["totalSamples"].value = total_samples
                 pt_shaders.pt.prog["maxDepth"].value = pt_settings.max_depth
 
@@ -413,6 +412,7 @@ def glfw_set_callbacks(window):
     glfwSetMouseButtonCallback(window, mouse_button_callback)
     glfwSetKeyCallback(window, key_callback)
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback)
+    glfwSetWindowSizeLimits(window, 400, 300, GLFW_DONT_CARE, GLFW_DONT_CARE)
 
 
 def framebuffer_size_callback(window, width, height):
@@ -422,6 +422,7 @@ def framebuffer_size_callback(window, width, height):
 
     screen.width = width
     screen.height = height
+    screen.resolution = (width, height)
 
 
 def process_input(window, delta_time):
