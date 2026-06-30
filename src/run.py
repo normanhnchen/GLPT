@@ -20,6 +20,8 @@ first_mouse = True
 last_x = screen.width / 2
 last_y = screen.height / 2
 
+middle_mouse_down = False
+
 
 def main():
     if not glfwInit():
@@ -38,9 +40,6 @@ def main():
         return "Failed to create GLFW window"
     
     glfwMakeContextCurrent(window)
-    glfwSetCursorPosCallback(window, mouse_callback)
-    glfwSetScrollCallback(window, scroll_callback)
-    # glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
     if screen.vsync == True:
         glfwSwapInterval(1)
     else:
@@ -50,7 +49,13 @@ def main():
 
     imgui.create_context()
 
+    global impl
     impl = GlfwRenderer(window)
+    
+    # Set callbacks after so imgui doesn't override them
+    glfwSetCursorPosCallback(window, mouse_callback)
+    glfwSetScrollCallback(window, scroll_callback)
+    glfwSetMouseButtonCallback(window, mouse_button_callback)
 
     try:
         with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
@@ -335,6 +340,9 @@ def update_stats(window, fps, samples):
 def process_input(window, delta_time):
     if glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS:
         glfwSetWindowShouldClose(window, True)
+
+    if imgui.get_io().want_capture_keyboard:
+        return
     
     if render_settings.render_mode == "path_tracing":
         return
@@ -353,27 +361,59 @@ def process_input(window, delta_time):
         camera.process_keyboard(CameraMovement.DOWN, delta_time)
 
 
+def mouse_button_callback(window, button, action, mods):
+    if hasattr(impl, "mouse_button_callback"):
+        impl.mouse_button_callback(window, button, action, mods)
+    
+    if imgui.get_io().want_capture_mouse:
+        return
+    
+    global middle_mouse_down, first_mouse
+
+    if button == GLFW_MOUSE_BUTTON_MIDDLE:
+        if action == GLFW_PRESS:
+            middle_mouse_down = True
+            first_mouse = True
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+        elif action == GLFW_RELEASE:
+            middle_mouse_down = False
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+
+
 def mouse_callback(window, xpos, ypos):
+    if hasattr(impl, "mouse_callback"):
+        impl.mouse_callback(window, xpos, ypos)
+    
+    if imgui.get_io().want_capture_mouse:
+        return
+
     if render_settings.render_mode == "path_tracing":
         return
 
-    global first_mouse, last_x, last_y
+    if middle_mouse_down:
+        global first_mouse, last_x, last_y
 
-    if first_mouse:
+        if first_mouse:
+            last_x = xpos
+            last_y = ypos
+            first_mouse = False
+        
+        xoffset = xpos - last_x
+        # Reversed since y-coordinates go from bottom to top
+        yoffset = last_y - ypos
         last_x = xpos
         last_y = ypos
-        first_mouse = False
-    
-    xoffset = xpos - last_x
-    # Reversed since y-coordinates go from bottom to top
-    yoffset = last_y - ypos
-    last_x = xpos
-    last_y = ypos
 
-    camera.process_mouse_movement(xoffset, yoffset)
+        camera.process_mouse_movement(xoffset, yoffset)
 
 
 def scroll_callback(window, xoffset, yoffset):
+    if hasattr(impl, "scroll_callback"):
+        impl.scroll_callback(window, xoffset, yoffset)
+    
+    if imgui.get_io().want_capture_mouse:
+        return
+
     camera.process_mouse_scroll(yoffset)
 
 
