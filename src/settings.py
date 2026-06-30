@@ -65,6 +65,7 @@ class FilePaths:
         self.path_tracing = ShaderGroup(config["path_tracing"])
         self.background = ShaderGroup(config["real_time"]["background"])
         self.pbr = ShaderGroup(config["real_time"]["pbr"])
+        self.irradiance_conv = ShaderGroup(config["real_time"]["irradiance_convolution"])
 
 
 with open("src/settings.json") as f:
