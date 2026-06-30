@@ -42,6 +42,11 @@ class Shaders:
                 file_paths.background.vert,
                 file_paths.background.frag
             )
+            self.final = Shader(
+                ctx,
+                file_paths.final.vert,
+                file_paths.final.frag
+            )
 
 
 class CameraBuffer:
@@ -480,11 +485,18 @@ def main():
     
     compute_texture = ctx.texture(screen.resolution, 4, dtype=f4)
 
-    if render_settings.render_mode == "path_tracing":
-        full_screen_quad = FullScreenQuad(ctx, shaders.final)
-    elif render_settings.render_mode == "rasterization":
+    full_screen_quad = FullScreenQuad(ctx, shaders.final)
+    
+    if render_settings.render_mode == "rasterization":
         pbr_pass = PBRPass(ctx, scene, shaders.pbr)
         bg_pass = BGPass(ctx, shaders.bg)
+
+        raster_color_tex = ctx.texture(screen.resolution, 4, dtype=f4)
+        raster_depth_texture = ctx.depth_texture(screen.resolution)
+        raster_fbo = ctx.framebuffer(
+            color_attachments=[raster_color_tex],
+            depth_attachment=raster_depth_texture
+        )
 
     camera_buffer = CameraBuffer()
 
@@ -584,25 +596,11 @@ def main():
             
                 # Draw to screen
                 compute_texture.use(location=0)
-
-            shaders.final.prog["exposure"].value = post_process_settings.exposure
-            
-            # Options:
-            #   - None
-            #   - ACESFilm
-            #   - AgX, AgXGolden, AgXPunchy
-            #   - Filmic
-            #   - Lottes
-            #   - Neutral
-            #   - Reinhard, Reinhard2
-            #   - Uchimura
-            #   - Uncharted2
-            #   - Unreal
-            shaders.final.set_tonemap(post_process_settings.tonemap)
-
-            full_screen_quad.draw()
         
         elif render_settings.render_mode == "rasterization":
+            raster_fbo.use()
+            raster_fbo.clear(0.0, 0.0, 0.0, 1.0)
+
             # --- Background shader ---
         
             ctx.depth_func = "<="
@@ -626,6 +624,26 @@ def main():
             shaders.pbr.prog["cameraPos"].value = camera.pos
 
             pbr_pass.draw()
+
+            ctx.screen.use()
+            raster_color_tex.use(location=0)
+        
+        shaders.final.prog["exposure"].value = post_process_settings.exposure
+            
+        # Options:
+        #   - None
+        #   - ACESFilm
+        #   - AgX, AgXGolden, AgXPunchy
+        #   - Filmic
+        #   - Lottes
+        #   - Neutral
+        #   - Reinhard, Reinhard2
+        #   - Uchimura
+        #   - Uncharted2
+        #   - Unreal
+        shaders.final.set_tonemap(post_process_settings.tonemap)
+
+        full_screen_quad.draw()
 
         glfwSwapBuffers(window)
         glfwPollEvents()

@@ -4,9 +4,9 @@
         "hdri": "src/assets/day_sky_hdri.exr",
         
         "path_tracing": {
-            "vert": "src/shaders/path_tracing/render.vs",
-            "frag": "src/shaders/path_tracing/render.fs",
-            "comp": "src/shaders/path_tracing/render.comp"
+            "vert": "src/shaders/path_tracing/final.vs",
+            "frag": "src/shaders/path_tracing/final.fs",
+            "comp": "src/shaders/path_tracing/pt.comp"
         },
         "rasterization": {
             "pbr": {
@@ -16,6 +16,10 @@
             "background": {
                 "vert": "src/shaders/rasterization/background.vs",
                 "frag": "src/shaders/rasterization/background.fs"
+            },
+            "final": {
+                "vert": "src/shaders/rasterization/final.vs",
+                "frag": "src/shaders/rasterization/final.fs"
             }
         }
     },
