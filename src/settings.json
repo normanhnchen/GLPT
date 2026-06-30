@@ -1,22 +1,32 @@
 {   
     "file_paths": {
-        "scene": "src/assets/alpha_test.glb",
+        "scene": "src/assets/glass_test.glb",
         "hdri": "src/assets/day_sky_hdri.exr",
         
-        "path_trace": {
-            "vert": "src/shaders/path_trace.vs",
-            "frag": "src/shaders/path_trace.fs",
-            "comp": "src/shaders/path_trace.comp"
+        "path_tracing": {
+            "vert": "src/shaders/path_tracing/final.vs",
+            "frag": "src/shaders/path_tracing/final.fs",
+            "comp": "src/shaders/path_tracing/pt.comp"
         },
-        "real_time": {
-            "vert": "src/shaders/real_time.vs",
-            "frag": "src/shaders/real_time.fs"
+        "rasterization": {
+            "pbr": {
+                "vert": "src/shaders/rasterization/pbr.vs",
+                "frag": "src/shaders/rasterization/pbr.fs"
+            },
+            "background": {
+                "vert": "src/shaders/rasterization/background.vs",
+                "frag": "src/shaders/rasterization/background.fs"
+            },
+            "final": {
+                "vert": "src/shaders/rasterization/final.vs",
+                "frag": "src/shaders/rasterization/final.fs"
+            }
         }
     },
     "screen": {
         "width": 1920,
         "height": 1080,
-        "vsync": true,
+        "vsync": false,
         "fps_cap": 240
     },
     "camera": {
@@ -42,5 +52,9 @@
         "exposure": 3.0,
         "tonemap": "AgX",
         "hdri_exposure": 1.0
+    },
+    "render": {
+        "render_mode": "rasterization",
+        "texture_size": [1024, 1024]
     }
 }
