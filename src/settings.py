@@ -65,6 +65,7 @@ class FilePaths:
         self.path_tracing = ShaderGroup(config["path_tracing"])
         self.background = ShaderGroup(config["rasterization"]["background"])
         self.pbr = ShaderGroup(config["rasterization"]["pbr"])
+        self.final = ShaderGroup(config["rasterization"]["final"])
 
 
 class RenderSettings:

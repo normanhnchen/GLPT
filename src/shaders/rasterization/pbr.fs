@@ -221,7 +221,7 @@ vec3 SamplePBR(vec3 N, Material mat) {
     // vec3 ambient = (kD * diffuse) * mat.ao;
 
     // Currently just use a base ambient light
-    vec3 ambient = vec3(0.02) * mat.baseCol * mat.ao;
+    vec3 ambient = vec3(0.1) * mat.baseCol * mat.ao;
 
     return Lo + ambient;
 }
@@ -265,8 +265,6 @@ void main() {
     }
 
     vec3 color = SamplePBR(N, mat);
-
-    // Gamma correction
-    vec3 finalColor = pow(color, vec3(1.0 / 2.2));
-    fragColor = vec4(finalColor, 1.0);
+    
+    fragColor = vec4(color, 1.0);
 }
