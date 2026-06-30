@@ -32,12 +32,12 @@ class Shaders:
                 file_paths.path_tracing.comp
             )
         elif render_mode == "rasterization":
-            self.pbr_shader = Shader(
+            self.pbr = Shader(
                 ctx,
                 file_paths.pbr.vert,
                 file_paths.pbr.frag
             )
-            self.bg_shader = Shader(
+            self.bg = Shader(
                 ctx,
                 file_paths.background.vert,
                 file_paths.background.frag
@@ -178,6 +178,59 @@ class MaterialBuffer:
         self.material_buffer.bind_to_storage_buffer(loc)
 
 
+class LightBuffer:
+    def __init__(self, scene):
+        light_dtype = np.dtype([
+            ("col", *vec3),
+            ("type", i4), # Point: 0, directional: 1, spot: 2
+            ("pos", *vec3),
+            ("intensity", f4),
+            ("dir", *vec3),
+            ("range", f4),
+            ("isSpot", i4),
+            ("innerConeAngle", f4), # Radians
+            ("outerConeAngle", f4), # Radians
+            ("pad1", f4)
+        ])
+
+        # Ensure there is atleast a buffer size
+        buffer_size = max(1, scene.num_lights)
+
+        light_data = np.zeros(buffer_size, dtype=light_dtype)
+
+        for i, light in enumerate(scene.lights):
+            light_type = light["type"]
+            if light_type == "directional":
+                light_data[i]["type"] = 1
+            elif light_type == "spot":
+                light_data[i]["type"] = 2
+            else:
+                light_data[i]["type"] = 0
+
+            light_data[i]["col"]       = light["color"]
+            light_data[i]["intensity"] = light["intensity"]
+            light_data[i]["range"]     = light["range"]
+
+            spot = light["spot"]
+            if spot:
+                light_data[i]["isSpot"] = 1
+                light_data[i]["innerConeAngle"] = spot["innerConeAngle"]
+                light_data[i]["outerConeAngle"] = spot["outerConeAngle"]
+            else:
+                light_data[i]["isSpot"] = 0
+            
+            # Convert to list then array as they are glm.vec3 objects
+            light_data[i]["pos"] = np.array(list(light["position"]))
+            light_data[i]["dir"] = np.array(list(light["direction"]))
+        
+        self.light_dtype = light_dtype
+        self.light_data = light_data
+    
+    def bind(self, ctx, loc):
+        self.light_buffer = ctx.buffer(self.light_data.tobytes())
+        self.light_buffer.bind_to_storage_buffer(loc)
+
+
 class TriangleBuffer:
     def __init__(self, material_buffer, scene):
         vertex_dtype = np.dtype([
@@ -289,6 +342,103 @@ class FullScreenQuad:
         self.vao.render(moderngl.TRIANGLE_STRIP)
 
 
+class PBRPass:
+    def __init__(self, ctx, scene, pbr_shader):
+        vertices = scene.vertices[scene.triangles]
+        uvs = scene.uvs[scene.triangles]
+        normals = scene.normals[scene.triangles]
+        tangents = scene.tangents[scene.triangles]
+        bitangents = scene.bitangents[scene.triangles]
+        ids = np.repeat(scene.material_ids, 3)
+
+        vertices = vertices.reshape(-1, 3)
+        uvs = uvs.reshape(-1, 2)
+        normals = normals.reshape(-1, 3)
+        tangents = tangents.reshape(-1, 3)
+        bitangents = bitangents.reshape(-1, 3)
+        ids = ids.reshape(-1,)
+
+        pbr_dtype = np.dtype([
+            ("pos", *vec3),
+            ("uv", *vec2),
+            ("normal", *vec3),
+            ("tangent", *vec3),
+            ("bitangent", *vec3),
+            ("matId", i4)
+        ])
+
+        pbr_data = np.zeros(len(vertices), dtype=pbr_dtype)
+
+        pbr_data["pos"] = vertices
+        pbr_data["uv"] = uvs
+        pbr_data["normal"] = normals
+        pbr_data["tangent"] = tangents
+        pbr_data["bitangent"] = bitangents
+        pbr_data["matId"] = ids
+
+        pbr_vbo = ctx.buffer(pbr_data.tobytes())
+
+        pbr_vao = ctx.vertex_array(
+            pbr_shader.prog,
+            [
+                (
+                    pbr_vbo,
+                    "3f 2f 3f 3f 3f 1i",
+                    "aPos", "aTexCoords", "aNormal", "aTangent", "aBitangent", "aMatId"
+                )
+            ]
+        )
+
+        self.pbr_data = pbr_data
+        self.pbr_vao = pbr_vao
+
+    def draw(self):
+        self.pbr_vao.render(moderngl.TRIANGLES)
+
+
+class BGPass:
+    def __init__(self, ctx, bg_shader):
+        cubemap_data = np.array([
+            -1, -1, -1,   -1, -1,  1,   -1,  1,  1,
+            -1, -1, -1,   -1,  1,  1,   -1,  1, -1,
+
+            1, -1,  1,    1, -1, -1,    1,  1, -1,
+            1, -1,  1,    1,  1, -1,    1,  1,  1,
+
+            -1, -1, -1,    1, -1, -1,    1, -1,  1,
+            -1, -1, -1,    1, -1,  1,   -1, -1,  1,
+
+            -1,  1,  1,    1,  1,  1,    1,  1, -1,
+            -1,  1,  1,    1,  1, -1,   -1,  1, -1,
+
+            1, -1, -1,   -1, -1, -1,   -1,  1, -1,
+            1, -1, -1,   -1,  1, -1,    1,  1, -1,
+
+            -1, -1,  1,    1, -1,  1,    1,  1,  1,
+            -1, -1,  1,    1,  1,  1,   -1,  1,  1,
+        ], dtype=f4)
+
+        bg_vbo = ctx.buffer(cubemap_data.tobytes())
+
+        bg_vao = ctx.vertex_array(
+            bg_shader.prog,
+            [
+                (
+                    bg_vbo,
+                    "3f",
+                    "aPos"
+                )
+            ]
+        )
+
+        self.bg_data = cubemap_data
+        self.bg_vbo = bg_vbo
+        self.bg_vao = bg_vao
+    
+    def draw(self):
+        self.bg_vao.render(moderngl.TRIANGLES)
+            
+
 def main():
     if not glfwInit():
         return "Failed to initialize GLFW"
@@ -330,7 +480,11 @@ def main():
     
     compute_texture = ctx.texture(screen.resolution, 4, dtype=f4)
 
-    full_screen_quad = FullScreenQuad(ctx, shaders.final)
+    if render_settings.render_mode == "path_tracing":
+        full_screen_quad = FullScreenQuad(ctx, shaders.final)
+    elif render_settings.render_mode == "rasterization":
+        pbr_pass = PBRPass(ctx, scene, shaders.pbr)
+        bg_pass = BGPass(ctx, shaders.bg)
 
     camera_buffer = CameraBuffer()
 
@@ -340,6 +494,8 @@ def main():
 
     bvh_node_buffer = BVHNodeBuffer(scene)
 
+    light_buffer = LightBuffer(scene)
+
     camera_buffer.bind(ctx, 0)
 
     triangle_buffer.bind(ctx, 1)
@@ -348,9 +504,11 @@ def main():
 
     bvh_node_buffer.bind(ctx, 3)
 
+    light_buffer.bind(ctx, 4)
+
     tri_indices_data = scene.bvh.tri_indices.astype(i4)
     tri_indices_buffer = ctx.buffer(tri_indices_data.tobytes())
-    tri_indices_buffer.bind_to_storage_buffer(4)
+    tri_indices_buffer.bind_to_storage_buffer(5)
 
     scene.create_texture_arrays(ctx, *render_settings.texture_size)
     scene.bind_texture_arrays()
@@ -366,6 +524,12 @@ def main():
     stats_frame_count = 0
 
     should_render = True
+
+    if render_settings.render_mode == "path_tracing":
+        ctx.disable(moderngl.DEPTH_TEST)
+    elif render_settings.render_mode == "rasterization":
+        ctx.enable(moderngl.DEPTH_TEST)
+    
 
     # Render loop
     while not glfwWindowShouldClose(window):
@@ -390,52 +554,78 @@ def main():
 
         ctx.clear(0, 0, 0, 1)
 
-        if camera.has_moved():
-            total_samples = 0
-            should_render = True
-        
-        if total_samples >= pt_settings.max_samples:
-            should_render = False
-        
-        if should_render:
-            # Update camera data
-            camera_buffer.update_data()
-
-            shaders.pt.prog["totalSamples"].value = total_samples
-            shaders.pt.prog["maxDepth"].value = pt_settings.max_depth
-
-            shaders.pt.prog["blur"].value = post_process_settings.blur
-
-            shaders.pt.prog["hdriExposure"].value = post_process_settings.hdri_exposure
-
-            # Apply ceiling function
-            # Allows the GPU to reach the entire screen despite different screen resolutions
-            local_size_x = (screen.width + 15) // 16
-            local_size_y = (screen.height + 15) // 16
+        if render_settings.render_mode == "path_tracing":
+            if camera.has_moved():
+                total_samples = 0
+                should_render = True
             
-            # Run compute shader
-            compute_texture.bind_to_image(0, read=True, write=True)
-            shaders.pt.prog.run(local_size_x, local_size_y)
-        
-            # Draw to screen
-            compute_texture.use(location=0)
+            if total_samples >= pt_settings.max_samples:
+                should_render = False
+            
+            if should_render:
+                # Update camera data
+                camera_buffer.update_data()
 
-        shaders.final.prog["exposure"].value = post_process_settings.exposure
-        
-        # Options:
-        #   - None
-        #   - ACESFilm
-        #   - AgX, AgXGolden, AgXPunchy
-        #   - Filmic
-        #   - Lottes
-        #   - Neutral
-        #   - Reinhard, Reinhard2
-        #   - Uchimura
-        #   - Uncharted2
-        #   - Unreal
-        shaders.final.set_tonemap(post_process_settings.tonemap)
+                shaders.pt.prog["totalSamples"].value = total_samples
+                shaders.pt.prog["maxDepth"].value = pt_settings.max_depth
 
-        full_screen_quad.draw()
+                shaders.pt.prog["blur"].value = post_process_settings.blur
+
+                shaders.pt.prog["hdriExposure"].value = post_process_settings.hdri_exposure
+
+                # Apply ceiling function
+                # Allows the GPU to reach the entire screen despite different screen resolutions
+                local_size_x = (screen.width + 15) // 16
+                local_size_y = (screen.height + 15) // 16
+                
+                # Run compute shader
+                compute_texture.bind_to_image(0, read=True, write=True)
+                shaders.pt.prog.run(local_size_x, local_size_y)
+            
+                # Draw to screen
+                compute_texture.use(location=0)
+
+            shaders.final.prog["exposure"].value = post_process_settings.exposure
+            
+            # Options:
+            #   - None
+            #   - ACESFilm
+            #   - AgX, AgXGolden, AgXPunchy
+            #   - Filmic
+            #   - Lottes
+            #   - Neutral
+            #   - Reinhard, Reinhard2
+            #   - Uchimura
+            #   - Uncharted2
+            #   - Unreal
+            shaders.final.set_tonemap(post_process_settings.tonemap)
+
+            full_screen_quad.draw()
+        
+        elif render_settings.render_mode == "rasterization":
+            # --- Background shader ---
+        
+            ctx.depth_func = "<="
+
+            # Vertex shader uniforms
+            shaders.bg.prog["view"].write(camera.get_view().to_bytes())
+            shaders.bg.prog["projection"].write(camera.get_perspective().to_bytes())
+
+            bg_pass.draw()
+
+            ctx.depth_func = "<"
+
+            # --- PBR shader ---
+
+            # Vertex shader uniforms
+            shaders.pbr.prog["view"].write(camera.get_view().to_bytes())
+            shaders.pbr.prog["projection"].write(camera.get_perspective().to_bytes())
+
+            # Fragment shader uniforms
+            shaders.pbr.prog["numLights"].value = set_i4(scene.num_lights)
+            shaders.pbr.prog["cameraPos"].value = camera.pos
+
+            pbr_pass.draw()
 
         glfwSwapBuffers(window)
         glfwPollEvents()
