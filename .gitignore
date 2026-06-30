@@ -1,5 +1,7 @@
-# Pickle
+# Assets & Cache
 *.pkl
+*.glb
+*.exr
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

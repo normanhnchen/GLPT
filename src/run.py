@@ -4,6 +4,8 @@ import moderngl
 import sys
 import time
 import pickle
+from imgui_bundle import imgui, imgui_ctx
+from imgui_bundle.python_backends.glfw_backend import GlfwRenderer
 
 from src.settings import *
 from src.dtypes import *
@@ -19,34 +21,384 @@ last_x = screen.width / 2
 last_y = screen.height / 2
 
 
-class Shaders:
-    def __init__(self, ctx, render_mode):
-        if render_mode == "path_tracing":
-            self.final = Shader(
-                ctx,
-                file_paths.path_tracing.vert,
-                file_paths.path_tracing.frag
-            )
-            self.pt = ComputeShader(
-                ctx,
-                file_paths.path_tracing.comp
-            )
-        elif render_mode == "rasterization":
-            self.pbr = Shader(
-                ctx,
-                file_paths.pbr.vert,
-                file_paths.pbr.frag
-            )
-            self.bg = Shader(
-                ctx,
-                file_paths.background.vert,
-                file_paths.background.frag
-            )
-            self.final = Shader(
-                ctx,
-                file_paths.final.vert,
-                file_paths.final.frag
-            )
+def main():
+    if not glfwInit():
+        return "Failed to initialize GLFW"
+
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4)
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6)
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE)
+    # Apple system required config
+    if sys.platform == "darwin":
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE)
+    
+    window = glfwCreateWindow(screen.width, screen.height, "FPS: 0 | Samples: 0", None, None)
+
+    if not window:
+        return "Failed to create GLFW window"
+    
+    glfwMakeContextCurrent(window)
+    glfwSetCursorPosCallback(window, mouse_callback)
+    glfwSetScrollCallback(window, scroll_callback)
+    # glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+    if screen.vsync == True:
+        glfwSwapInterval(1)
+    else:
+        glfwSwapInterval(0)
+
+    ctx = moderngl.create_context()
+
+    imgui.create_context()
+
+    impl = GlfwRenderer(window)
+
+    try:
+        with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
+            scene = pickle.load(f)
+    except:
+        scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+        with open("src/assets/cache/dragon_scene.pkl", "wb") as f:
+            pickle.dump(scene, f)
+
+    # scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+
+    pt_shaders = PTShaders(ctx)
+    raster_shaders = RasterShaders(ctx,)
+    
+    compute_texture = ctx.texture(screen.resolution, 4, dtype=f4)
+
+    full_screen_quad = FullScreenQuad(ctx, pt_shaders.final)
+
+    pbr_pass = PBRPass(ctx, scene, raster_shaders.pbr)
+    bg_pass = BGPass(ctx, raster_shaders.bg)
+
+    raster_color_tex = ctx.texture(screen.resolution, 4, dtype=f4)
+    raster_depth_texture = ctx.depth_texture(screen.resolution)
+    raster_fbo = ctx.framebuffer(
+        color_attachments=[raster_color_tex],
+        depth_attachment=raster_depth_texture
+    )
+
+    camera_buffer = CameraBuffer()
+
+    material_buffer = MaterialBuffer(scene)
+
+    triangle_buffer = TriangleBuffer(material_buffer, scene)
+
+    bvh_node_buffer = BVHNodeBuffer(scene)
+
+    light_buffer = LightBuffer(scene)
+
+    camera_buffer.bind(ctx, 0)
+
+    triangle_buffer.bind(ctx, 1)
+
+    material_buffer.bind(ctx, 2)
+
+    bvh_node_buffer.bind(ctx, 3)
+
+    light_buffer.bind(ctx, 4)
+
+    tri_indices_data = scene.bvh.tri_indices.astype(i4)
+    tri_indices_buffer = ctx.buffer(tri_indices_data.tobytes())
+    tri_indices_buffer.bind_to_storage_buffer(5)
+
+    scene.create_texture_arrays(ctx, *render_settings.texture_size)
+    scene.bind_texture_arrays()
+
+    scene.hdri.bind(ctx, 6)
+    
+    last_frame_start = 0
+    stats_start_time = time.perf_counter()
+
+    avg_fps = 0
+
+    total_samples = 0
+    stats_frame_count = 0
+
+    should_render = True
+
+    if render_settings.render_mode == "path_tracing":
+        ctx.disable(moderngl.DEPTH_TEST)
+    elif render_settings.render_mode == "rasterization":
+        ctx.enable(moderngl.DEPTH_TEST)
+
+    curr_selection = "Rasterization"
+    options = ["Rasterization", "Path Tracing"]
+    
+    settings_window = True
+    # Render loop
+    while not glfwWindowShouldClose(window):
+        frame_start = time.perf_counter()
+        delta_time = frame_start - last_frame_start
+        last_frame_start = frame_start
+
+        stats_elapsed_time = time.perf_counter() - stats_start_time
+        
+        # Log stats every 1.5 seconds
+        if stats_elapsed_time >= 1.5:
+            # Calculate average FPS over the 1.5 second window
+            avg_fps = stats_frame_count / stats_elapsed_time
+
+            # Reset stats counters
+            stats_start_time = time.perf_counter()
+            stats_frame_count = 0
+        
+        update_stats(window, avg_fps, total_samples)
+
+        glfwPollEvents()
+
+        process_input(window, delta_time)
+
+        impl.process_inputs()
+        
+        imgui.new_frame()
+
+        if settings_window:
+            imgui.set_next_window_size((400, 600))
+
+            is_expand, settings_window = imgui.begin("Settings", True)
+            if is_expand:
+                if imgui.begin_combo("Render Mode", curr_selection):
+                    for item in options:
+                        is_selected = (curr_selection == item)
+
+                        clicked, state = imgui.selectable(item, is_selected)
+
+                        if clicked:
+                            curr_selection = item
+
+                            if curr_selection == "Path Tracing":
+                                render_settings.render_mode = "path_tracing"
+                            else:
+                                render_settings.render_mode = "rasterization"
+
+                        if is_selected:
+                            imgui.set_item_default_focus()
+                    
+                    imgui.end_combo()
+                
+            imgui.end()
+
+        ctx.clear(0, 0, 0, 1)
+
+        if render_settings.render_mode == "path_tracing":
+            if camera.has_moved():
+                total_samples = 0
+                should_render = True
+            
+            if total_samples >= pt_settings.max_samples:
+                should_render = False
+            
+            if should_render:
+                # Update camera data
+                camera_buffer.update_data()
+
+                pt_shaders.pt.prog["totalSamples"].value = total_samples
+                pt_shaders.pt.prog["maxDepth"].value = pt_settings.max_depth
+
+                pt_shaders.pt.prog["blur"].value = post_process_settings.blur
+
+                pt_shaders.pt.prog["hdriExposure"].value = post_process_settings.hdri_exposure
+
+                # Apply ceiling function
+                # Allows the GPU to reach the entire screen despite different screen resolutions
+                local_size_x = (screen.width + 15) // 16
+                local_size_y = (screen.height + 15) // 16
+                
+                # Run compute shader
+                compute_texture.bind_to_image(0, read=True, write=True)
+                pt_shaders.pt.prog.run(local_size_x, local_size_y)
+            
+                # Draw to screen
+                compute_texture.use(location=0)
+
+                # Post Processing
+                # ---------------
+                pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
+                
+                # Options:
+                #   - None
+                #   - ACESFilm
+                #   - AgX, AgXGolden, AgXPunchy
+                #   - Filmic
+                #   - Lottes
+                #   - Neutral
+                #   - Reinhard, Reinhard2
+                #   - Uchimura
+                #   - Uncharted2
+                #   - Unreal
+                pt_shaders.final.set_tonemap(post_process_settings.tonemap)
+
+                full_screen_quad.draw()
+        
+        elif render_settings.render_mode == "rasterization":
+            raster_fbo.use()
+            raster_fbo.clear(0.0, 0.0, 0.0, 1.0)
+
+            # Background Shader
+            # -----------------
+            ctx.depth_func = "<="
+
+            # Vertex shader uniforms
+            raster_shaders.bg.prog["view"].write(camera.get_view().to_bytes())
+            raster_shaders.bg.prog["projection"].write(camera.get_perspective().to_bytes())
+
+            bg_pass.draw()
+
+            ctx.depth_func = "<"
+
+            # PBR Shader
+            # ----------
+            # Vertex shader uniforms
+            raster_shaders.pbr.prog["view"].write(camera.get_view().to_bytes())
+            raster_shaders.pbr.prog["projection"].write(camera.get_perspective().to_bytes())
+
+            # Fragment shader uniforms
+            raster_shaders.pbr.prog["numLights"].value = set_i4(scene.num_lights)
+            raster_shaders.pbr.prog["cameraPos"].value = camera.pos
+
+            pbr_pass.draw()
+
+            ctx.screen.use()
+            raster_color_tex.use(location=0)
+
+            # Post Processing
+            # ---------------
+            pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
+            
+            # Options:
+            #   - None
+            #   - ACESFilm
+            #   - AgX, AgXGolden, AgXPunchy
+            #   - Filmic
+            #   - Lottes
+            #   - Neutral
+            #   - Reinhard, Reinhard2
+            #   - Uchimura
+            #   - Uncharted2
+            #   - Unreal
+            pt_shaders.final.set_tonemap(post_process_settings.tonemap)
+
+            full_screen_quad.draw()
+    
+        # Render UI
+        # ---------
+        imgui.render()
+        impl.render(imgui.get_draw_data())
+
+        glfwSwapBuffers(window)
+
+        if should_render:
+            total_samples += 1
+        stats_frame_count += 1
+
+        cap_fps(frame_start, screen.fps_cap)
+    
+    impl.shutdown()
+    glfwTerminate()
+
+
+def cap_fps(frame_start, target_fps):
+    target_duration = 1 / target_fps
+    # Target time when the target_fps is reached
+    target_time = frame_start + target_duration
+
+    # Sleep/wait until the target_time is reached
+    while True:
+        remaining_time = target_time - time.perf_counter()
+
+        if remaining_time <= 0:
+            break
+        
+        # Sleep for the majority of the time to save CPU resources
+        if remaining_time > 0.001:
+            # Sleep for half of the remaining time
+            # This methods allow sleeping precision as remaining time approaches zero
+            sleep_time = remaining_time * 0.5
+            time.sleep(sleep_time)
+        
+        # Wait until the target time is reached
+        else:
+            pass
+
+
+def update_stats(window, fps, samples):
+    glfwSetWindowTitle(
+        window,
+        f"FPS: {fps:.2f} | Samples: {samples}"
+    )
+
+
+def process_input(window, delta_time):
+    if glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS:
+        glfwSetWindowShouldClose(window, True)
+    
+    if glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS:
+        camera.process_keyboard(CameraMovement.FORWARD, delta_time)
+    if glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS:
+        camera.process_keyboard(CameraMovement.BACKWARD, delta_time)
+    if glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS:
+        camera.process_keyboard(CameraMovement.LEFT, delta_time)
+    if glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS:
+        camera.process_keyboard(CameraMovement.RIGHT, delta_time)
+    if glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS:
+        camera.process_keyboard(CameraMovement.UP, delta_time)
+    if glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS:
+        camera.process_keyboard(CameraMovement.DOWN, delta_time)
+
+
+def mouse_callback(window, xpos, ypos):
+    global first_mouse, last_x, last_y
+
+    if first_mouse:
+        last_x = xpos
+        last_y = ypos
+        first_mouse = False
+    
+    xoffset = xpos - last_x
+    # Reversed since y-coordinates go from bottom to top
+    yoffset = last_y - ypos
+    last_x = xpos
+    last_y = ypos
+
+    camera.process_mouse_movement(xoffset, yoffset)
+
+
+def scroll_callback(window, xoffset, yoffset):
+    camera.process_mouse_scroll(yoffset)
+
+
+class PTShaders:
+    def __init__(self, ctx):
+        self.final = Shader(
+            ctx,
+            file_paths.path_tracing.vert,
+            file_paths.path_tracing.frag
+        )
+        self.pt = ComputeShader(
+            ctx,
+            file_paths.path_tracing.comp
+        )
+
+
+class RasterShaders:
+    def __init__(self, ctx):
+        self.pbr = Shader(
+            ctx,
+            file_paths.pbr.vert,
+            file_paths.pbr.frag
+        )
+        self.bg = Shader(
+            ctx,
+            file_paths.background.vert,
+            file_paths.background.frag
+        )
+        self.final = Shader(
+            ctx,
+            file_paths.final.vert,
+            file_paths.final.frag
+        )
 
 
 class CameraBuffer:
@@ -442,289 +794,6 @@ class BGPass:
     
     def draw(self):
         self.bg_vao.render(moderngl.TRIANGLES)
-            
-
-def main():
-    if not glfwInit():
-        return "Failed to initialize GLFW"
-
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4)
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6)
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE)
-    # Apple system required config
-    if sys.platform == "darwin":
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE)
-    
-    window = glfwCreateWindow(screen.width, screen.height, "FPS: 0 | Samples: 0", None, None)
-
-    if not window:
-        return "Failed to create GLFW window"
-    
-    glfwMakeContextCurrent(window)
-    glfwSetCursorPosCallback(window, mouse_callback)
-    glfwSetScrollCallback(window, scroll_callback)
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-    if screen.vsync == True:
-        glfwSwapInterval(1)
-    else:
-        glfwSwapInterval(0)
-
-    ctx = moderngl.create_context()
-
-    try:
-        with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
-            scene = pickle.load(f)
-    except:
-        scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
-        with open("src/assets/cache/dragon_scene.pkl", "wb") as f:
-            pickle.dump(scene, f)
-
-    # scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
-
-    shaders = Shaders(ctx, render_settings.render_mode)
-    
-    compute_texture = ctx.texture(screen.resolution, 4, dtype=f4)
-
-    full_screen_quad = FullScreenQuad(ctx, shaders.final)
-
-    if render_settings.render_mode == "rasterization":
-        pbr_pass = PBRPass(ctx, scene, shaders.pbr)
-        bg_pass = BGPass(ctx, shaders.bg)
-
-        raster_color_tex = ctx.texture(screen.resolution, 4, dtype=f4)
-        raster_depth_texture = ctx.depth_texture(screen.resolution)
-        raster_fbo = ctx.framebuffer(
-            color_attachments=[raster_color_tex],
-            depth_attachment=raster_depth_texture
-        )
-
-    camera_buffer = CameraBuffer()
-
-    material_buffer = MaterialBuffer(scene)
-
-    triangle_buffer = TriangleBuffer(material_buffer, scene)
-
-    bvh_node_buffer = BVHNodeBuffer(scene)
-
-    light_buffer = LightBuffer(scene)
-
-    camera_buffer.bind(ctx, 0)
-
-    triangle_buffer.bind(ctx, 1)
-
-    material_buffer.bind(ctx, 2)
-
-    bvh_node_buffer.bind(ctx, 3)
-
-    light_buffer.bind(ctx, 4)
-
-    tri_indices_data = scene.bvh.tri_indices.astype(i4)
-    tri_indices_buffer = ctx.buffer(tri_indices_data.tobytes())
-    tri_indices_buffer.bind_to_storage_buffer(5)
-
-    scene.create_texture_arrays(ctx, *render_settings.texture_size)
-    scene.bind_texture_arrays()
-
-    scene.hdri.bind(ctx, 6)
-    
-    last_frame_start = 0
-    stats_start_time = time.perf_counter()
-
-    avg_fps = 0
-
-    total_samples = 0
-    stats_frame_count = 0
-
-    should_render = True
-
-    if render_settings.render_mode == "path_tracing":
-        ctx.disable(moderngl.DEPTH_TEST)
-    elif render_settings.render_mode == "rasterization":
-        ctx.enable(moderngl.DEPTH_TEST)
-    
-
-    # Render loop
-    while not glfwWindowShouldClose(window):
-        frame_start = time.perf_counter()
-        delta_time = frame_start - last_frame_start
-        last_frame_start = frame_start
-
-        stats_elapsed_time = time.perf_counter() - stats_start_time
-        
-        # Log stats every 1.5 seconds
-        if stats_elapsed_time >= 1.5:
-            # Calculate average FPS over the 1.5 second window
-            avg_fps = stats_frame_count / stats_elapsed_time
-
-            # Reset stats counters
-            stats_start_time = time.perf_counter()
-            stats_frame_count = 0
-        
-        update_stats(window, avg_fps, total_samples)
-
-        process_input(window, delta_time)
-
-        ctx.clear(0, 0, 0, 1)
-
-        if render_settings.render_mode == "path_tracing":
-            if camera.has_moved():
-                total_samples = 0
-                should_render = True
-            
-            if total_samples >= pt_settings.max_samples:
-                should_render = False
-            
-            if should_render:
-                # Update camera data
-                camera_buffer.update_data()
-
-                shaders.pt.prog["totalSamples"].value = total_samples
-                shaders.pt.prog["maxDepth"].value = pt_settings.max_depth
-
-                shaders.pt.prog["blur"].value = post_process_settings.blur
-
-                shaders.pt.prog["hdriExposure"].value = post_process_settings.hdri_exposure
-
-                # Apply ceiling function
-                # Allows the GPU to reach the entire screen despite different screen resolutions
-                local_size_x = (screen.width + 15) // 16
-                local_size_y = (screen.height + 15) // 16
-                
-                # Run compute shader
-                compute_texture.bind_to_image(0, read=True, write=True)
-                shaders.pt.prog.run(local_size_x, local_size_y)
-            
-                # Draw to screen
-                compute_texture.use(location=0)
-        
-        elif render_settings.render_mode == "rasterization":
-            raster_fbo.use()
-            raster_fbo.clear(0.0, 0.0, 0.0, 1.0)
-
-            # --- Background shader ---
-        
-            ctx.depth_func = "<="
-
-            # Vertex shader uniforms
-            shaders.bg.prog["view"].write(camera.get_view().to_bytes())
-            shaders.bg.prog["projection"].write(camera.get_perspective().to_bytes())
-
-            bg_pass.draw()
-
-            ctx.depth_func = "<"
-
-            # --- PBR shader ---
-
-            # Vertex shader uniforms
-            shaders.pbr.prog["view"].write(camera.get_view().to_bytes())
-            shaders.pbr.prog["projection"].write(camera.get_perspective().to_bytes())
-
-            # Fragment shader uniforms
-            shaders.pbr.prog["numLights"].value = set_i4(scene.num_lights)
-            shaders.pbr.prog["cameraPos"].value = camera.pos
-
-            pbr_pass.draw()
-
-            ctx.screen.use()
-            raster_color_tex.use(location=0)
-        
-        shaders.final.prog["exposure"].value = post_process_settings.exposure
-            
-        # Options:
-        #   - None
-        #   - ACESFilm
-        #   - AgX, AgXGolden, AgXPunchy
-        #   - Filmic
-        #   - Lottes
-        #   - Neutral
-        #   - Reinhard, Reinhard2
-        #   - Uchimura
-        #   - Uncharted2
-        #   - Unreal
-        shaders.final.set_tonemap(post_process_settings.tonemap)
-
-        full_screen_quad.draw()
-
-        glfwSwapBuffers(window)
-        glfwPollEvents()
-
-        if should_render:
-            total_samples += 1
-        stats_frame_count += 1
-
-        cap_fps(frame_start, screen.fps_cap)
-    
-    glfwTerminate()
-
-
-def cap_fps(frame_start, target_fps):
-    target_duration = 1 / target_fps
-    # Target time when the target_fps is reached
-    target_time = frame_start + target_duration
-
-    # Sleep/wait until the target_time is reached
-    while True:
-        remaining_time = target_time - time.perf_counter()
-
-        if remaining_time <= 0:
-            break
-        
-        # Sleep for the majority of the time to save CPU resources
-        if remaining_time > 0.001:
-            # Sleep for half of the remaining time
-            # This methods allow sleeping precision as remaining time approaches zero
-            sleep_time = remaining_time * 0.5
-            time.sleep(sleep_time)
-        
-        # Wait until the target time is reached
-        else:
-            pass
-
-
-def update_stats(window, fps, samples):
-    glfwSetWindowTitle(
-        window,
-        f"FPS: {fps:.2f} | Samples: {samples}"
-    )
-
-
-def process_input(window, delta_time):
-    if glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS:
-        glfwSetWindowShouldClose(window, True)
-    
-    if glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.FORWARD, delta_time)
-    if glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.BACKWARD, delta_time)
-    if glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.LEFT, delta_time)
-    if glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.RIGHT, delta_time)
-    if glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.UP, delta_time)
-    if glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.DOWN, delta_time)
-
-
-def mouse_callback(window, xpos, ypos):
-    global first_mouse, last_x, last_y
-
-    if first_mouse:
-        last_x = xpos
-        last_y = ypos
-        first_mouse = False
-    
-    xoffset = xpos - last_x
-    # Reversed since y-coordinates go from bottom to top
-    yoffset = last_y - ypos
-    last_x = xpos
-    last_y = ypos
-
-    camera.process_mouse_movement(xoffset, yoffset)
-
-
-def scroll_callback(window, xoffset, yoffset):
-    camera.process_mouse_scroll(yoffset)
 
 
 if __name__ == "__main__":
