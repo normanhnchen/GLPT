@@ -66,11 +66,6 @@ def main():
         file_paths.background.vert,
         file_paths.background.frag
     )
-    conv_shader = Shader(
-        ctx,
-        file_paths.irradiance_conv.vert,
-        file_paths.irradiance_conv.frag
-    )
 
     vertices = scene.vertices[scene.triangles]
     uvs = scene.uvs[scene.triangles]
@@ -293,101 +288,6 @@ def main():
     scene.bind_texture_arrays()
 
     scene.hdri.bind(ctx, 6)
-
-    # https://learnopengl.com/PBR/IBL/Diffuse-irradiance
-    
-    # Vertices  Normals
-    # x, y, z,  nx, ny, nz
-    cube_data = np.array([
-        # Back Face
-        -1.0, -1.0, -1.0,  0.0,  0.0, -1.0,
-        1.0,  1.0, -1.0,  0.0,  0.0, -1.0,
-        1.0, -1.0, -1.0,  0.0,  0.0, -1.0,
-        1.0,  1.0, -1.0,  0.0,  0.0, -1.0,
-        -1.0, -1.0, -1.0,  0.0,  0.0, -1.0,
-        -1.0,  1.0, -1.0,  0.0,  0.0, -1.0,
-        # Front Face
-        -1.0, -1.0,  1.0,  0.0,  0.0,  1.0,
-        1.0, -1.0,  1.0,  0.0,  0.0,  1.0,
-        1.0,  1.0,  1.0,  0.0,  0.0,  1.0,
-        1.0,  1.0,  1.0,  0.0,  0.0,  1.0,
-        -1.0,  1.0,  1.0,  0.0,  0.0,  1.0,
-        -1.0, -1.0,  1.0,  0.0,  0.0,  1.0,
-        # Left Face
-        -1.0,  1.0,  1.0, -1.0,  0.0,  0.0,
-        -1.0,  1.0, -1.0, -1.0,  0.0,  0.0,
-        -1.0, -1.0, -1.0, -1.0,  0.0,  0.0,
-        -1.0, -1.0, -1.0, -1.0,  0.0,  0.0,
-        -1.0, -1.0,  1.0, -1.0,  0.0,  0.0,
-        -1.0,  1.0,  1.0, -1.0,  0.0,  0.0,
-        # Right Face
-        1.0,  1.0,  1.0,  1.0,  0.0,  0.0,
-        1.0, -1.0, -1.0,  1.0,  0.0,  0.0,
-        1.0,  1.0, -1.0,  1.0,  0.0,  0.0,
-        1.0, -1.0, -1.0,  1.0,  0.0,  0.0,
-        1.0,  1.0,  1.0,  1.0,  0.0,  0.0,
-        1.0, -1.0,  1.0,  1.0,  0.0,  0.0,
-        # Bottom Face
-        -1.0, -1.0, -1.0,  0.0, -1.0,  0.0,
-        1.0, -1.0, -1.0,  0.0, -1.0,  0.0,
-        1.0, -1.0,  1.0,  0.0, -1.0,  0.0,
-        1.0, -1.0,  1.0,  0.0, -1.0,  0.0,
-        -1.0, -1.0,  1.0,  0.0, -1.0,  0.0,
-        -1.0, -1.0, -1.0,  0.0, -1.0,  0.0,
-        # Top Face
-        -1.0,  1.0, -1.0,  0.0,  1.0,  0.0,
-        1.0,  1.0,  1.0,  0.0,  1.0,  0.0,
-        1.0,  1.0, -1.0,  0.0,  1.0,  0.0,
-        1.0,  1.0,  1.0,  0.0,  1.0,  0.0,
-        -1.0,  1.0, -1.0,  0.0,  1.0,  0.0,
-        -1.0,  1.0,  1.0,  0.0,  1.0,  0.0
-    ], dtype=f4)
-
-    cube_vbo = ctx.buffer(cube_data.tobytes())
-
-    cube_vao = ctx.vertex_array(
-        conv_shader.prog,
-        [
-            (
-                cube_vbo,
-                "3f 3f",
-                "aPos", "aNormal"
-            )
-        ]
-    )
-
-    irradiance_map = ctx.texture_cube((32, 32), 3, dtype=f4)
-
-    capture_projection = glm.perspective(glm.radians(90.0), 1.0, 0.1, 10.0)
-
-    capture_views = [
-        glm.lookAt(glm.vec3(0.0), glm.vec3( 1.0,  0.0,  0.0), glm.vec3(0.0, -1.0,  0.0)),
-        glm.lookAt(glm.vec3(0.0), glm.vec3(-1.0,  0.0,  0.0), glm.vec3(0.0, -1.0,  0.0)),
-        glm.lookAt(glm.vec3(0.0), glm.vec3( 0.0,  1.0,  0.0), glm.vec3(0.0,  0.0,  1.0)),
-        glm.lookAt(glm.vec3(0.0), glm.vec3( 0.0, -1.0,  0.0), glm.vec3(0.0,  0.0, -1.0)),
-        glm.lookAt(glm.vec3(0.0), glm.vec3( 0.0,  0.0,  1.0), glm.vec3(0.0, -1.0,  0.0)),
-        glm.lookAt(glm.vec3(0.0), glm.vec3( 0.0,  0.0, -1.0), glm.vec3(0.0, -1.0,  0.0))
-    ]
-
-    capture_tex = ctx.texture((32, 32), 3, dtype=f4)
-    capture_depth = ctx.depth_renderbuffer((32, 32))
-    capture_fbo = ctx.framebuffer([capture_tex], capture_depth)
-
-    conv_shader.prog["projection"].write(capture_projection)
-
-    capture_fbo.use()
-    capture_fbo.viewport = (0, 0, 32, 32)
-
-    # Update the vbo data for every side of the cubemap
-    for i in range(6):
-        conv_shader.prog["view"].write(capture_views[i])
-        capture_fbo.clear()
-        cube_vao.render()
-
-        face_data = capture_fbo.read(components=3, dtype=f4)
-        irradiance_map.write(data=face_data, face=i)
-
-    irradiance_map.use(location=7)
     
     last_frame_start = 0
     stats_start_time = time.perf_counter()
