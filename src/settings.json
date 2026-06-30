@@ -1,6 +1,6 @@
 {   
     "file_paths": {
-        "scene": "src/assets/dragon_scene.glb",
+        "scene": "src/assets/cornell_box.glb",
         "hdri": "src/assets/day_sky_hdri.exr",
         
         "path_tracing": {
@@ -16,6 +16,10 @@
             "background": {
                 "vert": "src/shaders/real_time/background.vs",
                 "frag": "src/shaders/real_time/background.fs"
+            },
+            "irradiance_convolution": {
+                "vert": "src/shaders/real_time/irradiance_conv.vs",
+                "frag": "src/shaders/real_time/irradiance_conv.fs"
             }
         }
     },
