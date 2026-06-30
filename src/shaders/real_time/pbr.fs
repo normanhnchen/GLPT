@@ -73,9 +73,7 @@ layout(binding = 3) uniform sampler2DArray metallicTextures;
 layout(binding = 4) uniform sampler2DArray normalTextures;
 layout(binding = 5) uniform sampler2DArray occlusionTextures;
 
-// layout(binding = 6) uniform sampler2D hdri;
-
-layout(binding = 7) uniform samplerCube irradianceMap;
+layout(binding = 6) uniform sampler2D hdri;
 
 #define PI 3.14159265359
 
@@ -115,7 +113,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float k) {
 }
 
 // https://learnopengl.com/PBR/Theory
-vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+vec3 FresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
@@ -156,10 +154,23 @@ void SampleLight(Light light, out vec3 L, out vec3 radiance) {
     radiance /= 4.0 * PI * 100.0;
 }
 
+vec3 SampleHDRI(vec3 dir) {
+    // Convert to spherical coordinates
+    float phi = atan(dir.z, dir.x);
+    float theta = acos(dir.y);
+    // Convert to uv coordinates
+    vec2 uv = vec2(phi / (2.0 * PI) + 0.5, theta / PI);
+    return texture(hdri, uv).rgb;
+}
+
 // https://learnopengl.com/PBR/Theory
 // https://learnopengl.com/PBR/IBL/Diffuse-irradiance
 vec3 SamplePBR(vec3 N, Material mat) {
     vec3 V = normalize(vec3(cameraPos - worldPos));
+
+    if (dot(V, N) < 0.0) {
+        N = -N;
+    }
 
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, mat.baseCol, mat.metallic);
@@ -181,7 +192,7 @@ vec3 SamplePBR(vec3 N, Material mat) {
         // Cook-Torrance BRDF terms
         float NDF = DistributionGGX(N, H, a);
         float G = GeometrySmith(N, V, L, k);
-        vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+        vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
 
         vec3 kS = F;
         vec3 kD = vec3(1.0) - kS;
@@ -200,12 +211,17 @@ vec3 SamplePBR(vec3 N, Material mat) {
         Lo += brdf * radiance * NdotL;
     }
 
-    vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
-    vec3 kD = 1.0 - kS;
-    kD *= 1.0 - mat.metallic;	  
-    vec3 irradiance = texture(irradianceMap, N).rgb;
-    vec3 diffuse = irradiance * mat.baseCol;
-    vec3 ambient = (kD * diffuse) * mat.ao;
+    // Note to self: re-implement IBL in the future
+    // vec3 irradiance = SampleHDRI(N);
+    // vec3 kS = FresnelSchlick(max(dot(N, V), 0.0), F0);
+    // vec3 kD = 1.0 - kS;
+    // kD *= 1.0 - mat.metallic;
+    // vec3 irradiance = vec3(0.02);
+    // vec3 diffuse = irradiance * mat.baseCol;
+    // vec3 ambient = (kD * diffuse) * mat.ao;
+
+    // Currently just use a base ambient light
+    vec3 ambient = vec3(0.02) * mat.baseCol * mat.ao;
 
     return Lo + ambient;
 }
@@ -239,24 +255,8 @@ void main() {
         N = texture(normalTextures, vec3(texCoords, mat.normalTexId)).rgb;
         N = N * 2.0 - 1.0;
         N = normalize(TBN * N);
-
-        // Build an Orthonormal basis (ONB)
-        vec3 helper = abs(N.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
-        T = normalize(cross(helper, N));
-        B = cross(N, T);
-
-        TBN = mat3(T, B, N);
-        mat3 invTBN = transpose(TBN);
     } else {
         N = normalize(normal);
-
-        // Build an Orthonormal basis (ONB)
-        vec3 helper = abs(N.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
-        T = normalize(cross(helper, N));
-        B = cross(N, T);
-
-        mat3 TBN = mat3(T, B, N);
-        mat3 invTBN = transpose(TBN);
     }
     if (mat.hasOcclTex == 1) {
         float ao = texture(occlusionTextures, vec3(texCoords, mat.occlTexId)).r;
