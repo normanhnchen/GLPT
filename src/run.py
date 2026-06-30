@@ -170,6 +170,9 @@ def main():
 
                             if curr_selection == "Path Tracing":
                                 render_settings.render_mode = "path_tracing"
+                                camera_buffer.update_data()
+                                total_samples = 0
+                                should_render = True
                             else:
                                 render_settings.render_mode = "rasterization"
 
@@ -183,17 +186,10 @@ def main():
         ctx.clear(0, 0, 0, 1)
 
         if render_settings.render_mode == "path_tracing":
-            if camera.has_moved():
-                total_samples = 0
-                should_render = True
-            
             if total_samples >= pt_settings.max_samples:
                 should_render = False
             
             if should_render:
-                # Update camera data
-                camera_buffer.update_data()
-
                 pt_shaders.pt.prog["totalSamples"].value = total_samples
                 pt_shaders.pt.prog["maxDepth"].value = pt_settings.max_depth
 
@@ -324,15 +320,24 @@ def cap_fps(frame_start, target_fps):
 
 
 def update_stats(window, fps, samples):
-    glfwSetWindowTitle(
-        window,
-        f"FPS: {fps:.2f} | Samples: {samples}"
-    )
+    if render_settings.render_mode == "path_tracing":
+        glfwSetWindowTitle(
+            window,
+            f"FPS: {fps:.2f} | Samples: {samples}"
+        )
+    else:
+        glfwSetWindowTitle(
+            window,
+            f"FPS: {fps:.2f}"
+        )
 
 
 def process_input(window, delta_time):
     if glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS:
         glfwSetWindowShouldClose(window, True)
+    
+    if render_settings.render_mode == "path_tracing":
+        return
     
     if glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS:
         camera.process_keyboard(CameraMovement.FORWARD, delta_time)
@@ -349,6 +354,9 @@ def process_input(window, delta_time):
 
 
 def mouse_callback(window, xpos, ypos):
+    if render_settings.render_mode == "path_tracing":
+        return
+
     global first_mouse, last_x, last_y
 
     if first_mouse:
