@@ -50,7 +50,7 @@
         "hdri_exposure": 1.0
     },
     "render": {
-        "render_mode": "path_tracing",
+        "render_mode": "rasterization",
         "texture_size": [1024, 1024]
     }
 }
