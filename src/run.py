@@ -53,9 +53,7 @@ def main():
     impl = GlfwRenderer(window)
     
     # Set callbacks after so imgui doesn't override them
-    glfwSetCursorPosCallback(window, mouse_callback)
-    glfwSetScrollCallback(window, scroll_callback)
-    glfwSetMouseButtonCallback(window, mouse_button_callback)
+    glfw_set_callbacks(window)
 
     try:
         with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
@@ -128,10 +126,12 @@ def main():
     elif render_settings.render_mode == "rasterization":
         ctx.enable(moderngl.DEPTH_TEST)
 
-    curr_selection = "Rasterization"
-    options = ["Rasterization", "Path Tracing"]
+    curr_mode = "Rasterization"
+    render_modes = ["Rasterization", "Path Tracing"]
     
-    settings_window = True
+    global settings_window
+    settings_window = False
+
     # Render loop
     while not glfwWindowShouldClose(window):
         frame_start = time.perf_counter()
@@ -164,16 +164,16 @@ def main():
 
             is_expand, settings_window = imgui.begin("Settings", True)
             if is_expand:
-                if imgui.begin_combo("Render Mode", curr_selection):
-                    for item in options:
-                        is_selected = (curr_selection == item)
+                if imgui.begin_combo("Render Mode", curr_mode):
+                    for mode in render_modes:
+                        is_selected = (curr_mode == mode)
 
-                        clicked, state = imgui.selectable(item, is_selected)
+                        clicked, state = imgui.selectable(mode, is_selected)
 
                         if clicked:
-                            curr_selection = item
+                            curr_mode = mode
 
-                            if curr_selection == "Path Tracing":
+                            if curr_mode == "Path Tracing":
                                 render_settings.render_mode = "path_tracing"
                                 camera_buffer.update_data()
                                 total_samples = 0
@@ -337,10 +337,14 @@ def update_stats(window, fps, samples):
         )
 
 
-def process_input(window, delta_time):
-    if glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS:
-        glfwSetWindowShouldClose(window, True)
+def glfw_set_callbacks(window):
+    glfwSetCursorPosCallback(window, mouse_callback)
+    glfwSetScrollCallback(window, scroll_callback)
+    glfwSetMouseButtonCallback(window, mouse_button_callback)
+    glfwSetKeyCallback(window, key_callback)
 
+
+def process_input(window, delta_time):
     if imgui.get_io().want_capture_keyboard:
         return
     
@@ -361,11 +365,21 @@ def process_input(window, delta_time):
         camera.process_keyboard(CameraMovement.DOWN, delta_time)
 
 
+def key_callback(window, key, scancode, action, mods):
+    global settings_window
+
+    if key == GLFW_KEY_ESCAPE and action == GLFW_PRESS:
+        settings_window = not settings_window
+
+
 def mouse_button_callback(window, button, action, mods):
     if hasattr(impl, "mouse_button_callback"):
         impl.mouse_button_callback(window, button, action, mods)
     
     if imgui.get_io().want_capture_mouse:
+        return
+
+    if render_settings.render_mode == "path_tracing":
         return
     
     global middle_mouse_down, first_mouse
@@ -412,6 +426,9 @@ def scroll_callback(window, xoffset, yoffset):
         impl.scroll_callback(window, xoffset, yoffset)
     
     if imgui.get_io().want_capture_mouse:
+        return
+    
+    if render_settings.render_mode == "path_tracing":
         return
 
     camera.process_mouse_scroll(yoffset)
