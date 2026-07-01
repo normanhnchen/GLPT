@@ -81,7 +81,11 @@ class PathTracingUI:
         # Dragging logic
         # --------------
         if imgui.is_item_active():
-            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
             pt_settings.max_bounces = bounces
             self.pt_state.total_samples = 0
         
@@ -122,7 +126,11 @@ class PathTracingUI:
         # Dragging logic
         # --------------
         if imgui.is_item_active():
-            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
             pt_settings.max_samples = samples
             self.pt_state.total_samples = 0
         
@@ -180,11 +188,15 @@ class CameraUI:
         # Dragging logic
         # --------------
         if imgui.is_item_active():
-            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
             self.camera.movement_speed = speed
             self.pt_state.total_samples = 0
         
-        else:
+        if imgui.is_item_deactivated():
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
 
         # Minus button

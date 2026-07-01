@@ -408,7 +408,7 @@ def framebuffer_size_callback(window, width, height):
 
 
 def process_input(window, delta_time):
-    if imgui.get_io().want_capture_keyboard:
+    if imgui.get_io().want_text_input:
         return
     
     if render_settings.render_mode == "path_tracing":
@@ -429,6 +429,9 @@ def process_input(window, delta_time):
 
 
 def key_callback(window, key, scancode, action, mods):
+    if hasattr(impl, "keyboard_callback"):
+        impl.keyboard_callback(window, key, scancode, action, mods)
+    
     global settings_window
 
     if key == GLFW_KEY_ESCAPE and action == GLFW_PRESS:
