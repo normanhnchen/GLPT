@@ -54,8 +54,8 @@
         "aperture": 0.0,
         "focus_dist": 10,
         "auto_focus": 0,
-        "exposure": 3.0,
-        "tonemap": "AgX",
+        "exposure": 1.0,
+        "tonemap": "ACESFilm",
         "hdri_exposure": 1.0
     },
     "render": {

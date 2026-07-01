@@ -6,6 +6,8 @@ out vec4 fragColor;
 
 layout(binding = 6) uniform sampler2D hdri;
 
+uniform float hdriExposure;
+
 #define PI 3.14159265359
 
 vec3 SampleHDRI(vec3 dir) {
@@ -18,7 +20,7 @@ vec3 SampleHDRI(vec3 dir) {
 }
 
 void main() {
-    vec3 color = SampleHDRI(normalize(localPos));
+    vec3 color = SampleHDRI(normalize(localPos)) * hdriExposure;
 
     fragColor = vec4(color, 1.0);
 }

@@ -103,3 +103,8 @@ class RasterState:
             color_attachments=[self.raster_color_tex],
             depth_attachment=self.raster_depth_texture
         )
+
+
+class PostProcessState:
+    def __init__(self):
+        self.tonemap = "AgX"

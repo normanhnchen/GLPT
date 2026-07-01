@@ -69,8 +69,10 @@ def main():
     
     global pt_state
     global raster_state
+    global post_process_state
     pt_state = PTState(ctx)
     raster_state = RasterState(ctx)
+    post_process_state = PostProcessState()
 
     pt_quad = FullScreenQuad(ctx, pt_shaders.final)
     raster_quad = FullScreenQuad(ctx, raster_shaders.final)
@@ -117,6 +119,7 @@ def main():
 
     settings_ui = SettingsUI(
         pt_state,
+        post_process_state,
         camera_buffer,
         camera
     )
@@ -285,6 +288,7 @@ def main():
             # Vertex shader uniforms
             raster_shaders.bg.prog["view"].write(camera.get_view().to_bytes())
             raster_shaders.bg.prog["projection"].write(camera.get_perspective().to_bytes())
+            raster_shaders.bg.prog["hdriExposure"].value = post_process_settings.hdri_exposure
 
             bg_pass.draw()
 

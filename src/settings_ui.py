@@ -271,7 +271,7 @@ class PathTracingUI:
         # ------
         slider_speed = 0.5
         hardcoded_min_spp = 1
-        hardcoded_max_spp = 1024
+        hardcoded_max_spp = 128
         spp = pt_settings.spp
         changed, spp = imgui.drag_int(
             "##spp",
@@ -344,7 +344,8 @@ class CameraUI:
             speed,
             slider_speed,
             hardcoded_min_speed,
-            hardcoded_max_speed
+            hardcoded_max_speed,
+            val_format
         )
 
         # Dragging logic
@@ -483,6 +484,7 @@ class CameraUI:
 class PostProcessingUI:
     def __init__(self, **kwargs):
         self.pt_state = kwargs.get("pt_state")
+        self.post_process_state = kwargs.get("post_process_state")
 
         super().__init__(**kwargs)
 
@@ -490,34 +492,138 @@ class PostProcessingUI:
         options = ["None", "ACESFilm", "AgX", "AgXGolden", "AgXPunchy", "Filmic", "Lottes",
                    "Neutral", "Reinhard", "Reinhard2", "Uchimura", "Uncharted2", "Unreal"]
 
-        curr_tonemap = "AgX"
-
-        if imgui.begin_combo("Render Mode", curr_tonemap):
+        if imgui.begin_combo("Render Mode", self.post_process_state.tonemap):
             for tonemap in options:
-                is_selected = (curr_tonemap == tonemap)
+                is_selected = (self.post_process_state.tonemap == tonemap)
 
                 clicked, state = imgui.selectable(tonemap, is_selected)
 
                 if clicked:
-                    curr_tonemap = tonemap
+                    self.post_process_state.tonemap = tonemap
 
-                    post_process_settings.tonemap = curr_tonemap
+                    post_process_settings.tonemap = self.post_process_state.tonemap
                     self.pt_state.restart_render()
 
                 if is_selected:
                     imgui.set_item_default_focus()
             
             imgui.end_combo()
+        
+    def exposure_slider(self):
+        # Slider 
+        # ------
+        slider_speed = 0.1
+        hardcoded_min_exposure = 0.1
+        hardcoded_max_exposure = 10
+        exposure = post_process_settings.exposure
+        val_format = "%.1f"
+        changed, exposure = imgui.drag_float(
+            "##exposure",
+            exposure,
+            slider_speed,
+            hardcoded_min_exposure,
+            hardcoded_max_exposure,
+            val_format
+        )
+
+        # Dragging logic
+        # --------------
+        if imgui.is_item_active() and changed:
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            post_process_settings.exposure = exposure
+            self.pt_state.restart_render()
+        
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        
+        # Minus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("-##exposure_minus"):
+            if post_process_settings.exposure > hardcoded_min_exposure:
+                post_process_settings.exposure -= 1
+                self.pt_state.restart_render()
+        
+        # Plus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("+##exposure_plus"):
+            if post_process_settings.exposure < hardcoded_max_exposure:
+                post_process_settings.exposure += 1
+                self.pt_state.restart_render()
+        
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("Exposure")
+    
+    def hdri_exposure_slider(self):
+        # Slider 
+        # ------
+        slider_speed = 0.1
+        hardcoded_min_hdri_exposure = 0.1
+        hardcoded_max_hdri_exposure = 10
+        hdri_exposure = post_process_settings.hdri_exposure
+        val_format = "%.1f"
+        changed, hdri_exposure = imgui.drag_float(
+            "##hdri_exposure",
+            hdri_exposure,
+            slider_speed,
+            hardcoded_min_hdri_exposure,
+            hardcoded_max_hdri_exposure,
+            val_format
+        )
+
+        # Dragging logic
+        # --------------
+        if imgui.is_item_active() and changed:
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            post_process_settings.hdri_exposure = hdri_exposure
+            self.pt_state.restart_render()
+        
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        
+        # Minus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("-##hdri_exposure_minus"):
+            if post_process_settings.hdri_exposure > hardcoded_min_hdri_exposure:
+                post_process_settings.hdri_exposure -= 1
+                self.pt_state.restart_render()
+        
+        # Plus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("+##hdri_exposure_plus"):
+            if post_process_settings.hdri_exposure < hardcoded_max_hdri_exposure:
+                post_process_settings.hdri_exposure += 1
+                self.pt_state.restart_render()
+        
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("HDRI Exposure")
 
 
 class SettingsUI(PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
     def __init__(self,
             pt_state,
+            post_process_state,
             camera_buffer,
             camera
         ):
         super().__init__(
             pt_state=pt_state,
+            post_process_state=post_process_state,
             camera_buffer=camera_buffer,
             camera=camera
         )
@@ -561,4 +667,6 @@ class SettingsUI(PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
         self.mouse_sensitivity_slider()
     
     def post_processing_ui(self):
+        self.exposure_slider()
+        self.hdri_exposure_slider()
         self.tonemap_dropdown()
