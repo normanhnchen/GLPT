@@ -54,6 +54,102 @@ class RenderingUI:
         if imgui.button("View Saved Render"):
             render_settings.render_mode = "path_tracing"
             self.pt_state.view_saved = True
+    
+    def tiles_x_slider(self):
+        # Slider 
+        # ------
+        slider_speed = 0.5
+        hardcoded_min_tiles_x = 1
+        hardcoded_max_tiles_x = 1024
+        tiles_x = render_settings.tiles_x
+        changed, tiles_x = imgui.drag_int(
+            "##tiles_x",
+            tiles_x,
+            slider_speed,
+            hardcoded_min_tiles_x,
+            hardcoded_max_tiles_x
+        )
+
+        # Dragging logic
+        # --------------
+        if imgui.is_item_active():
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            render_settings.tiles_x = tiles_x
+            self.pt_state.update_tiles()
+            self.pt_state.total_samples = 0
+        
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        
+        # Minus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("-##tiles_x_minus"):
+            if render_settings.tiles_x > hardcoded_min_tiles_x:
+                render_settings.tiles_x -= 1
+                self.pt_state.update_tiles()
+                self.pt_state.total_samples = 0
+        
+        # Plus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("+##tiles_x_plus"):
+            if render_settings.tiles_x < hardcoded_max_tiles_x:
+                render_settings.tiles_x += 1
+                self.pt_state.update_tiles()
+                self.pt_state.total_samples = 0
+    
+    def tiles_y_slider(self):
+        # Slider 
+        # ------
+        slider_speed = 0.5
+        hardcoded_min_tiles_y = 1
+        hardcoded_max_tiles_y = 1024
+        tiles_y = render_settings.tiles_y
+        changed, tiles_y = imgui.drag_int(
+            "##tiles_y",
+            tiles_y,
+            slider_speed,
+            hardcoded_min_tiles_y,
+            hardcoded_max_tiles_y
+        )
+
+        # Dragging logic
+        # --------------
+        if imgui.is_item_active():
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            render_settings.tiles_y = tiles_y
+            self.pt_state.update_tiles()
+            self.pt_state.total_samples = 0
+        
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        
+        # Minus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("-##tiles_y_minus"):
+            if render_settings.tiles_y > hardcoded_min_tiles_y:
+                render_settings.tiles_y -= 1
+                self.pt_state.update_tiles()
+                self.pt_state.total_samples = 0
+        
+        # Plus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("+##tiles_y_plus"):
+            if render_settings.tiles_y < hardcoded_max_tiles_y:
+                render_settings.tiles_y += 1
+                self.pt_state.update_tiles()
+                self.pt_state.total_samples = 0
 
 
 class PathTracingUI:
@@ -364,6 +460,9 @@ class SettingsUI(CameraUI, PathTracingUI, RenderingUI):
             else:
                 self.start_new_button()
                 self.view_saved_button()
+            
+        self.tiles_x_slider()
+        self.tiles_y_slider()
 
     def path_tracing_ui(self):
         self.max_bounce_slider()

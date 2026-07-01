@@ -64,6 +64,18 @@ class PTState:
         self.render_complete = True
         self.view_saved = True
     
+    def update_tiles(self):
+        # Current tile top left position in pixels
+        self.curr_tile_x = 0
+        self.curr_tile_y = 0
+        # Apply ceiling function
+        # Allows the compute shader to reach the entire screen
+        self.tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
+        self.tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
+
+        # Reset accumulation buffer
+        self.compute_tex.write(np.zeros((*screen.resolution, 4), dtype=f4))
+    
 
 class RasterState:
     def __init__(self, ctx):
