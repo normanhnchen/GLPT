@@ -30,12 +30,7 @@ class BVH:
         self.nodes = [self.root]
         self.tri_indices = np.arange(scene.num_triangles)
         
-        start_time = time.perf_counter()
-
         self.subdivide(self.root)
-
-        end_time = time.perf_counter()
-        print(f"BVH built in {end_time - start_time:.4f}s")
     
     def subdivide(self, node):
         if node.tri_count <= 4:

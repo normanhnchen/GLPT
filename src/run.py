@@ -15,6 +15,7 @@ from src.model import *
 from src.render_state import *
 from src.buffers import *
 from src.draw_passes import *
+from src.bvh_builder import *
 
 
 camera = Camera()
@@ -83,28 +84,17 @@ def main():
     bg_pass = BGPass(ctx, raster_shaders.bg)
 
     camera_buffer = CameraBuffer(camera)
-
     material_buffer = MaterialBuffer(scene)
-
     triangle_buffer = TriangleBuffer(material_buffer, scene)
-
-    bvh_node_buffer = BVHNodeBuffer(scene)
-
     light_buffer = LightBuffer(scene)
 
-    tri_indices_buffer = TriangleIndicesBuffer(scene)
+    bvh_builder = BVHBuilder(scene)
+    bvh_ready = False
 
     camera_buffer.bind(ctx, 0)
-
     triangle_buffer.bind(ctx, 1)
-
     material_buffer.bind(ctx, 2)
-
-    bvh_node_buffer.bind(ctx, 3)
-
-    light_buffer.bind(ctx, 4)
-
-    tri_indices_buffer.bind(ctx, 5)
+    light_buffer.bind(ctx, 3)
 
     scene.create_texture_arrays(ctx, *render_settings.texture_size)
     scene.bind_texture_arrays()
@@ -144,6 +134,15 @@ def main():
             # Reset stats counters
             stats_start_time = time.perf_counter()
             stats_frame_count = 0
+
+        if not bvh_ready and bvh_builder.is_done:
+            bvh_node_buffer = BVHNodeBuffer(scene)
+            tri_indices_buffer = TriangleIndicesBuffer(scene)
+
+            bvh_node_buffer.bind(ctx, 4)
+            tri_indices_buffer.bind(ctx, 5)
+
+            bvh_ready = True
         
         if need_resize:
             pt_state.resize()
@@ -174,28 +173,31 @@ def main():
 
             is_expand, settings_window = imgui.begin("Settings", True)
             if is_expand:
-                if render_settings.render_mode == "path_tracing":
-                    if imgui.button("Back to Viewport"):
-                        render_settings.render_mode = "rasterization"
-                        pt_state.view_saved = False
-                    
-                    if pt_state.first_render:
-                        pt_state.first_render = False
-                
+                if not bvh_ready:
+                    imgui.text_disabled("Preparing path tracer (building BVH)...")
                 else:
-                    if pt_state.saved_render is None:
-                        if imgui.button("Start Render"):
-                            pt_state.start_render(camera_buffer)
-                            pt_state.view_saved = False
-                    
-                    else:
-                        if imgui.button("Start New Render"):
-                            pt_state.start_render(camera_buffer)
+                    if render_settings.render_mode == "path_tracing":
+                        if imgui.button("Back to Viewport"):
+                            render_settings.render_mode = "rasterization"
                             pt_state.view_saved = False
                         
-                        if imgui.button("View Saved Render"):
-                            render_settings.render_mode = "path_tracing"
-                            pt_state.view_saved = True
+                        if pt_state.first_render:
+                            pt_state.first_render = False
+                    
+                    else:
+                        if pt_state.saved_render is None:
+                            if imgui.button("Start Render"):
+                                pt_state.start_render(camera_buffer)
+                                pt_state.view_saved = False
+                        
+                        else:
+                            if imgui.button("Start New Render"):
+                                pt_state.start_render(camera_buffer)
+                                pt_state.view_saved = False
+                            
+                            if imgui.button("View Saved Render"):
+                                render_settings.render_mode = "path_tracing"
+                                pt_state.view_saved = True
                 
             imgui.end()
 

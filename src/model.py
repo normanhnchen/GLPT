@@ -255,11 +255,14 @@ class Scene:
         end_time = time.perf_counter()
 
         print(f"Scene built in {end_time - start_time:.4f}s")
-        print("Building BVH...")
-        
+    
+        self.num_lights = len(self.lights)
+        self.bvh = None
+        self.num_bvh_nodes = None
+    
+    def build_bvh(self):
         self.bvh = BVH(self)
         self.num_bvh_nodes = len(self.bvh.nodes)
-        self.num_lights = len(self.lights)
     
     # Logic for parsing GLB files assisted by AI
     def _get_extensions(self):

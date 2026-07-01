@@ -62,7 +62,7 @@ layout (std430, binding = 2) buffer MaterialBuffer {
     Material materials[];
 };
 
-layout (std430, binding = 4) buffer LightBuffer {
+layout (std430, binding = 3) buffer LightBuffer {
     Light lights[];
 };
 
