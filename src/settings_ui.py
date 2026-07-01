@@ -89,6 +89,7 @@ class PathTracingUI:
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
         
         # Minus button
+        # ------------
         imgui.same_line()
         if imgui.button("-##bounces_minus"):
             if pt_settings.max_bounces > hardcoded_min_bounces:
@@ -96,6 +97,7 @@ class PathTracingUI:
                 self.pt_state.total_samples = 0
         
         # Plus button
+        # ------------
         imgui.same_line()
         if imgui.button("+##bounces_plus"):
             if pt_settings.max_bounces < hardcoded_max_bounces:
@@ -128,6 +130,7 @@ class PathTracingUI:
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
 
         # Minus button
+        # ------------
         imgui.same_line()
         if imgui.button("-##samples_minus"):
             if pt_settings.max_samples > hardcoded_min_samples:
@@ -135,13 +138,13 @@ class PathTracingUI:
                 self.pt_state.total_samples = 0
         
         # Plus button
+        # ------------
         imgui.same_line()
         if imgui.button("+##samples_plus"):
             if pt_settings.max_samples < hardcoded_max_samples:
                 pt_settings.max_samples += 1
                 self.pt_state.total_samples = 0
         
-    
     def reset_pt_button(self):
         if imgui.button("Reset Path Tracing Settings"):
             pt_settings.max_bounces = _pt_settings_default.max_bounces
@@ -150,16 +153,67 @@ class PathTracingUI:
             self.pt_state.render_complete = False
             self.pt_state.view_saved = False
             self.pt_state.should_render = True
-        
 
-class SettingsUI(PathTracingUI, RenderingUI):
+
+class CameraUI:
+    def __init__(self, **kwargs):
+        self.pt_state = kwargs.get("pt_state")
+        self.camera = kwargs.get("camera")
+
+        super().__init__(**kwargs)
+
+    def movement_speed_slider(self):
+        # Slider 
+        # ------
+        slider_speed = 0.5
+        hardcoded_min_speed = 0
+        hardcoded_max_speed = 10000
+        speed = self.camera.movement_speed
+        changed, speed = imgui.drag_float(
+            "Movement Speed",
+            speed,
+            slider_speed,
+            hardcoded_min_speed,
+            hardcoded_max_speed
+        )
+
+        # Dragging logic
+        # --------------
+        if imgui.is_item_active():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            self.camera.movement_speed = speed
+            self.pt_state.total_samples = 0
+        
+        else:
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+
+        # Minus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("-##speed_minus"):
+            if self.camera.movement_speed > hardcoded_min_speed:
+                self.camera.movement_speed -= 1
+                self.pt_state.total_samples = 0
+        
+        # Plus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("+##speed_plus"):
+            if self.camera.movement_speed < hardcoded_max_speed:
+                self.camera.movement_speed += 1
+                self.pt_state.total_samples = 0
+
+
+class SettingsUI(CameraUI, PathTracingUI, RenderingUI):
     def __init__(self,
             pt_state,
-            camera_buffer
+            camera_buffer,
+            camera
         ):
         super().__init__(
             pt_state=pt_state,
-            camera_buffer=camera_buffer
+            camera_buffer=camera_buffer,
+            camera=camera
         )
 
     def rendering_ui(self):
@@ -171,7 +225,7 @@ class SettingsUI(PathTracingUI, RenderingUI):
                 else:
                     self.continue_button()
                 
-                    self.cancel_button()
+                self.cancel_button()
             
             else:
                 self.viewport_button()
@@ -185,8 +239,11 @@ class SettingsUI(PathTracingUI, RenderingUI):
             else:
                 self.start_new_button()
                 self.view_saved_button()
-    
+
     def path_tracing_ui(self):
         self.max_bounce_slider()
         self.max_samples_slider()
         self.reset_pt_button()
+    
+    def camera_ui(self):
+        self.movement_speed_slider()

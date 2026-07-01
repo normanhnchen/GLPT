@@ -125,7 +125,8 @@ def main():
 
     settings_ui = SettingsUI(
         pt_state,
-        camera_buffer
+        camera_buffer,
+        camera
     )
 
     # Render loop
@@ -179,7 +180,7 @@ def main():
             pt_state.save_render()
 
         if settings_window:
-            imgui.set_next_window_size((400, 600))
+            imgui.set_next_window_size((600, 600))
             is_expand, settings_window = imgui.begin("Settings", settings_window)
 
             if is_expand:
@@ -188,6 +189,7 @@ def main():
                 else:
                     settings_ui.rendering_ui()
                     settings_ui.path_tracing_ui()
+                    settings_ui.movement_speed_slider()
                 
             imgui.end()
 
