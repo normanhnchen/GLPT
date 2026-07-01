@@ -282,6 +282,60 @@ class CameraUI:
         # -----
         imgui.same_line()
         imgui.text("FOV")
+    
+    def mouse_sensitivity_slider(self):
+        # Slider 
+        # ------
+        slider_speed = 0.1
+        hardcoded_min_sensitivity = 0.1
+        hardcoded_max_sensitivity = 10
+        val_format = "%.1f"
+        # Alter the slider values to look larger but is the same internally
+        visual_factor = 10
+        mouse_sensitivity = self.camera.mouse_sensitivity * visual_factor
+        changed, mouse_sensitivity = imgui.drag_float(
+            "##mouse_sensitivity",
+            mouse_sensitivity,
+            slider_speed,
+            hardcoded_min_sensitivity,
+            hardcoded_max_sensitivity,
+            val_format
+        )
+
+        # Dragging logic
+        # --------------
+        if imgui.is_item_active():
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            self.camera.mouse_sensitivity = mouse_sensitivity / visual_factor
+            self.pt_state.total_samples = 0
+        
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+
+        # Minus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("-##sens_minus"):
+            if self.camera.mouse_sensitivity >= hardcoded_min_sensitivity + 1:
+                self.camera.mouse_sensitivity -= 1
+                self.pt_state.total_samples = 0
+        
+        # Plus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("+##sens_plus"):
+            if self.camera.mouse_sensitivity <= hardcoded_max_sensitivity - 1:
+                self.camera.mouse_sensitivity += 1
+                self.pt_state.total_samples = 0
+        
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("Mouse Sensitivity")
 
 
 class SettingsUI(CameraUI, PathTracingUI, RenderingUI):
@@ -328,3 +382,4 @@ class SettingsUI(CameraUI, PathTracingUI, RenderingUI):
     def camera_ui(self):
         self.movement_speed_slider()
         self.fov_slider()
+        self.mouse_sensitivity_slider()
