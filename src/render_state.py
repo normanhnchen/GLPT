@@ -18,7 +18,6 @@ class PTState:
         self.tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
 
         self.render_complete = False
-        self.first_render = True
         self.view_saved = False
         self.should_render = False
         self.total_samples = 0
@@ -57,11 +56,13 @@ class PTState:
         self.compute_tex.write(np.zeros((*screen.resolution, 4), dtype=f4))
     
     def save_render(self):
-        self.render_complete = True
         if self.saved_render is not None:
             self.saved_render.release()
         self.saved_render = self.ctx.texture(screen.resolution, 4, dtype=f4)
         self.saved_render.write(self.compute_tex.read())
+
+        self.render_complete = True
+        self.view_saved = True
     
 
 class RasterState:

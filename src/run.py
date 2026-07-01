@@ -16,6 +16,7 @@ from src.render_state import *
 from src.buffers import *
 from src.draw_passes import *
 from src.bvh_builder import *
+from src.settings_ui import *
 
 
 camera = Camera()
@@ -70,10 +71,12 @@ def main():
     #         pickle.dump(scene, f)
 
     scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
-
-    pt_shaders = PTShaders(ctx)
-    raster_shaders = RasterShaders(ctx,)
     
+    pt_shaders = PTShaders(ctx)
+    raster_shaders = RasterShaders(ctx)
+    
+    global pt_state
+    global raster_state
     pt_state = PTState(ctx)
     raster_state = RasterState(ctx)
 
@@ -119,6 +122,8 @@ def main():
     settings_window = False
 
     global need_resize
+
+    settings_ui = SettingsUI(pt_state, render_settings, camera_buffer)
 
     # Render loop
     while not glfwWindowShouldClose(window):
@@ -171,41 +176,24 @@ def main():
             pt_state.save_render()
 
         if settings_window:
-            imgui.set_next_window_size((400, 600))
+            settings_ui.set_window(400, 600)
+            settings_ui.begin("Settings")
 
-            is_expand, settings_window = imgui.begin("Settings", True)
-            if is_expand:
+            if settings_ui.is_expand:
                 if not bvh_ready:
                     imgui.text_disabled("Preparing path tracer (building BVH)...")
                 else:
-                    if render_settings.render_mode == "path_tracing":
-                        if imgui.button("Back to Viewport"):
-                            render_settings.render_mode = "rasterization"
-                            pt_state.view_saved = False
-                        
-                        if pt_state.first_render:
-                            pt_state.first_render = False
-                    
-                    else:
-                        if pt_state.saved_render is None:
-                            if imgui.button("Start Render"):
-                                pt_state.start_render(camera_buffer)
-                                pt_state.view_saved = False
-                        
-                        else:
-                            if imgui.button("Start New Render"):
-                                pt_state.start_render(camera_buffer)
-                                pt_state.view_saved = False
-                            
-                            if imgui.button("View Saved Render"):
-                                render_settings.render_mode = "path_tracing"
-                                pt_state.view_saved = True
+                    settings_ui.rendering_ui()
                 
             imgui.end()
 
         if pt_state.view_saved:
             # Draw to screen
             pt_state.saved_render.use(location=0)
+
+            # Prevent resizing saved texture
+            # Clips the image
+            ctx.viewport = (0, 0, *pt_state.saved_render.size)
 
             # Post Processing
             # ---------------
@@ -226,7 +214,7 @@ def main():
 
             pt_quad.draw()
 
-        if render_settings.render_mode == "path_tracing":
+        elif render_settings.render_mode == "path_tracing":
             if pt_state.total_samples >= pt_settings.max_samples:
                 pt_state.should_render = False
             
@@ -377,7 +365,7 @@ def cap_fps(frame_start, target_fps):
 
 def update_stats(window, fps, samples, render_complete):
     if render_settings.render_mode == "path_tracing":
-        if render_complete:
+        if render_complete or pt_state.view_saved:
             glfwSetWindowTitle(
                 window,
                 f"FPS: {fps:.2f} | Render Complete"
