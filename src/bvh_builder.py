@@ -1,4 +1,3 @@
-import time
 import threading
 
 
@@ -10,12 +9,6 @@ class BVHBuilder:
         self.is_done = False
     
     def _build(self):
-        start_time = time.perf_counter()
-        print("Building BVH in the background...")
-
         self.scene.build_bvh()
         self.is_done = True
-
-        end_time = time.perf_counter()
-        print(f"BVH built in {end_time - start_time:.4f}s")
     

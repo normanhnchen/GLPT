@@ -1,6 +1,6 @@
 {   
     "file_paths": {
-        "scene": "src/assets/alpha_test.glb",
+        "scene": "src/assets/dragon_scene.glb",
         "hdri": "src/assets/day_sky_hdri.exr",
         
         "path_tracing": {
@@ -21,6 +21,10 @@
                 "vert": "src/shaders/rasterization/final.vs",
                 "frag": "src/shaders/rasterization/final.fs"
             }
+        },
+        "cache": {
+            "scene": "src/assets/cache/",
+            "bvh": "src/assets/cache/"
         }
     },
     "screen": {

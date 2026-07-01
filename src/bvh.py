@@ -1,6 +1,8 @@
 import numpy as np
 from numba import njit, prange
 
+from src.settings import *
+
 
 # https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
 # https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
@@ -9,7 +11,9 @@ from numba import njit, prange
 
 class BVH:
     def __init__(self, scene):
-        self.scene = scene
+        self.scene_triangles = scene.triangles
+        self.scene_vertices = scene.vertices
+        self.scene_centroids = scene.centroids
 
         max_nodes = 2 * scene.num_triangles
 
@@ -50,9 +54,9 @@ class BVH:
             return
         
         indices = self.tri_indices[self.first_tri_indices[node_idx] : self.first_tri_indices[node_idx] + self.tri_counts[node_idx]]
-        triangles = self.scene.triangles[indices]
-        centroids = self.scene.centroids[indices]
-        vertices = self.scene.vertices[triangles]
+        triangles = self.scene_triangles[indices]
+        centroids = self.scene_centroids[indices]
+        vertices = self.scene_vertices[triangles]
         
         best_axis, best_pos, best_cost = find_best_split(centroids, vertices)
 
@@ -70,7 +74,7 @@ class BVH:
         j = i + self.tri_counts[node_idx] - 1
         while i <= j:
             tri_idx = self.tri_indices[i]
-            if self.scene.centroids[tri_idx][axis] < split_pos:
+            if self.scene_centroids[tri_idx][axis] < split_pos:
                 i += 1
             else:
                 # Swap triangle indices
@@ -109,7 +113,7 @@ class BVH:
         
     def update_node_bounds(self, node_idx):
         indices = self.tri_indices[self.first_tri_indices[node_idx] : self.first_tri_indices[node_idx] + self.tri_counts[node_idx]]
-        tri_verts = self.scene.vertices[self.scene.triangles[indices]]
+        tri_verts = self.scene_vertices[self.scene_triangles[indices]]
         self.aabb_mins[node_idx] = np.min(tri_verts, axis=(0, 1))
         self.aabb_maxs[node_idx] = np.max(tri_verts, axis=(0, 1))
     
@@ -119,7 +123,7 @@ class BVH:
         return self.tri_counts[node_idx] * area
 
 
-@njit(nogil=True, fastmath=True, parallel=True)
+@njit(nogil=True, fastmath=True, parallel=True, cache=True)
 def find_best_split(centroids, vertices):
     BINS = 8
 
@@ -225,7 +229,8 @@ def find_best_split(centroids, vertices):
     return best_axis, best_pos, best_cost
 
 
-@njit(fastmath=True)
+@njit(fastmath=True, cache=True)
 def get_aabb_area(aabb_min, aabb_max):
     e = aabb_max - aabb_min
     return e[0] * e[1] + e[1] * e[2] + e[2] * e[0]
+

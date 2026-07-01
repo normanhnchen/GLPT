@@ -62,15 +62,7 @@ def main():
     # Set callbacks after so imgui doesn't override them
     glfw_set_callbacks(window)
 
-    # try:
-    #     with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
-    #         scene = pickle.load(f)
-    # except:
-    #     scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
-    #     with open("src/assets/cache/dragon_scene.pkl", "wb") as f:
-    #         pickle.dump(scene, f)
-
-    scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+    scene = load_scene(file_paths.scene, hdri_path=file_paths.hdri)
     
     pt_shaders = PTShaders(ctx)
     raster_shaders = RasterShaders(ctx)

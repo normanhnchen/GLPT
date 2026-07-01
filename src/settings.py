@@ -67,6 +67,9 @@ class FilePaths:
         self.pbr = ShaderGroup(config["rasterization"]["pbr"])
         self.final = ShaderGroup(config["rasterization"]["final"])
 
+        self.scene_cache = config["cache"]["scene"]
+        self.bvh_cache = config["cache"]["bvh"]
+
 
 class RenderSettings:
     def __init__(self, json_settings):

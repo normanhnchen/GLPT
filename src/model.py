@@ -4,9 +4,25 @@ import cv2
 import pygltflib
 import glm
 import time
+import pickle
+from pathlib import Path
 
+from src.settings import *
 from src.dtypes import *
 from src.bvh import *
+
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
+
+def get_cache_path(path, cache_dir, type):
+    abs_path = Path(path).resolve()
+    abs_cache_dir = Path(cache_dir).resolve()
+
+    rel_path = abs_path.relative_to(ROOT_DIR)
+
+    cache_name = str(rel_path.parent / rel_path.stem).replace("/", "_").replace("\\", "_")
+    return abs_cache_dir / f"{type}_{cache_name}.pkl"
 
 
 class Texture:
@@ -149,12 +165,17 @@ class HDRI:
 
 class Scene:
     def __init__(self, scene_path, hdri_path=None):
-        print("Building scene...")
-        start_time = time.perf_counter()
-
         self.scene_path = scene_path
+        self.hdri_path = hdri_path
+        self.scene_name = Path(scene_path).stem
 
-        scene = trimesh.load(scene_path)
+        self.scene_cache_path = get_cache_path(scene_path, file_paths.scene_cache, "scene")
+        self.bvh_cache_path = get_cache_path(scene_path, file_paths.bvh_cache, "bvh")
+
+        self._build()
+
+    def _build(self):
+        scene = trimesh.load(self.scene_path)
 
         all_extensions, all_lights = self._get_extensions()
 
@@ -250,20 +271,37 @@ class Scene:
         self.lights = all_lights
 
         self.hdri = None
-        if hdri_path is not None:
-            self.hdri = HDRI(hdri_path)
-        
-        end_time = time.perf_counter()
+        if self.hdri_path is not None:
+            self.hdri = HDRI(self.hdri_path)
 
-        print(f"Scene built in {end_time - start_time:.4f}s")
-    
         self.num_lights = len(self.lights)
+    
         self.bvh = None
         self.num_bvh_nodes = None
     
     def build_bvh(self):
-        self.bvh = BVH(self)
-        self.num_bvh_nodes = self.bvh.nodes_used
+        try:
+            with open(self.bvh_cache_path, "rb") as f:
+                self.bvh = pickle.load(f)
+            
+            self.num_bvh_nodes = self.bvh.nodes_used
+
+            print("Loaded BVH from cache")
+        except:
+            start_time = time.perf_counter()
+            print("Building BVH in the background...")
+
+            bvh = BVH(self)
+            self.bvh = bvh
+            self.num_bvh_nodes = self.bvh.nodes_used
+
+            end_time = time.perf_counter()
+            print(f"BVH built in {end_time - start_time:.4f}s")
+
+            with open(self.bvh_cache_path, "wb") as f:
+                pickle.dump(bvh, f)
+            
+            print("BVH saved to cache")
     
     # Logic for parsing GLB files assisted by AI
     def _get_extensions(self):
@@ -421,3 +459,30 @@ class Scene:
             
         if "occlusion" in self.texture_arrays:
             self.texture_arrays["occlusion"].use(location=occlusion_tex_loc)
+
+
+def load_scene(scene_path, hdri_path=None):
+    scene_cache_path = get_cache_path(scene_path, file_paths.scene_cache, "scene")
+
+    try:
+        with open(scene_cache_path, "rb") as f:
+            scene = pickle.load(f)
+
+        print("Loaded scene from cache")
+    except:
+        print("Building scene...")
+        start_time = time.perf_counter()
+
+        scene = Scene(scene_path, hdri_path=hdri_path)
+
+        end_time = time.perf_counter()
+        print(f"Scene built in {end_time - start_time:.4f}s")
+
+        print("Scene saving to cache...")
+
+        with open(scene_cache_path, "wb") as f:
+            pickle.dump(scene, f)
+        
+        print("Scene saved to cache")
+    
+    return scene
