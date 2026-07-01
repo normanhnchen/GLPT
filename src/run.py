@@ -125,9 +125,7 @@ def main():
 
     settings_ui = SettingsUI(
         pt_state,
-        render_settings,
-        camera_buffer,
-        pt_settings
+        camera_buffer
     )
 
     # Render loop

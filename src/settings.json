@@ -42,7 +42,7 @@
     },
     "path_tracing": {
         "max_bounces": 16,
-        "max_samples": 256
+        "max_samples": 1024
     },
     "post_processing": {
         "blur": 1.0,

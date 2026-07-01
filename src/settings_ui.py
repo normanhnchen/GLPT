@@ -1,11 +1,12 @@
 from imgui_bundle import imgui
 from glfw.GLFW import *
+from src.settings import *
+from src.settings import _pt_settings_default
 
 
 class RenderingUI:
     def __init__(self, **kwargs):
         self.pt_state = kwargs.get("pt_state")
-        self.render_settings = kwargs.get("render_settings")
         self.camera_buffer = kwargs.get("camera_buffer")
 
         super().__init__()
@@ -29,12 +30,12 @@ class RenderingUI:
     
     def cancel_button(self):
         if imgui.button("Cancel"):
-            self.render_settings.render_mode = "rasterization"
+            render_settings.render_mode = "rasterization"
             self.pt_state.view_saved = False
     
     def viewport_button(self):
         if imgui.button("Back to Viewport"):
-            self.render_settings.render_mode = "rasterization"
+            render_settings.render_mode = "rasterization"
             self.pt_state.view_saved = False
     
     def start_button(self):
@@ -51,13 +52,12 @@ class RenderingUI:
     
     def view_saved_button(self):
         if imgui.button("View Saved Render"):
-            self.render_settings.render_mode = "path_tracing"
+            render_settings.render_mode = "path_tracing"
             self.pt_state.view_saved = True
 
 
 class PathTracingUI:
     def __init__(self, **kwargs):
-        self.pt_settings = kwargs.get("pt_settings")
         self.pt_state = kwargs.get("pt_state")
         self.window = glfwGetCurrentContext()
 
@@ -67,7 +67,7 @@ class PathTracingUI:
         slider_speed = 0.5
         hardcode_min_bounces = 1
         hardcode_max_bounces = 1024
-        int_val = self.pt_settings.max_bounces
+        int_val = pt_settings.max_bounces
         changed, int_val = imgui.drag_int(
             "Max Bounces",
             int_val,
@@ -78,7 +78,7 @@ class PathTracingUI:
 
         if imgui.is_item_active():
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-            self.pt_settings.max_bounces = int_val
+            pt_settings.max_bounces = int_val
             self.pt_state.total_samples = 0
         
         if imgui.is_item_deactivated():
@@ -88,7 +88,7 @@ class PathTracingUI:
         slider_speed = 0.5
         hardcode_min_samples = 1
         hardcode_max_samples = 16384
-        int_val = self.pt_settings.max_samples
+        int_val = pt_settings.max_samples
         changed, int_val = imgui.drag_int(
             "Max Samples",
             int_val,
@@ -98,29 +98,34 @@ class PathTracingUI:
         )
         if imgui.is_item_active():
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-            self.pt_settings.max_samples = int_val
+            pt_settings.max_samples = int_val
             self.pt_state.total_samples = 0
         
         if imgui.is_item_deactivated():
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
     
+    def reset_pt_button(self):
+        if imgui.button("Reset Path Tracing Settings"):
+            pt_settings.max_bounces = _pt_settings_default.max_bounces
+            pt_settings.max_samples = _pt_settings_default.max_samples
+            self.pt_state.total_samples = 0
+            self.pt_state.render_complete = False
+            self.pt_state.view_saved = False
+            self.pt_state.should_render = True
+        
 
 class SettingsUI(PathTracingUI, RenderingUI):
     def __init__(self,
             pt_state,
-            render_settings,
-            camera_buffer,
-            pt_settings
+            camera_buffer
         ):
         super().__init__(
             pt_state=pt_state,
-            render_settings=render_settings,
-            camera_buffer=camera_buffer,
-            pt_settings=pt_settings
+            camera_buffer=camera_buffer
         )
 
     def rendering_ui(self):
-        if self.render_settings.render_mode == "path_tracing":
+        if render_settings.render_mode == "path_tracing":
             if not self.pt_state.view_saved:
                 if self.pt_state.should_render:
                     self.stop_button()
@@ -146,3 +151,4 @@ class SettingsUI(PathTracingUI, RenderingUI):
     def path_tracing_ui(self):
         self.max_bounce_slider()
         self.max_samples_slider()
+        self.reset_pt_button()
