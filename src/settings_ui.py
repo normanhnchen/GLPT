@@ -2,10 +2,12 @@ from imgui_bundle import imgui
 
 
 class RenderingUI:
-    def __init__(self, pt_state, render_settings, camera_buffer):
-        self.pt_state = pt_state
-        self.render_settings = render_settings
-        self.camera_buffer = camera_buffer
+    def __init__(self, **kwargs):
+        self.pt_state = kwargs.get("pt_state")
+        self.render_settings = kwargs.get("render_settings")
+        self.camera_buffer = kwargs.get("camera_buffer")
+
+        super().__init__()
     
     def stop_button(self):
             if imgui.button("Stop"):
@@ -14,6 +16,12 @@ class RenderingUI:
     
     def continue_button(self):
         if imgui.button("Continue"):
+            self.pt_state.view_saved = False
+            self.pt_state.should_render = True
+        
+    def restart_button(self):
+        if imgui.button("Restart"):
+            self.pt_state.total_samples = 0
             self.pt_state.view_saved = False
             self.pt_state.should_render = True
     
@@ -45,9 +53,43 @@ class RenderingUI:
             self.pt_state.view_saved = True
 
 
-class SettingsUI(RenderingUI):
-    def __init__(self, pt_state, render_settings, camera_buffer):
-        super().__init__(pt_state, render_settings, camera_buffer)
+class PathTracingUI:
+    def __init__(self, **kwargs):
+        self.pt_settings = kwargs.get("pt_settings")
+        self.pt_state = kwargs.get("pt_state")
+
+        super().__init__(**kwargs)
+    
+    def max_bounce_slider(self):
+        slider_speed = 0.5
+        hardcode_min_bounces = 0
+        hardcode_max_bounces = 1024
+        int_val = self.pt_settings.max_bounces
+        changed, int_val = imgui.drag_int(
+            "Max Bounces",
+            int_val,
+            slider_speed,
+            hardcode_min_bounces,
+            hardcode_max_bounces
+        )
+        if imgui.is_item_active():
+            self.pt_settings.max_bounces = int_val
+            self.pt_state.total_samples = 0
+    
+
+class SettingsUI(PathTracingUI, RenderingUI):
+    def __init__(self,
+            pt_state,
+            render_settings,
+            camera_buffer,
+            pt_settings
+        ):
+        super().__init__(
+            pt_state=pt_state,
+            render_settings=render_settings,
+            camera_buffer=camera_buffer,
+            pt_settings=pt_settings
+        )
 
         self.is_expand = None
         self.settings_window = None
@@ -66,7 +108,8 @@ class SettingsUI(RenderingUI):
                 
                 else:
                     self.continue_button()
-                
+                    
+                self.restart_button()
                 self.cancel_button()
             
             else:

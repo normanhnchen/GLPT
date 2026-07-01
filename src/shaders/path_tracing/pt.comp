@@ -154,7 +154,7 @@ struct HitRecord {
 #define PI 3.14159265359
 
 uniform int totalSamples;
-uniform int maxDepth;
+uniform int maxBounces;
 uniform float blur;
 uniform float hdriExposure;
 
@@ -530,7 +530,7 @@ vec3 RayColor(Ray ray, inout uvec3 v) {
     vec3 entryPoint = vec3(0.0);
     bool insideMedium = false;
 
-    for (int i = 0; i < maxDepth; i++) {
+    for (int i = 0; i < maxBounces; i++) {
         if (!Hit(ray, rec)) {
             // Ray has exited the scene
             vec3 envColor = SampleHDRI(ray.dir);

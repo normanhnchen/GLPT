@@ -123,7 +123,12 @@ def main():
 
     global need_resize
 
-    settings_ui = SettingsUI(pt_state, render_settings, camera_buffer)
+    settings_ui = SettingsUI(
+        pt_state,
+        render_settings,
+        camera_buffer,
+        pt_settings
+    )
 
     # Render loop
     while not glfwWindowShouldClose(window):
@@ -184,6 +189,7 @@ def main():
                     imgui.text_disabled("Preparing path tracer (building BVH)...")
                 else:
                     settings_ui.rendering_ui()
+                    settings_ui.max_bounce_slider()
                 
             imgui.end()
 
@@ -222,7 +228,7 @@ def main():
                 pt_shaders.pt.prog["aspectRatio"].value = set_f4(screen.width / screen.height)
 
                 pt_shaders.pt.prog["totalSamples"].value = pt_state.total_samples
-                pt_shaders.pt.prog["maxDepth"].value = pt_settings.max_depth
+                pt_shaders.pt.prog["maxBounces"].value = pt_settings.max_bounces
 
                 pt_shaders.pt.prog["blur"].value = post_process_settings.blur
 
