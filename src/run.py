@@ -232,7 +232,7 @@ def main():
                 groups_y = (pt_state.tile_height + 15) // 16
 
                 offset_x = pt_state.curr_tile_x
-                offset_y = screen.height - pt_state.curr_tile_y
+                offset_y = pt_state.curr_tile_y
 
                 pt_shaders.pt.prog["uOffset"].value = np.array([offset_x, offset_y], dtype=i4)
 

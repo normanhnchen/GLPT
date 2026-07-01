@@ -205,7 +205,6 @@ class CameraUI:
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
             
             self.camera.movement_speed = speed
-            self.pt_state.total_samples = 0
         
         if imgui.is_item_deactivated():
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
@@ -216,7 +215,6 @@ class CameraUI:
         if imgui.button("-##speed_minus"):
             if self.camera.movement_speed >= hardcoded_min_speed + 1:
                 self.camera.movement_speed -= 1
-                self.pt_state.total_samples = 0
         
         # Plus button
         # ------------
@@ -224,7 +222,6 @@ class CameraUI:
         if imgui.button("+##speed_plus"):
             if self.camera.movement_speed <= hardcoded_max_speed - 1:
                 self.camera.movement_speed += 1
-                self.pt_state.total_samples = 0
         
         # Label
         # -----
@@ -257,7 +254,6 @@ class CameraUI:
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
             
             self.camera.fov = fov
-            self.pt_state.total_samples = 0
         
         if imgui.is_item_deactivated():
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
@@ -268,7 +264,6 @@ class CameraUI:
         if imgui.button("-##fov_minus"):
             if self.camera.fov >= hardcoded_min_fov + 1:
                 self.camera.fov -= 1
-                self.pt_state.total_samples = 0
         
         # Plus button
         # ------------
@@ -276,7 +271,6 @@ class CameraUI:
         if imgui.button("+##fov_plus"):
             if self.camera.fov <= hardcoded_max_fov - 1:
                 self.camera.fov += 1
-                self.pt_state.total_samples = 0
         
         # Label
         # -----
@@ -311,7 +305,6 @@ class CameraUI:
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
             
             self.camera.mouse_sensitivity = mouse_sensitivity / visual_factor
-            self.pt_state.total_samples = 0
         
         if imgui.is_item_deactivated():
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
@@ -322,7 +315,6 @@ class CameraUI:
         if imgui.button("-##sens_minus"):
             if self.camera.mouse_sensitivity >= hardcoded_min_sensitivity + 1:
                 self.camera.mouse_sensitivity -= 1
-                self.pt_state.total_samples = 0
         
         # Plus button
         # ------------
@@ -330,7 +322,6 @@ class CameraUI:
         if imgui.button("+##sens_plus"):
             if self.camera.mouse_sensitivity <= hardcoded_max_sensitivity - 1:
                 self.camera.mouse_sensitivity += 1
-                self.pt_state.total_samples = 0
         
         # Label
         # -----

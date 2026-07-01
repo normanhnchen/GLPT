@@ -61,6 +61,6 @@
         "render_mode": "rasterization",
         "texture_size": [1024, 1024],
         "tiles_x": 4,
-        "tiles_y": 4
+        "tiles_y": 2
     }
 }
