@@ -232,6 +232,10 @@ void main() {
         vec4 baseCol = texture(baseColorTextures, vec3(texCoords, mat.baseTexId));
         mat.baseCol = baseCol.rgb;
         mat.alpha = baseCol.w;
+
+        if (mat.alpha < 0.1) {
+            discard;
+        }
     }
     if (mat.hasEmissiveTex == 1) {
         mat.emissive = texture(emissiveTextures, vec3(texCoords, mat.emissiveTexId)).rgb;

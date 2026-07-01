@@ -112,6 +112,8 @@ def main():
         ctx.disable(moderngl.DEPTH_TEST)
     elif render_settings.render_mode == "rasterization":
         ctx.enable(moderngl.DEPTH_TEST)
+        ctx.enable(moderngl.BLEND)
+        ctx.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
     
     global settings_window
     settings_window = False
