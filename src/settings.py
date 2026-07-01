@@ -33,6 +33,7 @@ class PTSettings:
     def __init__(self, json_settings):
         config = json_settings["path_tracing"]
 
+        self.spp = config["samples_per_pixel"]
         self.max_bounces = config["max_bounces"]
         self.max_samples = config["max_samples"]
 

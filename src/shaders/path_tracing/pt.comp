@@ -153,6 +153,7 @@ struct HitRecord {
 #define INF 1e20
 #define PI 3.14159265359
 
+uniform int samplesPerPixel;
 uniform int totalSamples;
 uniform int maxBounces;
 uniform float blur;
@@ -678,38 +679,42 @@ void main() {
 
     uvec3 state = InitRngState(pixelCoords);
     
-    // Get random vec3 (range [0, 1])
-    // Convert to range [-0.5, 0.5]
-    vec3 noise = PCG3d(state) - 0.5;
-    // Anti-aliasing sub-pixel jitter
-    vec2 jitter = noise.xy * blur;
+    float maxRadiance = 100.0;
 
-    // Map pixel to Normalized Device Coordinates (-1 to 1)
-    vec2 uv = (vec2(pixelCoords) + jitter) / vec2(dims) * 2.0 - 1.0;
+    vec3 sampledColor = vec3(0.0);
+    for (int i = 0; i < samplesPerPixel; i++) {
+        // Get random vec3 (range [0, 1])
+        // Convert to range [-0.5, 0.5]
+        vec3 noise = PCG3d(state) - 0.5;
+        // Anti-aliasing sub-pixel jitter
+        vec2 jitter = noise.xy * blur;
 
-    // Adjust for aspect ratio
-    uv.x *= aspectRatio;
+        // Map pixel to Normalized Device Coordinates (-1 to 1)
+        vec2 uv = (vec2(pixelCoords) + jitter) / vec2(dims) * 2.0 - 1.0;
 
-    float tanHalfFov = tan(radians(Camera.fov) * 0.5);
-    vec3 pinholeDir = normalize(Camera.front + (uv.x * Camera.right * tanHalfFov) + (uv.y * Camera.up * tanHalfFov));
+        // Adjust for aspect ratio
+        uv.x *= aspectRatio;
 
-    vec3 focusPoint = Camera.pos + pinholeDir * Camera.focusDist;
+        float tanHalfFov = tan(radians(Camera.fov) * 0.5);
+        vec3 pinholeDir = normalize(Camera.front + (uv.x * Camera.right * tanHalfFov) + (uv.y * Camera.up * tanHalfFov));
 
-    vec2 rd = Camera.aperture * SampleUnitDisk(state);
-    vec3 offset = Camera.right * rd.x + Camera.up * rd.y;
+        vec3 focusPoint = Camera.pos + pinholeDir * Camera.focusDist;
 
-    Ray ray;
-    ray.orig = Camera.pos + offset;
-    ray.dir = normalize(focusPoint - ray.orig);
+        vec2 rd = Camera.aperture * SampleUnitDisk(state);
+        vec3 offset = Camera.right * rd.x + Camera.up * rd.y;
 
-    float maxRadiance = 10.0;
+        Ray ray;
+        ray.orig = Camera.pos + offset;
+        ray.dir = normalize(focusPoint - ray.orig);
+        vec3 newColor = RayColor(ray, state);
 
-    vec3 sampledColor = RayColor(ray, state);
-    // Clamp to prevent fireflies
-    sampledColor = min(sampledColor, vec3(10.0));
+        // Clamp to prevent fireflies
+        sampledColor += min(newColor, vec3(maxRadiance));
+    }
+    sampledColor /= float(samplesPerPixel);
 
     vec3 oldColor = imageLoad(imgOutput, pixelCoords).rgb;
-    float weight = 1.0 / (float(totalSamples) + 1.0);
+    float weight = float(samplesPerPixel) / (float(totalSamples + samplesPerPixel));
     
     vec3 finalColor;
     if (totalSamples == 0) {

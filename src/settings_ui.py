@@ -23,10 +23,7 @@ class RenderingUI:
         
     def restart_button(self):
         if imgui.button("Restart"):
-            self.pt_state.total_samples = 0
-            self.pt_state.render_complete = False
-            self.pt_state.view_saved = False
-            self.pt_state.should_render = True
+            self.pt_state.restart_render()
     
     def cancel_button(self):
         if imgui.button("Cancel"):
@@ -79,7 +76,7 @@ class RenderingUI:
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
             
             render_settings.tiles_x = tiles_x
-            self.pt_state.update_tiles()
+            self.pt_state.restart_render()
             self.pt_state.total_samples = 0
         
         if imgui.is_item_deactivated():
@@ -91,7 +88,7 @@ class RenderingUI:
         if imgui.button("-##tiles_x_minus"):
             if render_settings.tiles_x > hardcoded_min_tiles_x:
                 render_settings.tiles_x -= 1
-                self.pt_state.update_tiles()
+                self.pt_state.restart_render()
                 self.pt_state.total_samples = 0
         
         # Plus button
@@ -100,8 +97,13 @@ class RenderingUI:
         if imgui.button("+##tiles_x_plus"):
             if render_settings.tiles_x < hardcoded_max_tiles_x:
                 render_settings.tiles_x += 1
-                self.pt_state.update_tiles()
+                self.pt_state.restart_render()
                 self.pt_state.total_samples = 0
+            
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("Tiles X")
     
     def tiles_y_slider(self):
         # Slider 
@@ -127,7 +129,7 @@ class RenderingUI:
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
             
             render_settings.tiles_y = tiles_y
-            self.pt_state.update_tiles()
+            self.pt_state.restart_render()
             self.pt_state.total_samples = 0
         
         if imgui.is_item_deactivated():
@@ -139,7 +141,7 @@ class RenderingUI:
         if imgui.button("-##tiles_y_minus"):
             if render_settings.tiles_y > hardcoded_min_tiles_y:
                 render_settings.tiles_y -= 1
-                self.pt_state.update_tiles()
+                self.pt_state.restart_render()
                 self.pt_state.total_samples = 0
         
         # Plus button
@@ -148,8 +150,13 @@ class RenderingUI:
         if imgui.button("+##tiles_y_plus"):
             if render_settings.tiles_y < hardcoded_max_tiles_y:
                 render_settings.tiles_y += 1
-                self.pt_state.update_tiles()
+                self.pt_state.restart_render()
                 self.pt_state.total_samples = 0
+        
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("Tiles Y")
 
 
 class PathTracingUI:
@@ -183,7 +190,7 @@ class PathTracingUI:
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
             
             pt_settings.max_bounces = bounces
-            self.pt_state.total_samples = 0
+            self.pt_state.restart_render()
         
         if imgui.is_item_deactivated():
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
@@ -194,7 +201,7 @@ class PathTracingUI:
         if imgui.button("-##bounces_minus"):
             if pt_settings.max_bounces > hardcoded_min_bounces:
                 pt_settings.max_bounces -= 1
-                self.pt_state.total_samples = 0
+                self.pt_state.restart_render()
         
         # Plus button
         # ------------
@@ -202,7 +209,7 @@ class PathTracingUI:
         if imgui.button("+##bounces_plus"):
             if pt_settings.max_bounces < hardcoded_max_bounces:
                 pt_settings.max_bounces += 1
-                self.pt_state.total_samples = 0
+                self.pt_state.restart_render()
         
         # Label
         # -----
@@ -233,7 +240,7 @@ class PathTracingUI:
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
             
             pt_settings.max_samples = samples
-            self.pt_state.total_samples = 0
+            self.pt_state.restart_render()
         
         if imgui.is_item_deactivated():
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
@@ -244,7 +251,7 @@ class PathTracingUI:
         if imgui.button("-##samples_minus"):
             if pt_settings.max_samples > hardcoded_min_samples:
                 pt_settings.max_samples -= 1
-                self.pt_state.total_samples = 0
+                self.pt_state.restart_render()
         
         # Plus button
         # ------------
@@ -252,21 +259,69 @@ class PathTracingUI:
         if imgui.button("+##samples_plus"):
             if pt_settings.max_samples < hardcoded_max_samples:
                 pt_settings.max_samples += 1
-                self.pt_state.total_samples = 0
+                self.pt_state.restart_render()
         
         # Label
         # -----
         imgui.same_line()
         imgui.text("Max Samples")
+    
+    def spp_slider(self):
+        # Slider 
+        # ------
+        slider_speed = 0.5
+        hardcoded_min_spp = 1
+        hardcoded_max_spp = 1024
+        spp = pt_settings.spp
+        changed, spp = imgui.drag_int(
+            "##spp",
+            spp,
+            slider_speed,
+            hardcoded_min_spp,
+            hardcoded_max_spp
+        )
+
+        # Dragging logic
+        # --------------
+        if imgui.is_item_active():
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            pt_settings.spp = spp
+            self.pt_state.restart_render()
         
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        
+        # Minus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("-##spp_minus"):
+            if pt_settings.spp > hardcoded_min_spp:
+                pt_settings.spp -= 1
+                self.pt_state.restart_render()
+        
+        # Plus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("+##spp_plus"):
+            if pt_settings.spp < hardcoded_max_spp:
+                pt_settings.spp += 1
+                self.pt_state.restart_render()
+        
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("Samples Per Pixel")
+    
     def reset_pt_button(self):
         if imgui.button("Reset Path Tracing Settings"):
             pt_settings.max_bounces = _pt_settings_default.max_bounces
             pt_settings.max_samples = _pt_settings_default.max_samples
-            self.pt_state.total_samples = 0
-            self.pt_state.render_complete = False
-            self.pt_state.view_saved = False
-            self.pt_state.should_render = True
+            pt_settings.spp = _pt_settings_default.spp
+            self.pt_state.restart_render()
 
 
 class CameraUI:
@@ -467,6 +522,7 @@ class SettingsUI(CameraUI, PathTracingUI, RenderingUI):
     def path_tracing_ui(self):
         self.max_bounce_slider()
         self.max_samples_slider()
+        self.spp_slider()
         self.reset_pt_button()
     
     def camera_ui(self):
