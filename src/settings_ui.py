@@ -485,6 +485,7 @@ class PostProcessingUI:
     def __init__(self, **kwargs):
         self.pt_state = kwargs.get("pt_state")
         self.post_process_state = kwargs.get("post_process_state")
+        self.camera_buffer = kwargs.get("camera_buffer")
 
         super().__init__(**kwargs)
 
@@ -612,6 +613,194 @@ class PostProcessingUI:
         # -----
         imgui.same_line()
         imgui.text("HDRI Exposure")
+    
+    def blur_slider(self):
+        # Slider 
+        # ------
+        slider_speed = 0.5
+        hardcoded_min_blur = 0
+        hardcoded_max_blur = 100
+        blur = post_process_settings.blur
+        val_format = "%.1f"
+        changed, blur = imgui.drag_float(
+            "##blur",
+            blur,
+            slider_speed,
+            hardcoded_min_blur,
+            hardcoded_max_blur,
+            val_format
+        )
+
+        # Dragging logic
+        # --------------
+        if imgui.is_item_active() and changed:
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            post_process_settings.blur = blur
+            self.pt_state.restart_render()
+        
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        
+        # Minus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("-##blur_minus"):
+            if post_process_settings.blur > hardcoded_min_blur:
+                post_process_settings.blur -= 1
+                self.pt_state.restart_render()
+        
+        # Plus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("+##blur_plus"):
+            if post_process_settings.blur < hardcoded_max_blur:
+                post_process_settings.blur += 1
+                self.pt_state.restart_render()
+        
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("Blur")
+    
+    def dof_checkbox(self):
+        enabled = self.post_process_state.dof_enabled
+        changed, enabled = imgui.checkbox("Enable Depth of Field", enabled)
+        if changed:
+            self.post_process_state.dof_enabled = enabled
+            if not enabled:
+                post_process_settings.aperture = 0
+                self.camera_buffer.update_data()
+                self.pt_state.restart_render()
+            else:
+                post_process_settings.aperture = self.post_process_state.aperture
+                self.camera_buffer.update_data()
+                self.pt_state.restart_render()
+        
+    def aperture_slider(self):
+        if not self.post_process_state.dof_enabled:
+            return
+        
+        # Slider 
+        # ------
+        slider_speed = 0.1
+        hardcoded_min_aperture = 0.1
+        hardcoded_max_aperture = 10
+        aperture = post_process_settings.aperture
+        val_format = "%.1f"
+        changed, aperture = imgui.drag_float(
+            "##aperture",
+            aperture,
+            slider_speed,
+            hardcoded_min_aperture,
+            hardcoded_max_aperture,
+            val_format
+        )
+
+        # Dragging logic
+        # --------------
+        if imgui.is_item_active() and changed:
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            post_process_settings.aperture = aperture
+            self.post_process_state.aperture = post_process_settings.aperture
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+        
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        
+        # Minus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("-##aperture_minus"):
+            if post_process_settings.aperture > hardcoded_min_aperture:
+                post_process_settings.aperture -= 1
+                self.post_process_state.aperture = post_process_settings.aperture
+                self.camera_buffer.update_data()
+                self.pt_state.restart_render()
+        
+        # Plus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("+##aperture_plus"):
+            if post_process_settings.aperture < hardcoded_max_aperture:
+                post_process_settings.aperture += 1
+                self.post_process_state.aperture = post_process_settings.aperture
+                self.camera_buffer.update_data()
+                self.pt_state.restart_render()
+        
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("Aperture")
+    
+    def focus_dist_slider(self):
+        if not self.post_process_state.dof_enabled:
+            return
+        
+        # Slider 
+        # ------
+        slider_speed = 0.1
+        hardcoded_min_focus_dist = 0.1
+        hardcoded_max_focus_dist = 1000
+        focus_dist = post_process_settings.focus_dist
+        val_format = "%.1f"
+        changed, focus_dist = imgui.drag_float(
+            "##focus_dist",
+            focus_dist,
+            slider_speed,
+            hardcoded_min_focus_dist,
+            hardcoded_max_focus_dist,
+            val_format
+        )
+
+        # Dragging logic
+        # --------------
+        if imgui.is_item_active() and changed:
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            post_process_settings.focus_dist = focus_dist
+            self.post_process_state.focus_dist = post_process_settings.focus_dist
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+        
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        
+        # Minus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("-##focus_dist_minus"):
+            if post_process_settings.focus_dist > hardcoded_min_focus_dist:
+                post_process_settings.focus_dist -= 1
+                self.post_process_state.focus_dist = post_process_settings.focus_dist
+                self.camera_buffer.update_data()
+                self.pt_state.restart_render()
+        
+        # Plus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("+##focus_dist_plus"):
+            if post_process_settings.focus_dist < hardcoded_max_focus_dist:
+                post_process_settings.focus_dist += 1
+                self.post_process_state.focus_dist = post_process_settings.focus_dist
+                self.camera_buffer.update_data()
+                self.pt_state.restart_render()
+        
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("Focus Distance")
 
 
 class SettingsUI(PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
@@ -670,3 +859,7 @@ class SettingsUI(PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
         self.exposure_slider()
         self.hdri_exposure_slider()
         self.tonemap_dropdown()
+        self.blur_slider()
+        self.dof_checkbox()
+        self.aperture_slider()
+        self.focus_dist_slider()

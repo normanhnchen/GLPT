@@ -34,6 +34,9 @@ class CameraBuffer:
         self.camera_data["up"] = self.camera.up
         self.camera_data["right"] = self.camera.right
         self.camera_data["fov"] = self.camera.fov
+        self.camera_data["aperture"] = post_process_settings.aperture
+        self.camera_data["focusDist"] = post_process_settings.focus_dist
+        self.camera_data["autoFocus"] = post_process_settings.auto_focus
 
         self.camera_buffer.write(self.camera_data.tobytes())
     
