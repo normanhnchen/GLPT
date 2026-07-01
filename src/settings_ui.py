@@ -71,7 +71,7 @@ class PathTracingUI:
         hardcoded_max_bounces = 1024
         bounces = pt_settings.max_bounces
         changed, bounces = imgui.drag_int(
-            "Max Bounces",
+            "##max_bounces",
             bounces,
             slider_speed,
             hardcoded_min_bounces,
@@ -108,6 +108,11 @@ class PathTracingUI:
                 pt_settings.max_bounces += 1
                 self.pt_state.total_samples = 0
         
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("Max Bounces")
+        
     def max_samples_slider(self):
         # Slider 
         # ------
@@ -116,7 +121,7 @@ class PathTracingUI:
         hardcoded_max_samples = 16384
         samples = pt_settings.max_samples
         changed, samples = imgui.drag_int(
-            "Max Samples",
+            "##max_samples",
             samples,
             slider_speed,
             hardcoded_min_samples,
@@ -153,6 +158,11 @@ class PathTracingUI:
                 pt_settings.max_samples += 1
                 self.pt_state.total_samples = 0
         
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("Max Samples")
+        
     def reset_pt_button(self):
         if imgui.button("Reset Path Tracing Settings"):
             pt_settings.max_bounces = _pt_settings_default.max_bounces
@@ -178,7 +188,7 @@ class CameraUI:
         hardcoded_max_speed = 10000
         speed = self.camera.movement_speed
         changed, speed = imgui.drag_float(
-            "Movement Speed",
+            "##movement_speed",
             speed,
             slider_speed,
             hardcoded_min_speed,
@@ -214,6 +224,11 @@ class CameraUI:
             if self.camera.movement_speed < hardcoded_max_speed:
                 self.camera.movement_speed += 1
                 self.pt_state.total_samples = 0
+        
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("Movement Speed")
 
 
 class SettingsUI(CameraUI, PathTracingUI, RenderingUI):
