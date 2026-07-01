@@ -25,6 +25,90 @@ middle_mouse_down = False
 need_resize = False
 
 
+class PTState:
+    def __init__(self, ctx):
+        self.ctx = ctx
+        self.compute_tex = ctx.texture(screen.resolution, 4, dtype=f4)
+        self.saved_render = None
+
+        # Current tile top left position in pixels
+        self.curr_tile_x = 0
+        self.curr_tile_y = 0
+        # Apply ceiling function
+        # Allows the compute shader to reach the entire screen
+        self.tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
+        self.tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
+
+        self.render_complete = False
+        self.first_render = True
+        self.view_saved = False
+        self.should_render = False
+        self.total_samples = 0
+    
+    def resize(self):
+        self.compute_tex.release()
+
+        self.compute_tex = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.compute_tex.write(np.zeros((*screen.resolution, 4), dtype=f4))
+
+        self.total_samples = 0
+        self.render_complete = False
+
+        # Reset tiling
+        self.curr_tile_x = 0
+        self.curr_tile_y = 0
+
+        # Recalculate tile sizes
+        self.tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
+        self.tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
+    
+    def start_render(self, camera_buffer):
+        render_settings.render_mode = "path_tracing"
+
+        camera_buffer.update_data()
+
+        self.total_samples = 0
+        self.should_render = True
+        self.render_complete = False
+        
+        # Reset tiling
+        self.curr_tile_x = 0
+        self.curr_tile_y = 0
+
+        # Reset accumulation buffer
+        self.compute_tex.write(np.zeros((*screen.resolution, 4), dtype=f4))
+    
+    def save_render(self):
+        self.render_complete = True
+        if self.saved_render is not None:
+            self.saved_render.release()
+        self.saved_render = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.saved_render.write(self.compute_tex.read())
+    
+
+class RasterState:
+    def __init__(self, ctx):
+        self.ctx = ctx
+        self.raster_color_tex = ctx.texture(screen.resolution, 4, dtype=f4)
+        self.raster_depth_texture = ctx.depth_texture(screen.resolution)
+        self.raster_fbo = ctx.framebuffer(
+            color_attachments=[self.raster_color_tex],
+            depth_attachment=self.raster_depth_texture
+        )
+    
+    def resize(self):
+        self.raster_color_tex.release()
+        self.raster_depth_texture.release()
+        self.raster_fbo.release()
+
+        self.raster_color_tex = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.raster_depth_texture = self.ctx.depth_texture(screen.resolution)
+        self.raster_fbo = self.ctx.framebuffer(
+            color_attachments=[self.raster_color_tex],
+            depth_attachment=self.raster_depth_texture
+        )
+
+
 def main():
     if not glfwInit():
         return "Failed to initialize GLFW"
@@ -70,20 +154,14 @@ def main():
     pt_shaders = PTShaders(ctx)
     raster_shaders = RasterShaders(ctx,)
     
-    compute_texture = ctx.texture(screen.resolution, 4, dtype=f4)
+    pt_state = PTState(ctx)
+    raster_state = RasterState(ctx)
 
     pt_quad = FullScreenQuad(ctx, pt_shaders.final)
     raster_quad = FullScreenQuad(ctx, raster_shaders.final)
 
     pbr_pass = PBRPass(ctx, scene, raster_shaders.pbr)
     bg_pass = BGPass(ctx, raster_shaders.bg)
-
-    raster_color_tex = ctx.texture(screen.resolution, 4, dtype=f4)
-    raster_depth_texture = ctx.depth_texture(screen.resolution)
-    raster_fbo = ctx.framebuffer(
-        color_attachments=[raster_color_tex],
-        depth_attachment=raster_depth_texture
-    )
 
     camera_buffer = CameraBuffer()
 
@@ -95,6 +173,8 @@ def main():
 
     light_buffer = LightBuffer(scene)
 
+    tri_indices_buffer = TriangleIndicesBuffer(scene)
+
     camera_buffer.bind(ctx, 0)
 
     triangle_buffer.bind(ctx, 1)
@@ -105,9 +185,7 @@ def main():
 
     light_buffer.bind(ctx, 4)
 
-    tri_indices_data = scene.bvh.tri_indices.astype(i4)
-    tri_indices_buffer = ctx.buffer(tri_indices_data.tobytes())
-    tri_indices_buffer.bind_to_storage_buffer(5)
+    tri_indices_buffer.bind(ctx, 5)
 
     scene.create_texture_arrays(ctx, *render_settings.texture_size)
     scene.bind_texture_arrays()
@@ -119,10 +197,7 @@ def main():
 
     avg_fps = 0
 
-    total_samples = 0
     stats_frame_count = 0
-
-    should_render = True
 
     if render_settings.render_mode == "path_tracing":
         ctx.disable(moderngl.DEPTH_TEST)
@@ -133,22 +208,6 @@ def main():
     settings_window = False
 
     global need_resize
-
-    # Current tile top left position in pixels
-    curr_tile_x = 0
-    curr_tile_y = 0
-
-    # Apply ceiling function
-    # Allows the compute shader to reach the entire screen
-    tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
-    tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
-
-    global render_complete
-
-    render_complete = False
-    first_render = True
-    view_saved = False
-    saved_render = None
 
     # Render loop
     while not glfwWindowShouldClose(window):
@@ -168,39 +227,15 @@ def main():
             stats_frame_count = 0
         
         if need_resize:
-            compute_texture.release()
-
-            compute_texture = ctx.texture(screen.resolution, 4, dtype=f4)
-            compute_texture.write(np.zeros((*screen.resolution, 4), dtype=f4))
-
-            raster_color_tex.release()
-            raster_depth_texture.release()
-            raster_fbo.release()
-
-            raster_color_tex = ctx.texture(screen.resolution, 4, dtype=f4)
-            raster_depth_texture = ctx.depth_texture(screen.resolution)
-            raster_fbo = ctx.framebuffer(
-                color_attachments=[raster_color_tex],
-                depth_attachment=raster_depth_texture
-            )
-
-            total_samples = 0
-            render_complete = False
-
-            # Reset tiling
-            curr_tile_x = 0
-            curr_tile_y = 0
-
-            # Recalculate tile sizes
-            tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
-            tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
+            pt_state.resize()
+            raster_state.resize()
 
             ctx.screen.use()
             ctx.viewport = (0, 0, screen.width, screen.height)
 
             need_resize = False
         
-        update_stats(window, avg_fps, total_samples, render_complete)
+        update_stats(window, avg_fps, pt_state.total_samples, pt_state.render_complete)
         
         ctx.clear(0, 0, 0, 1)
 
@@ -212,12 +247,8 @@ def main():
         
         imgui.new_frame()
         
-        if total_samples == pt_settings.max_samples and not render_complete:
-            render_complete = True
-            if saved_render is not None:
-                saved_render.release()
-            saved_render = ctx.texture(screen.resolution, 4, dtype=f4)
-            saved_render.write(compute_texture.read())
+        if pt_state.total_samples == pt_settings.max_samples and not pt_state.render_complete:
+            pt_state.save_render()
 
         if settings_window:
             imgui.set_next_window_size((400, 600))
@@ -227,60 +258,31 @@ def main():
                 if render_settings.render_mode == "path_tracing":
                     if imgui.button("Back to Viewport"):
                         render_settings.render_mode = "rasterization"
-
-                        view_saved = False
+                        pt_state.view_saved = False
                     
-                    if first_render:
-                        first_render = False
+                    if pt_state.first_render:
+                        pt_state.first_render = False
                 
                 else:
-                    if saved_render is None:
+                    if pt_state.saved_render is None:
                         if imgui.button("Start Render"):
-                            render_settings.render_mode = "path_tracing"
-
-                            camera_buffer.update_data()
-
-                            total_samples = 0
-                            should_render = True
-                            render_complete = False
-                            
-                            # Reset tiling
-                            curr_tile_x = 0
-                            curr_tile_y = 0
-
-                            # Reset accumulation buffer
-                            compute_texture.write(np.zeros((*screen.resolution, 4), dtype=f4))
-
-                            view_saved = False
+                            pt_state.start_render(camera_buffer)
+                            pt_state.view_saved = False
                     
                     else:
                         if imgui.button("Start New Render"):
-                            render_settings.render_mode = "path_tracing"
-
-                            camera_buffer.update_data()
-
-                            total_samples = 0
-                            should_render = True
-                            render_complete = False
-                            
-                            # Reset tiling
-                            curr_tile_x = 0
-                            curr_tile_y = 0
-
-                            # Reset accumulation buffer
-                            compute_texture.write(np.zeros((*screen.resolution, 4), dtype=f4))
-
-                            view_saved = False
+                            pt_state.start_render(camera_buffer)
+                            pt_state.view_saved = False
                         
                         if imgui.button("View Saved Render"):
                             render_settings.render_mode = "path_tracing"
-                            view_saved = True
+                            pt_state.view_saved = True
                 
             imgui.end()
 
-        if view_saved:
+        if pt_state.view_saved:
             # Draw to screen
-            saved_render.use(location=0)
+            pt_state.saved_render.use(location=0)
 
             # Post Processing
             # ---------------
@@ -302,13 +304,13 @@ def main():
             pt_quad.draw()
 
         if render_settings.render_mode == "path_tracing":
-            if total_samples >= pt_settings.max_samples:
-                should_render = False
+            if pt_state.total_samples >= pt_settings.max_samples:
+                pt_state.should_render = False
             
-            if should_render:
+            if pt_state.should_render:
                 pt_shaders.pt.prog["aspectRatio"].value = set_f4(screen.width / screen.height)
 
-                pt_shaders.pt.prog["totalSamples"].value = total_samples
+                pt_shaders.pt.prog["totalSamples"].value = pt_state.total_samples
                 pt_shaders.pt.prog["maxDepth"].value = pt_settings.max_depth
 
                 pt_shaders.pt.prog["blur"].value = post_process_settings.blur
@@ -317,29 +319,30 @@ def main():
 
                 # Apply ceiling function
                 # Allows the compute shader to reach the entire screen
-                local_size_x = (tile_width + 15) // 16
-                local_size_y = (tile_height + 15) // 16
+                groups_x = (pt_state.tile_width + 15) // 16
+                groups_y = (pt_state.tile_height + 15) // 16
 
-                offset_x = curr_tile_x
-                offset_y = screen.height - curr_tile_y
+                offset_x = pt_state.curr_tile_x
+                offset_y = screen.height - pt_state.curr_tile_y
 
                 pt_shaders.pt.prog["uOffset"].value = np.array([offset_x, offset_y], dtype=i4)
 
-                curr_tile_x += tile_width
-                if curr_tile_x > screen.width:
-                    curr_tile_x = 0
-                    curr_tile_y += tile_height
+                pt_state.curr_tile_x += pt_state.tile_width
+                if pt_state.curr_tile_x > screen.width:
+                    pt_state.curr_tile_x = 0
+                    pt_state.curr_tile_y += pt_state.tile_height
                 
-                if curr_tile_y > screen.height:
-                    curr_tile_y = 0
-                    total_samples += 1
+                if pt_state.curr_tile_y > screen.height:
+                    pt_state.curr_tile_y = 0
+                    # Finished rendering entire screen; add a sample
+                    pt_state.total_samples += 1
                 
                 # Run compute shader
-                compute_texture.bind_to_image(0, read=True, write=True)
-                pt_shaders.pt.prog.run(local_size_x, local_size_y)
+                pt_state.compute_tex.bind_to_image(0, read=True, write=True)
+                pt_shaders.pt.prog.run(groups_x, groups_y)
             
             # Draw to screen
-            compute_texture.use(location=0)
+            pt_state.compute_tex.use(location=0)
 
             # Post Processing
             # ---------------
@@ -361,8 +364,8 @@ def main():
             pt_quad.draw()
         
         elif render_settings.render_mode == "rasterization":
-            raster_fbo.use()
-            raster_fbo.clear(0.0, 0.0, 0.0, 1.0)
+            raster_state.raster_fbo.use()
+            raster_state.raster_fbo.clear(0.0, 0.0, 0.0, 1.0)
 
             # Background Shader
             # -----------------
@@ -389,7 +392,7 @@ def main():
             pbr_pass.draw()
 
             ctx.screen.use()
-            raster_color_tex.use(location=0)
+            raster_state.raster_color_tex.use(location=0)
 
             # Post Processing
             # ---------------
@@ -883,6 +886,15 @@ class BVHNodeBuffer:
     def bind(self, ctx, loc):
         self.bvh_node_buffer = ctx.buffer(self.bvh_node_data.tobytes())
         self.bvh_node_buffer.bind_to_storage_buffer(loc)
+
+
+class TriangleIndicesBuffer:
+    def __init__(self, scene):
+        self.tri_indices_data = scene.bvh.tri_indices.astype(i4)
+    
+    def bind(self, ctx, loc):
+        self.tri_indices_buffer = ctx.buffer(self.tri_indices_data.tobytes())
+        self.tri_indices_buffer.bind_to_storage_buffer(loc)
 
 
 class FullScreenQuad:
