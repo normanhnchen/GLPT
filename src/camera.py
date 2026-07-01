@@ -86,8 +86,8 @@ class Camera:
         self.fov -= yoffset
         if self.fov < 1:
             self.fov = 1
-        elif self.fov > 100:
-            self.fov = 100
+        elif self.fov > 135:
+            self.fov = 135
 
     def _update_camera_vectors(self):
         # Calculate the new front vector

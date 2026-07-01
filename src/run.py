@@ -189,7 +189,7 @@ def main():
                 else:
                     settings_ui.rendering_ui()
                     settings_ui.path_tracing_ui()
-                    settings_ui.movement_speed_slider()
+                    settings_ui.camera_ui()
                 
             imgui.end()
 

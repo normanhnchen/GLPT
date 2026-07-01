@@ -186,6 +186,7 @@ class CameraUI:
         slider_speed = 0.5
         hardcoded_min_speed = 0
         hardcoded_max_speed = 10000
+        val_format = "%.1f"
         speed = self.camera.movement_speed
         changed, speed = imgui.drag_float(
             "##movement_speed",
@@ -213,7 +214,7 @@ class CameraUI:
         # ------------
         imgui.same_line()
         if imgui.button("-##speed_minus"):
-            if self.camera.movement_speed > hardcoded_min_speed:
+            if self.camera.movement_speed >= hardcoded_min_speed + 1:
                 self.camera.movement_speed -= 1
                 self.pt_state.total_samples = 0
         
@@ -221,7 +222,7 @@ class CameraUI:
         # ------------
         imgui.same_line()
         if imgui.button("+##speed_plus"):
-            if self.camera.movement_speed < hardcoded_max_speed:
+            if self.camera.movement_speed <= hardcoded_max_speed - 1:
                 self.camera.movement_speed += 1
                 self.pt_state.total_samples = 0
         
@@ -229,6 +230,58 @@ class CameraUI:
         # -----
         imgui.same_line()
         imgui.text("Movement Speed")
+    
+    def fov_slider(self):
+        # Slider 
+        # ------
+        slider_speed = 1
+        hardcoded_min_fov = 1
+        hardcoded_max_fov = 135
+        val_format = "%.1f"
+        fov = self.camera.fov
+        changed, fov = imgui.drag_float(
+            "##fov",
+            fov,
+            slider_speed,
+            hardcoded_min_fov,
+            hardcoded_max_fov,
+            val_format
+        )
+
+        # Dragging logic
+        # --------------
+        if imgui.is_item_active():
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            self.camera.fov = fov
+            self.pt_state.total_samples = 0
+        
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+
+        # Minus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("-##fov_minus"):
+            if self.camera.fov >= hardcoded_min_fov + 1:
+                self.camera.fov -= 1
+                self.pt_state.total_samples = 0
+        
+        # Plus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("+##fov_plus"):
+            if self.camera.fov <= hardcoded_max_fov - 1:
+                self.camera.fov += 1
+                self.pt_state.total_samples = 0
+        
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("FOV")
 
 
 class SettingsUI(CameraUI, PathTracingUI, RenderingUI):
@@ -274,3 +327,4 @@ class SettingsUI(CameraUI, PathTracingUI, RenderingUI):
     
     def camera_ui(self):
         self.movement_speed_slider()
+        self.fov_slider()
