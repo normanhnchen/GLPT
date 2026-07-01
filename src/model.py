@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import pygltflib
 import glm
+import time
 
 from src.dtypes import *
 from src.bvh import *
@@ -262,7 +263,7 @@ class Scene:
     
     def build_bvh(self):
         self.bvh = BVH(self)
-        self.num_bvh_nodes = len(self.bvh.nodes)
+        self.num_bvh_nodes = self.bvh.nodes_used
     
     # Logic for parsing GLB files assisted by AI
     def _get_extensions(self):

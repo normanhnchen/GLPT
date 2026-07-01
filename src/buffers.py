@@ -265,14 +265,14 @@ class BVHNodeBuffer:
         
         bvh_node_data = np.zeros(scene.num_bvh_nodes, bvh_node_dtype)
 
-        for i, node in enumerate(scene.bvh.nodes):
-            bvh_node_data[i]["aabbMin"] = node.aabb_min
-            bvh_node_data[i]["aabbMax"] = node.aabb_max
-            bvh_node_data[i]["leftChildIdx"] = node.left_child_idx
-            bvh_node_data[i]["rightChildIdx"] = node.right_child_idx
-            bvh_node_data[i]["firstTriIdx"] = node.first_tri_idx
-            bvh_node_data[i]["triCount"] = node.tri_count
-            bvh_node_data[i]["isLeaf"] = node.is_leaf
+        for i in range(scene.num_bvh_nodes):
+            bvh_node_data[i]["aabbMin"] = scene.bvh.aabb_mins[i]
+            bvh_node_data[i]["aabbMax"] = scene.bvh.aabb_maxs[i]
+            bvh_node_data[i]["leftChildIdx"] = scene.bvh.left_child_indices[i]
+            bvh_node_data[i]["rightChildIdx"] = scene.bvh.right_child_indices[i]
+            bvh_node_data[i]["firstTriIdx"] = scene.bvh.first_tri_indices[i]
+            bvh_node_data[i]["triCount"] = scene.bvh.tri_counts[i]
+            bvh_node_data[i]["isLeaf"] = scene.bvh.is_leafs[i]
         
         self.bvh_node_dtype = bvh_node_dtype
         self.bvh_node_data = bvh_node_data

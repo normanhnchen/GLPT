@@ -41,8 +41,8 @@
         "_world_up": [0, 1, 0]
     },
     "path_tracing": {
-        "max_depth": 8,
-        "max_samples": 10
+        "max_depth": 16,
+        "max_samples": 256
     },
     "post_processing": {
         "blur": 1.0,
