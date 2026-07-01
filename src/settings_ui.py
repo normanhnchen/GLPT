@@ -480,7 +480,37 @@ class CameraUI:
         imgui.text("Mouse Sensitivity")
 
 
-class SettingsUI(CameraUI, PathTracingUI, RenderingUI):
+class PostProcessingUI:
+    def __init__(self, **kwargs):
+        self.pt_state = kwargs.get("pt_state")
+
+        super().__init__(**kwargs)
+
+    def tonemap_dropdown(self):
+        options = ["None", "ACESFilm", "AgX", "AgXGolden", "AgXPunchy", "Filmic", "Lottes",
+                   "Neutral", "Reinhard", "Reinhard2", "Uchimura", "Uncharted2", "Unreal"]
+
+        curr_tonemap = "AgX"
+
+        if imgui.begin_combo("Render Mode", curr_tonemap):
+            for tonemap in options:
+                is_selected = (curr_tonemap == tonemap)
+
+                clicked, state = imgui.selectable(tonemap, is_selected)
+
+                if clicked:
+                    curr_tonemap = tonemap
+
+                    post_process_settings.tonemap = curr_tonemap
+                    self.pt_state.restart_render()
+
+                if is_selected:
+                    imgui.set_item_default_focus()
+            
+            imgui.end_combo()
+
+
+class SettingsUI(PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
     def __init__(self,
             pt_state,
             camera_buffer,
@@ -529,3 +559,6 @@ class SettingsUI(CameraUI, PathTracingUI, RenderingUI):
         self.movement_speed_slider()
         self.fov_slider()
         self.mouse_sensitivity_slider()
+    
+    def post_processing_ui(self):
+        self.tonemap_dropdown()

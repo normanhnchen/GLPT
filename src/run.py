@@ -182,6 +182,7 @@ def main():
                     settings_ui.rendering_ui()
                     settings_ui.path_tracing_ui()
                     settings_ui.camera_ui()
+                    settings_ui.post_processing_ui()
                 
             imgui.end()
 
