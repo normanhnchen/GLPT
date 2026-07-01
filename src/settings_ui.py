@@ -69,7 +69,7 @@ class RenderingUI:
 
         # Dragging logic
         # --------------
-        if imgui.is_item_active():
+        if imgui.is_item_active() and changed:
             if imgui.is_mouse_dragging(0):
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
             else:
@@ -122,7 +122,7 @@ class RenderingUI:
 
         # Dragging logic
         # --------------
-        if imgui.is_item_active():
+        if imgui.is_item_active() and changed:
             if imgui.is_mouse_dragging(0):
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
             else:
@@ -183,7 +183,7 @@ class PathTracingUI:
 
         # Dragging logic
         # --------------
-        if imgui.is_item_active():
+        if imgui.is_item_active() and changed:
             if imgui.is_mouse_dragging(0):
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
             else:
@@ -233,7 +233,7 @@ class PathTracingUI:
 
         # Dragging logic
         # --------------
-        if imgui.is_item_active():
+        if imgui.is_item_active() and changed:
             if imgui.is_mouse_dragging(0):
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
             else:
@@ -283,7 +283,7 @@ class PathTracingUI:
 
         # Dragging logic
         # --------------
-        if imgui.is_item_active():
+        if imgui.is_item_active() and changed:
             if imgui.is_mouse_dragging(0):
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
             else:
@@ -349,7 +349,7 @@ class CameraUI:
 
         # Dragging logic
         # --------------
-        if imgui.is_item_active():
+        if imgui.is_item_active() and changed:
             if imgui.is_mouse_dragging(0):
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
             else:
@@ -398,7 +398,7 @@ class CameraUI:
 
         # Dragging logic
         # --------------
-        if imgui.is_item_active():
+        if imgui.is_item_active() and changed:
             if imgui.is_mouse_dragging(0):
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
             else:
@@ -449,7 +449,7 @@ class CameraUI:
 
         # Dragging logic
         # --------------
-        if imgui.is_item_active():
+        if imgui.is_item_active() and changed:
             if imgui.is_mouse_dragging(0):
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
             else:
