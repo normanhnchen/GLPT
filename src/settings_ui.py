@@ -1,4 +1,5 @@
 from imgui_bundle import imgui
+from glfw.GLFW import *
 
 
 class RenderingUI:
@@ -22,6 +23,7 @@ class RenderingUI:
     def restart_button(self):
         if imgui.button("Restart"):
             self.pt_state.total_samples = 0
+            self.pt_state.render_complete = False
             self.pt_state.view_saved = False
             self.pt_state.should_render = True
     
@@ -57,12 +59,13 @@ class PathTracingUI:
     def __init__(self, **kwargs):
         self.pt_settings = kwargs.get("pt_settings")
         self.pt_state = kwargs.get("pt_state")
+        self.window = glfwGetCurrentContext()
 
         super().__init__(**kwargs)
     
     def max_bounce_slider(self):
         slider_speed = 0.5
-        hardcode_min_bounces = 0
+        hardcode_min_bounces = 1
         hardcode_max_bounces = 1024
         int_val = self.pt_settings.max_bounces
         changed, int_val = imgui.drag_int(
@@ -72,9 +75,34 @@ class PathTracingUI:
             hardcode_min_bounces,
             hardcode_max_bounces
         )
+
         if imgui.is_item_active():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
             self.pt_settings.max_bounces = int_val
             self.pt_state.total_samples = 0
+        
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        
+    def max_samples_slider(self):
+        slider_speed = 0.5
+        hardcode_min_samples = 1
+        hardcode_max_samples = 16384
+        int_val = self.pt_settings.max_samples
+        changed, int_val = imgui.drag_int(
+            "Max Samples",
+            int_val,
+            slider_speed,
+            hardcode_min_samples,
+            hardcode_max_samples
+        )
+        if imgui.is_item_active():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            self.pt_settings.max_samples = int_val
+            self.pt_state.total_samples = 0
+        
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
     
 
 class SettingsUI(PathTracingUI, RenderingUI):
@@ -91,15 +119,6 @@ class SettingsUI(PathTracingUI, RenderingUI):
             pt_settings=pt_settings
         )
 
-        self.is_expand = None
-        self.settings_window = None
-    
-    def set_window(self, width, height):
-        imgui.set_next_window_size((width, height))
-
-    def begin(self, name):
-        self.is_expand, self.settings_window = imgui.begin(name, True)
-
     def rendering_ui(self):
         if self.render_settings.render_mode == "path_tracing":
             if not self.pt_state.view_saved:
@@ -108,12 +127,13 @@ class SettingsUI(PathTracingUI, RenderingUI):
                 
                 else:
                     self.continue_button()
-                    
-                self.restart_button()
-                self.cancel_button()
+                
+                    self.cancel_button()
             
             else:
                 self.viewport_button()
+            
+            self.restart_button()
         
         else:
             if self.pt_state.saved_render is None:
@@ -122,3 +142,7 @@ class SettingsUI(PathTracingUI, RenderingUI):
             else:
                 self.start_new_button()
                 self.view_saved_button()
+    
+    def path_tracing_ui(self):
+        self.max_bounce_slider()
+        self.max_samples_slider()

@@ -181,15 +181,15 @@ def main():
             pt_state.save_render()
 
         if settings_window:
-            settings_ui.set_window(400, 600)
-            settings_ui.begin("Settings")
+            imgui.set_next_window_size((400, 600))
+            is_expand, settings_window = imgui.begin("Settings", settings_window)
 
-            if settings_ui.is_expand:
+            if is_expand:
                 if not bvh_ready:
                     imgui.text_disabled("Preparing path tracer (building BVH)...")
                 else:
                     settings_ui.rendering_ui()
-                    settings_ui.max_bounce_slider()
+                    settings_ui.path_tracing_ui()
                 
             imgui.end()
 
