@@ -64,45 +64,83 @@ class PathTracingUI:
         super().__init__(**kwargs)
     
     def max_bounce_slider(self):
+        # Slider 
+        # ------
         slider_speed = 0.5
-        hardcode_min_bounces = 1
-        hardcode_max_bounces = 1024
-        int_val = pt_settings.max_bounces
-        changed, int_val = imgui.drag_int(
+        hardcoded_min_bounces = 1
+        hardcoded_max_bounces = 1024
+        bounces = pt_settings.max_bounces
+        changed, bounces = imgui.drag_int(
             "Max Bounces",
-            int_val,
+            bounces,
             slider_speed,
-            hardcode_min_bounces,
-            hardcode_max_bounces
+            hardcoded_min_bounces,
+            hardcoded_max_bounces
         )
 
+        # Dragging logic
+        # --------------
         if imgui.is_item_active():
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-            pt_settings.max_bounces = int_val
+            pt_settings.max_bounces = bounces
             self.pt_state.total_samples = 0
         
         if imgui.is_item_deactivated():
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        
+        # Minus button
+        imgui.same_line()
+        if imgui.button("-##bounces_minus"):
+            if pt_settings.max_bounces > hardcoded_min_bounces:
+                pt_settings.max_bounces -= 1
+                self.pt_state.total_samples = 0
+        
+        # Plus button
+        imgui.same_line()
+        if imgui.button("+##bounces_plus"):
+            if pt_settings.max_bounces < hardcoded_max_bounces:
+                pt_settings.max_bounces += 1
+                self.pt_state.total_samples = 0
         
     def max_samples_slider(self):
+        # Slider 
+        # ------
         slider_speed = 0.5
-        hardcode_min_samples = 1
-        hardcode_max_samples = 16384
-        int_val = pt_settings.max_samples
-        changed, int_val = imgui.drag_int(
+        hardcoded_min_samples = 1
+        hardcoded_max_samples = 16384
+        samples = pt_settings.max_samples
+        changed, samples = imgui.drag_int(
             "Max Samples",
-            int_val,
+            samples,
             slider_speed,
-            hardcode_min_samples,
-            hardcode_max_samples
+            hardcoded_min_samples,
+            hardcoded_max_samples
         )
+
+        # Dragging logic
+        # --------------
         if imgui.is_item_active():
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-            pt_settings.max_samples = int_val
+            pt_settings.max_samples = samples
             self.pt_state.total_samples = 0
         
         if imgui.is_item_deactivated():
             glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+
+        # Minus button
+        imgui.same_line()
+        if imgui.button("-##samples_minus"):
+            if pt_settings.max_samples > hardcoded_min_samples:
+                pt_settings.max_samples -= 1
+                self.pt_state.total_samples = 0
+        
+        # Plus button
+        imgui.same_line()
+        if imgui.button("+##samples_plus"):
+            if pt_settings.max_samples < hardcoded_max_samples:
+                pt_settings.max_samples += 1
+                self.pt_state.total_samples = 0
+        
     
     def reset_pt_button(self):
         if imgui.button("Reset Path Tracing Settings"):
