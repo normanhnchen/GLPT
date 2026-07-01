@@ -27,7 +27,7 @@
         "width": 1920,
         "height": 1080,
         "vsync": false,
-        "fps_cap": 240
+        "fps_cap": -1
     },
     "camera": {
         "_yaw": 90,
@@ -42,7 +42,7 @@
     },
     "path_tracing": {
         "max_depth": 8,
-        "max_samples": 4096
+        "max_samples": 10
     },
     "post_processing": {
         "blur": 1.0,

@@ -57,22 +57,23 @@ def main():
     # Set callbacks after so imgui doesn't override them
     glfw_set_callbacks(window)
 
-    try:
-        with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
-            scene = pickle.load(f)
-    except:
-        scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
-        with open("src/assets/cache/dragon_scene.pkl", "wb") as f:
-            pickle.dump(scene, f)
+    # try:
+    #     with open("src/assets/cache/dragon_scene.pkl", "rb") as f:
+    #         scene = pickle.load(f)
+    # except:
+    #     scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+    #     with open("src/assets/cache/dragon_scene.pkl", "wb") as f:
+    #         pickle.dump(scene, f)
 
-    # scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
+    scene = Scene(file_paths.scene, hdri_path=file_paths.hdri)
 
     pt_shaders = PTShaders(ctx)
     raster_shaders = RasterShaders(ctx,)
     
     compute_texture = ctx.texture(screen.resolution, 4, dtype=f4)
 
-    full_screen_quad = FullScreenQuad(ctx, pt_shaders.final)
+    pt_quad = FullScreenQuad(ctx, pt_shaders.final)
+    raster_quad = FullScreenQuad(ctx, raster_shaders.final)
 
     pbr_pass = PBRPass(ctx, scene, raster_shaders.pbr)
     bg_pass = BGPass(ctx, raster_shaders.bg)
@@ -127,9 +128,6 @@ def main():
         ctx.disable(moderngl.DEPTH_TEST)
     elif render_settings.render_mode == "rasterization":
         ctx.enable(moderngl.DEPTH_TEST)
-
-    curr_mode = "Rasterization"
-    render_modes = ["Rasterization", "Path Tracing"]
     
     global settings_window
     settings_window = False
@@ -144,6 +142,13 @@ def main():
     # Allows the compute shader to reach the entire screen
     tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
     tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
+
+    global render_complete
+
+    render_complete = False
+    first_render = True
+    view_saved = False
+    saved_render = None
 
     # Render loop
     while not glfwWindowShouldClose(window):
@@ -180,6 +185,7 @@ def main():
             )
 
             total_samples = 0
+            render_complete = False
 
             # Reset tiling
             curr_tile_x = 0
@@ -194,7 +200,9 @@ def main():
 
             need_resize = False
         
-        update_stats(window, avg_fps, total_samples)
+        update_stats(window, avg_fps, total_samples, render_complete)
+        
+        ctx.clear(0, 0, 0, 1)
 
         glfwPollEvents()
 
@@ -203,47 +211,95 @@ def main():
         impl.process_inputs()
         
         imgui.new_frame()
+        
+        if total_samples == pt_settings.max_samples and not render_complete:
+            render_complete = True
+            if saved_render is not None:
+                saved_render.release()
+            saved_render = ctx.texture(screen.resolution, 4, dtype=f4)
+            saved_render.write(compute_texture.read())
 
         if settings_window:
             imgui.set_next_window_size((400, 600))
 
             is_expand, settings_window = imgui.begin("Settings", True)
             if is_expand:
-                if imgui.begin_combo("Render Mode", curr_mode):
-                    for mode in render_modes:
-                        is_selected = (curr_mode == mode)
+                if render_settings.render_mode == "path_tracing":
+                    if imgui.button("Back to Viewport"):
+                        render_settings.render_mode = "rasterization"
 
-                        clicked, state = imgui.selectable(mode, is_selected)
-
-                        if clicked:
-                            curr_mode = mode
-
-                            if curr_mode == "Path Tracing":
-                                render_settings.render_mode = "path_tracing"
-                                
-                                camera_buffer.update_data()
-
-                                total_samples = 0
-                                should_render = True
-                                
-                                # Reset tiling
-                                curr_tile_x = 0
-                                curr_tile_y = 0
-
-                                # Reset accumulation buffer
-                                compute_texture.write(np.zeros((*screen.resolution, 4), dtype=f4))
-                            
-                            else:
-                                render_settings.render_mode = "rasterization"
-
-                        if is_selected:
-                            imgui.set_item_default_focus()
+                        view_saved = False
                     
-                    imgui.end_combo()
+                    if first_render:
+                        first_render = False
+                
+                else:
+                    if saved_render is None:
+                        if imgui.button("Start Render"):
+                            render_settings.render_mode = "path_tracing"
+
+                            camera_buffer.update_data()
+
+                            total_samples = 0
+                            should_render = True
+                            render_complete = False
+                            
+                            # Reset tiling
+                            curr_tile_x = 0
+                            curr_tile_y = 0
+
+                            # Reset accumulation buffer
+                            compute_texture.write(np.zeros((*screen.resolution, 4), dtype=f4))
+
+                            view_saved = False
+                    
+                    else:
+                        if imgui.button("Start New Render"):
+                            render_settings.render_mode = "path_tracing"
+
+                            camera_buffer.update_data()
+
+                            total_samples = 0
+                            should_render = True
+                            render_complete = False
+                            
+                            # Reset tiling
+                            curr_tile_x = 0
+                            curr_tile_y = 0
+
+                            # Reset accumulation buffer
+                            compute_texture.write(np.zeros((*screen.resolution, 4), dtype=f4))
+
+                            view_saved = False
+                        
+                        if imgui.button("View Saved Render"):
+                            render_settings.render_mode = "path_tracing"
+                            view_saved = True
                 
             imgui.end()
 
-        ctx.clear(0, 0, 0, 1)
+        if view_saved:
+            # Draw to screen
+            saved_render.use(location=0)
+
+            # Post Processing
+            # ---------------
+            pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
+            
+            # Options:
+            #   - None
+            #   - ACESFilm
+            #   - AgX, AgXGolden, AgXPunchy
+            #   - Filmic
+            #   - Lottes
+            #   - Neutral
+            #   - Reinhard, Reinhard2
+            #   - Uchimura
+            #   - Uncharted2
+            #   - Unreal
+            pt_shaders.final.set_tonemap(post_process_settings.tonemap)
+
+            pt_quad.draw()
 
         if render_settings.render_mode == "path_tracing":
             if total_samples >= pt_settings.max_samples:
@@ -265,7 +321,7 @@ def main():
                 local_size_y = (tile_height + 15) // 16
 
                 offset_x = curr_tile_x
-                offset_y = curr_tile_y
+                offset_y = screen.height - curr_tile_y
 
                 pt_shaders.pt.prog["uOffset"].value = np.array([offset_x, offset_y], dtype=i4)
 
@@ -282,27 +338,27 @@ def main():
                 compute_texture.bind_to_image(0, read=True, write=True)
                 pt_shaders.pt.prog.run(local_size_x, local_size_y)
             
-                # Draw to screen
-                compute_texture.use(location=0)
+            # Draw to screen
+            compute_texture.use(location=0)
 
-                # Post Processing
-                # ---------------
-                pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
-                
-                # Options:
-                #   - None
-                #   - ACESFilm
-                #   - AgX, AgXGolden, AgXPunchy
-                #   - Filmic
-                #   - Lottes
-                #   - Neutral
-                #   - Reinhard, Reinhard2
-                #   - Uchimura
-                #   - Uncharted2
-                #   - Unreal
-                pt_shaders.final.set_tonemap(post_process_settings.tonemap)
+            # Post Processing
+            # ---------------
+            pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
+            
+            # Options:
+            #   - None
+            #   - ACESFilm
+            #   - AgX, AgXGolden, AgXPunchy
+            #   - Filmic
+            #   - Lottes
+            #   - Neutral
+            #   - Reinhard, Reinhard2
+            #   - Uchimura
+            #   - Uncharted2
+            #   - Unreal
+            pt_shaders.final.set_tonemap(post_process_settings.tonemap)
 
-                full_screen_quad.draw()
+            pt_quad.draw()
         
         elif render_settings.render_mode == "rasterization":
             raster_fbo.use()
@@ -337,7 +393,7 @@ def main():
 
             # Post Processing
             # ---------------
-            pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
+            raster_shaders.final.prog["exposure"].value = post_process_settings.exposure
             
             # Options:
             #   - None
@@ -350,9 +406,9 @@ def main():
             #   - Uchimura
             #   - Uncharted2
             #   - Unreal
-            pt_shaders.final.set_tonemap(post_process_settings.tonemap)
+            raster_shaders.final.set_tonemap(post_process_settings.tonemap)
 
-            full_screen_quad.draw()
+            raster_quad.draw()
     
         # Render UI
         # ---------
@@ -393,12 +449,18 @@ def cap_fps(frame_start, target_fps):
             pass
 
 
-def update_stats(window, fps, samples):
+def update_stats(window, fps, samples, render_complete):
     if render_settings.render_mode == "path_tracing":
-        glfwSetWindowTitle(
-            window,
-            f"FPS: {fps:.2f} | Samples: {samples}"
-        )
+        if render_complete:
+            glfwSetWindowTitle(
+                window,
+                f"FPS: {fps:.2f} | Render Complete"
+            )
+        else:
+            glfwSetWindowTitle(
+                window,
+                f"FPS: {fps:.2f} | Samples: {samples}"
+            )
     else:
         glfwSetWindowTitle(
             window,
