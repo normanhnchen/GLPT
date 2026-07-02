@@ -107,7 +107,7 @@ class RasterState:
 
 class PostProcessState:
     def __init__(self):
-        self.tonemap = "AgX"
+        self.tonemap = post_process_settings.tonemap
         self.dof_enabled = False
         self.aperture = 0
         self.focus_dist = 10

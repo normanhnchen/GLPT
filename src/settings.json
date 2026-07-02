@@ -1,6 +1,6 @@
 {   
     "file_paths": {
-        "scene": "src/assets/glass_test.glb",
+        "scene": "src/assets/combined_scene.glb",
         "hdri": "src/assets/day_sky_hdri.exr",
         
         "path_tracing": {

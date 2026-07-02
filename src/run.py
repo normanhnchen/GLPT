@@ -130,6 +130,10 @@ def main():
         delta_time = frame_start - last_frame_start
         last_frame_start = frame_start
 
+        if screen.width <= 0 or screen.height <= 0:
+            glfwPollEvents()
+            continue
+
         stats_elapsed_time = time.perf_counter() - stats_start_time
         
         # Log stats every 1.5 seconds
@@ -221,7 +225,8 @@ def main():
                 pt_state.should_render = False
             
             if pt_state.should_render:
-                pt_shaders.pt.prog["aspectRatio"].value = set_f4(screen.width / screen.height)
+                aspect_ratio = screen.width / max(screen.height, 1)
+                pt_shaders.pt.prog["aspectRatio"].value = set_f4(aspect_ratio)
 
                 pt_shaders.pt.prog["samplesPerPixel"].value = pt_settings.spp
                 pt_shaders.pt.prog["totalSamples"].value = pt_state.total_samples
@@ -398,11 +403,14 @@ def glfw_set_callbacks(window):
 def framebuffer_size_callback(window, width, height):
     global need_resize, screen
 
+    width = max(1, int(width))
+    height = max(1, int(height))
+
     need_resize = True
 
     screen.width = width
     screen.height = height
-    screen.resolution = (width, height)
+    screen.resolution = np.array([width, height], dtype=np.int32)
 
 
 def process_input(window, delta_time):

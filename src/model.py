@@ -33,15 +33,12 @@ class Texture:
             return
             
         self.is_empty = False
-        self._original_image = pil_image
         self.image = pil_image.convert("RGBA")
-        self.data = self.image.tobytes()
     
     def resize(self, width, height):
         if self.is_empty:
             return
-        self.image = self._original_image.resize((width, height)).convert("RGBA")
-        self.data = self.image.tobytes()
+        self.image = self.image.resize((width, height)).convert("RGBA")
 
 
 class Material:
@@ -237,6 +234,10 @@ class Scene:
             faces = mesh.faces
             if hasattr(mesh.visual, "uv") and mesh.visual.uv is not None and len(mesh.visual.uv) == len(vertices):
                 uvs = mesh.visual.uv
+                # Flip uvs
+                # glTF defines uvs increasing downwards
+                # OpenGL defines uvs increasing upwards
+                uvs[:, 1] = 1.0 - uvs[:, 1]
             else:
                 uvs = np.zeros((len(vertices), 2), dtype=f4)
 
@@ -417,7 +418,7 @@ class Scene:
             data = bytearray()
             for tex in tex_list:
                 tex.resize(width, height)
-                data.extend(tex.data)
+                data.extend(tex.image.tobytes())
                 
             self.texture_arrays[name] = ctx.texture_array(
                 size=(width, height, len(tex_list)),
