@@ -60,7 +60,7 @@
     },
     "render": {
         "render_mode": "rasterization",
-        "texture_size": [1024, 1024],
+        "texture_size": [4096, 4096],
         "tiles_x": 4,
         "tiles_y": 2
     }

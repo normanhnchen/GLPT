@@ -803,7 +803,83 @@ class PostProcessingUI:
         imgui.text("Focus Distance")
 
 
-class SettingsUI(PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
+class ScreenUI:
+    def __init__(self, **kwargs):
+        self.pt_state = kwargs.get("pt_state")
+        self.window = glfwGetCurrentContext()
+
+        super().__init__(**kwargs)
+    
+    def vsync_checkbox(self):
+        enabled = screen.vsync
+        changed, enabled = imgui.checkbox("Vsync", enabled)
+
+        if changed:
+            screen.vsync = enabled
+
+            if screen.vsync == True:
+                glfwSwapInterval(1)
+            else:
+                glfwSwapInterval(0)
+    
+    def fps_slider(self):
+        # Slider 
+        # ------
+        slider_speed = 1
+        hardcoded_min_fps = 30
+        hardcoded_max_fps = 360
+        fps = screen.fps_cap
+        is_unlimited = screen.fps_cap == -1
+        display_fps = hardcoded_max_fps if is_unlimited else screen.fps_cap
+        fps_format = "None" if is_unlimited else "%d"
+        changed, fps = imgui.drag_int(
+            "##fps",
+            display_fps,
+            slider_speed,
+            hardcoded_min_fps,
+            hardcoded_max_fps,
+            format=fps_format
+        )
+
+        if fps >= hardcoded_max_fps:
+            fps = -1
+
+        # Dragging logic
+        # --------------
+        if imgui.is_item_active() and changed:
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            screen.fps_cap = fps
+        
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        
+        # Minus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("-##fps_minus"):
+            if screen.fps_cap > hardcoded_min_fps:
+                screen.fps_cap -= 1
+        
+        # Plus button
+        # ------------
+        imgui.same_line()
+        if imgui.button("+##fps_plus"):
+            if 0 < screen.fps_cap < hardcoded_max_fps:
+                screen.fps_cap += 1
+            elif screen.fps_cap == hardcoded_max_fps:
+                screen.fps_cap = -1
+        
+        # Label
+        # -----
+        imgui.same_line()
+        imgui.text("FPS Cap")
+
+
+class SettingsUI(ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
     def __init__(self,
             pt_state,
             post_process_state,
@@ -863,3 +939,7 @@ class SettingsUI(PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
         self.dof_checkbox()
         self.aperture_slider()
         self.focus_dist_slider()
+    
+    def screen_ui(self):
+        self.vsync_checkbox()
+        self.fps_slider()

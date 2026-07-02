@@ -136,9 +136,9 @@ def main():
 
         stats_elapsed_time = time.perf_counter() - stats_start_time
         
-        # Log stats every 1.5 seconds
-        if stats_elapsed_time >= 1.5:
-            # Calculate average FPS over the 1.5 second window
+        # Log stats every 0.5 seconds
+        if stats_elapsed_time >= 0.5:
+            # Calculate average FPS over the 0.5 second window
             avg_fps = stats_frame_count / stats_elapsed_time
 
             # Reset stats counters
@@ -146,6 +146,8 @@ def main():
             stats_frame_count = 0
 
         if not bvh_ready and bvh_builder.is_done:
+            print("Creating BVH buffers...")
+
             bvh_node_buffer = BVHNodeBuffer(scene)
             tri_indices_buffer = TriangleIndicesBuffer(scene)
 
@@ -153,6 +155,8 @@ def main():
             tri_indices_buffer.bind(ctx, 5)
 
             bvh_ready = True
+
+            print("Path tracing is ready")
         
         if need_resize:
             pt_state.resize()
@@ -187,9 +191,11 @@ def main():
                     imgui.text_disabled("Preparing path tracer (building BVH)...")
                 else:
                     settings_ui.rendering_ui()
-                    settings_ui.path_tracing_ui()
-                    settings_ui.camera_ui()
-                    settings_ui.post_processing_ui()
+                
+                settings_ui.path_tracing_ui()
+                settings_ui.camera_ui()
+                settings_ui.post_processing_ui()
+                settings_ui.screen_ui()
                 
             imgui.end()
 
