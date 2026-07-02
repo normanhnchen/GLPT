@@ -190,12 +190,30 @@ def main():
                 if not bvh_ready:
                     imgui.text_disabled("Preparing path tracer (building BVH)...")
                 else:
-                    settings_ui.rendering_ui()
+                    if imgui.tree_node("Rendering"):
+                        settings_ui.rendering_ui()
+
+                        imgui.tree_pop()
                 
-                settings_ui.path_tracing_ui()
-                settings_ui.camera_ui()
-                settings_ui.post_processing_ui()
-                settings_ui.screen_ui()
+                if imgui.tree_node("Path Tracing"):
+                    settings_ui.path_tracing_ui()
+                        
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Camera UI"):
+                    settings_ui.camera_ui()
+
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Post Processing"):
+                    settings_ui.post_processing_ui()
+
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Screen"):
+                    settings_ui.screen_ui()
+
+                    imgui.tree_pop()
                 
             imgui.end()
 
