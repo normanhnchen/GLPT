@@ -276,6 +276,11 @@ class Scene:
             self.hdri = HDRI(self.hdri_path)
 
         self.num_lights = len(self.lights)
+
+        scene_min = np.min(self.vertices, axis=0)
+        scene_max = np.max(self.vertices, axis=0)
+
+        self.extent = np.linalg.norm(scene_max - scene_min)
     
         self.bvh = None
         self.num_bvh_nodes = None

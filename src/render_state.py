@@ -9,6 +9,7 @@ class PTState:
         self.combined_pass = ctx.texture(screen.resolution, 4, dtype=f4)
         self.base_color_pass = ctx.texture(screen.resolution, 4, dtype=f4)
         self.normal_pass = ctx.texture(screen.resolution, 4, dtype=f4)
+        self.depth_pass = ctx.texture(screen.resolution, 4, dtype=f4)
         self.saved_render = None
 
         # Current tile position in pixels
@@ -28,6 +29,7 @@ class PTState:
         self.combined_pass.release()
         self.base_color_pass.release()
         self.normal_pass.release()
+        self.depth_pass.release()
 
         self.combined_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
         self.combined_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
@@ -35,6 +37,8 @@ class PTState:
         self.base_color_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
         self.normal_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
         self.normal_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        self.depth_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.depth_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
 
         self.total_samples = 0
         self.render_complete = False
@@ -64,6 +68,7 @@ class PTState:
         self.combined_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
         self.base_color_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
         self.normal_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        self.depth_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
     
     def save_render(self):
         if self.saved_render is not None:
@@ -92,6 +97,7 @@ class PTState:
         self.combined_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
         self.base_color_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
         self.normal_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        self.depth_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
     
 
 class RasterState:

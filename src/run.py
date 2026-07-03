@@ -260,6 +260,8 @@ def main():
 
                 pt_shaders.pt.prog["hdriExposure"].value = post_process_settings.hdri_exposure
 
+                pt_shaders.pt.prog["sceneExtent"].value = scene.extent
+
                 # Apply ceiling function
                 # Allows the compute shader to reach the entire screen
                 groups_x = (pt_state.tile_width + 15) // 16
@@ -284,10 +286,11 @@ def main():
                 pt_state.combined_pass.bind_to_image(0, read=True, write=True)
                 pt_state.base_color_pass.bind_to_image(1, read=True, write=True)
                 pt_state.normal_pass.bind_to_image(2, read=True, write=True)
+                pt_state.depth_pass.bind_to_image(3, read=True, write=True)
                 pt_shaders.pt.prog.run(groups_x, groups_y)
             
             # Draw to screen
-            pt_state.normal_pass.use(location=0)
+            pt_state.depth_pass.use(location=0)
 
             # Post Processing
             # ---------------
