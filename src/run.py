@@ -281,11 +281,13 @@ def main():
                     pt_state.total_samples += pt_settings.spp
                 
                 # Run compute shader
-                pt_state.compute_tex.bind_to_image(0, read=True, write=True)
+                pt_state.combined_pass.bind_to_image(0, read=True, write=True)
+                pt_state.base_color_pass.bind_to_image(1, read=True, write=True)
+                pt_state.normal_pass.bind_to_image(2, read=True, write=True)
                 pt_shaders.pt.prog.run(groups_x, groups_y)
             
             # Draw to screen
-            pt_state.compute_tex.use(location=0)
+            pt_state.normal_pass.use(location=0)
 
             # Post Processing
             # ---------------

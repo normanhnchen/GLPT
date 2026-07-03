@@ -6,7 +6,9 @@ from src.settings import *
 class PTState:
     def __init__(self, ctx):
         self.ctx = ctx
-        self.compute_tex = ctx.texture(screen.resolution, 4, dtype=f4)
+        self.combined_pass = ctx.texture(screen.resolution, 4, dtype=f4)
+        self.base_color_pass = ctx.texture(screen.resolution, 4, dtype=f4)
+        self.normal_pass = ctx.texture(screen.resolution, 4, dtype=f4)
         self.saved_render = None
 
         # Current tile position in pixels
@@ -23,10 +25,16 @@ class PTState:
         self.total_samples = 0
     
     def resize(self):
-        self.compute_tex.release()
+        self.combined_pass.release()
+        self.base_color_pass.release()
+        self.normal_pass.release()
 
-        self.compute_tex = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.compute_tex.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        self.combined_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.combined_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        self.base_color_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.base_color_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        self.normal_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.normal_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
 
         self.total_samples = 0
         self.render_complete = False
@@ -52,14 +60,16 @@ class PTState:
         self.curr_tile_x = 0
         self.curr_tile_y = 0
 
-        # Reset accumulation buffer
-        self.compute_tex.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        # Reset accumulation buffers
+        self.combined_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        self.base_color_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        self.normal_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
     
     def save_render(self):
         if self.saved_render is not None:
             self.saved_render.release()
         self.saved_render = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.saved_render.write(self.compute_tex.read())
+        self.saved_render.write(self.combined_pass.read())
 
         self.render_complete = True
         self.view_saved = True
@@ -78,8 +88,10 @@ class PTState:
         self.tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
         self.tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
         
-        # Reset accumulation buffer
-        self.compute_tex.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        # Reset accumulation buffers
+        self.combined_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        self.base_color_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        self.normal_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
     
 
 class RasterState:
