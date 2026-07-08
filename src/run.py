@@ -283,7 +283,15 @@ def main():
                 aspect_ratio = screen.width / max(screen.height, 1)
                 pt_shaders.pt.prog["aspectRatio"].value = set_f4(aspect_ratio)
 
-                pt_shaders.pt.prog["samplesPerPixel"].value = pt_settings.spp
+                # Prevent the samples from going over the max samples limit
+                samples_left = pt_settings.max_samples - pt_state.total_samples
+                print(samples_left)
+
+                if samples_left < pt_settings.spp:
+                    pt_shaders.pt.prog["samplesPerPixel"].value = samples_left
+                else:
+                    pt_shaders.pt.prog["samplesPerPixel"].value = pt_settings.spp
+                
                 pt_shaders.pt.prog["totalSamples"].value = pt_state.total_samples
                 pt_shaders.pt.prog["maxBounces"].value = pt_settings.max_bounces
 
@@ -310,8 +318,12 @@ def main():
                 
                 if pt_state.curr_tile_y > screen.height:
                     pt_state.curr_tile_y = 0
-                    # Finished rendering entire screen; add samples per pixel
-                    pt_state.total_samples += pt_settings.spp
+
+                    # Finished rendering entire screen
+                    if samples_left < pt_settings.spp:
+                        pt_state.total_samples += samples_left
+                    else:
+                        pt_state.total_samples += pt_settings.spp
                 
                 # Run compute shader
                 pt_state.combined_pass.bind_to_image(0, read=True, write=True)
