@@ -290,7 +290,7 @@ def main():
                 pt_shaders.pt.prog.run(groups_x, groups_y)
             
             # Draw to screen
-            pt_state.depth_pass.use(location=0)
+            pt_state.combined_pass.use(location=0)
 
             # Post Processing
             # ---------------

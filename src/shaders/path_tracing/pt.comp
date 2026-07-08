@@ -700,7 +700,7 @@ void main() {
 
     uvec3 state = InitRngState(pixelCoords);
     
-    float maxRadiance = 100.0;
+    float maxRadiance = 10.0;
 
     vec3 sampleCombined = vec3(0.0);
     vec3 sampleBaseColor = vec3(0.0);
