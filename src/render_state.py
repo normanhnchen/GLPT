@@ -23,6 +23,7 @@ class PTState:
         self.render_complete = False
         self.view_saved = False
         self.should_render = False
+        self.should_denoise = False
         self.total_samples = 0
     
     def resize(self):
@@ -83,6 +84,7 @@ class PTState:
         self.total_samples = 0
         self.render_complete = False
         self.view_saved = False
+        self.should_denoise = False
         self.should_render = True
 
         # Reset tiling

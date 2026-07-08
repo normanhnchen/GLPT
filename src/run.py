@@ -216,8 +216,39 @@ def main():
                     imgui.tree_pop()
                 
             imgui.end()
+        
+        if pt_state.should_denoise:
+            # Denoise
 
-        if pt_state.view_saved:
+            pass
+
+            # Draw to screen
+            pt_state.saved_render.use(location=0)
+
+            # Prevent resizing saved texture
+            # Clips the image
+            ctx.viewport = (0, 0, *pt_state.saved_render.size)
+
+            # Post Processing
+            # ---------------
+            pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
+            
+            # Options:
+            #   - None
+            #   - ACESFilm
+            #   - AgX, AgXGolden, AgXPunchy
+            #   - Filmic
+            #   - Lottes
+            #   - Neutral
+            #   - Reinhard, Reinhard2
+            #   - Uchimura
+            #   - Uncharted2
+            #   - Unreal
+            pt_shaders.final.set_tonemap(post_process_settings.tonemap)
+
+            pt_quad.draw()
+
+        elif pt_state.view_saved:
             # Draw to screen
             pt_state.saved_render.use(location=0)
 

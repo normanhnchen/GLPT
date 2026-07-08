@@ -29,23 +29,31 @@ class RenderingUI:
         if imgui.button("Cancel"):
             render_settings.render_mode = "rasterization"
             self.pt_state.view_saved = False
+            self.pt_state.should_denoise = False
     
     def viewport_button(self):
         if imgui.button("Back to Viewport"):
             render_settings.render_mode = "rasterization"
             self.pt_state.view_saved = False
+            self.pt_state.should_denoise = False
     
     def start_button(self):
         if imgui.button("Start Render"):
             self.pt_state.start_render(self.camera_buffer)
             self.pt_state.view_saved = False
             self.pt_state.should_render = True
+            self.pt_state.should_denoise = False
     
     def start_new_button(self):
         if imgui.button("Start New Render"):
             self.pt_state.start_render(self.camera_buffer)
             self.pt_state.view_saved = False
             self.pt_state.should_render = True
+            self.pt_state.should_denoise = False
+        
+    def denoise_button(self):
+        if imgui.button("Start Denoising"):
+            self.pt_state.should_denoise = True
     
     def view_saved_button(self):
         if imgui.button("View Saved Render"):
@@ -906,6 +914,7 @@ class SettingsUI(ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, RenderingU
             
             else:
                 self.viewport_button()
+                self.denoise_button()
             
             self.restart_button()
         
