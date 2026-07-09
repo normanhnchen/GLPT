@@ -45,7 +45,7 @@
         "_world_up": [0, 1, 0]
     },
     "path_tracing": {
-        "samples_per_pixel": 4,
+        "samples_per_pixel": 1,
         "max_bounces": 16,
         "max_samples": 1024
     },

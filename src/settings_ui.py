@@ -885,9 +885,30 @@ class ScreenUI:
         # -----
         imgui.same_line()
         imgui.text("FPS Cap")
+    
+
+class DebugUI:
+    def __init__(self, **kwargs):
+        self.pt_state = kwargs.get("pt_state")
+
+        super().__init__(**kwargs)
+    
+    def debug_mode_button(self):
+        if self.pt_state.saved_combined is not None:
+            if imgui.button("Off"):
+                self.pt_state.debug_mode = "off"
+            else:
+                if imgui.button("View Albedo"):
+                    self.pt_state.debug_mode = "albedo"
+                if imgui.button("View Normal"):
+                    self.pt_state.debug_mode = "normal"
+                if imgui.button("View Depth"):
+                    self.pt_state.debug_mode = "depth"
+        else:
+            imgui.text_disabled("No saved renders")
 
 
-class SettingsUI(ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
+class SettingsUI(DebugUI, ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
     def __init__(self,
             pt_state,
             post_process_state,
@@ -919,7 +940,7 @@ class SettingsUI(ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, RenderingU
             self.restart_button()
         
         else:
-            if self.pt_state.saved_render is None:
+            if self.pt_state.saved_combined is None:
                 self.start_button()
             
             else:
@@ -952,3 +973,6 @@ class SettingsUI(ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, RenderingU
     def screen_ui(self):
         self.vsync_checkbox()
         self.fps_slider()
+    
+    def debug_ui(self):
+        self.debug_mode_button()

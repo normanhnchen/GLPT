@@ -215,6 +215,11 @@ def main():
 
                     imgui.tree_pop()
                 
+                if imgui.tree_node("Debug"):
+                    settings_ui.debug_ui()
+
+                    imgui.tree_pop()
+                
             imgui.end()
         
         if pt_state.should_denoise:
@@ -223,11 +228,11 @@ def main():
             pass
 
             # Draw to screen
-            pt_state.saved_render.use(location=0)
+            pt_state.saved_combined.use(location=0)
 
             # Prevent resizing saved texture
             # Clips the image
-            ctx.viewport = (0, 0, *pt_state.saved_render.size)
+            ctx.viewport = (0, 0, *pt_state.saved_combined.size)
 
             # Post Processing
             # ---------------
@@ -249,12 +254,19 @@ def main():
             pt_quad.draw()
 
         elif pt_state.view_saved:
-            # Draw to screen
-            pt_state.saved_render.use(location=0)
+            # Draw texture to screen depending on the debug mode
+            if pt_state.debug_mode == "off":
+                pt_state.saved_combined.use(location=0)
+            elif pt_state.debug_mode == "albedo":
+                pt_state.saved_albedo.use(location=0)
+            elif pt_state.debug_mode == "normal":
+                pt_state.saved_normal.use(location=0)
+            elif pt_state.debug_mode == "depth":
+                pt_state.saved_depth.use(location=0)
 
-            # Prevent resizing saved texture
-            # Clips the image
-            ctx.viewport = (0, 0, *pt_state.saved_render.size)
+            # Prevent resizing saved texture to new screen dimensions
+            # Doesn't matter which saved texture to use since all are saved at the same dimensions
+            ctx.viewport = (0, 0, *pt_state.saved_combined.size)
 
             # Post Processing
             # ---------------
@@ -285,7 +297,6 @@ def main():
 
                 # Prevent the samples from going over the max samples limit
                 samples_left = pt_settings.max_samples - pt_state.total_samples
-                print(samples_left)
 
                 if samples_left < pt_settings.spp:
                     pt_shaders.pt.prog["samplesPerPixel"].value = samples_left
@@ -299,7 +310,7 @@ def main():
 
                 pt_shaders.pt.prog["hdriExposure"].value = post_process_settings.hdri_exposure
 
-                pt_shaders.pt.prog["sceneExtent"].value = scene.extent
+                pt_shaders.pt.prog["depthFactor"].value = 1 / scene.extent
 
                 # Apply ceiling function
                 # Allows the compute shader to reach the entire screen
@@ -327,7 +338,7 @@ def main():
                 
                 # Run compute shader
                 pt_state.combined_pass.bind_to_image(0, read=True, write=True)
-                pt_state.base_color_pass.bind_to_image(1, read=True, write=True)
+                pt_state.albedo_pass.bind_to_image(1, read=True, write=True)
                 pt_state.normal_pass.bind_to_image(2, read=True, write=True)
                 pt_state.depth_pass.bind_to_image(3, read=True, write=True)
                 pt_shaders.pt.prog.run(groups_x, groups_y)

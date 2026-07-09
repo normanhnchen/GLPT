@@ -161,7 +161,7 @@ uniform int totalSamples;
 uniform int maxBounces;
 uniform float blur;
 uniform float hdriExposure;
-uniform float sceneExtent;
+uniform float depthFactor;
 
 // PCG 3d hash randomization
 // http://www.jcgt.org/published/0009/03/02/
@@ -631,9 +631,8 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
         if (isFirstHit) {
             baseColorOut = mat.baseCol;
             normalOut = rec.normal;
-            // Divide by scene extent and by 2 as a scale for the depth
             // Subtract from 1 as depth color reduces with distance
-            float depth = 1.0 - rec.t / sceneExtent / 2.0;
+            float depth = 1.0 - rec.t * depthFactor / 2.0;
             depthOut = clamp(depth, 0.0, 1.0);
 
             isFirstHit = false;
