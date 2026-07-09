@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import numpy as np
+from src.dtypes import *
 
 
 class ConvBlock(nn.Module):
@@ -75,6 +77,12 @@ class UNet(nn.Module):
         self.conv_out = nn.Conv2d(64, out_channels, kernel_size=1)
     
     def forward(self, combined, albedo, normal, depth):
+        # Convert from OpenGL textures to torch tensors
+        combined = self.tex_to_tensor(combined)
+        albedo = self.tex_to_tensor(albedo)
+        normal = self.tex_to_tensor(normal)
+        depth = self.tex_to_tensor(depth)
+
         # 10 channels
         x = torch.cat([combined, albedo, normal, depth], dim=1)
 
@@ -90,3 +98,12 @@ class UNet(nn.Module):
         x8 = self.d4(x7, x0)
 
         return self.conv_out(x8)
+
+    def tex_to_tensor(self, tex):
+        tex_data = tex.read()
+        tex_width, tex_height = tex.size
+        channels = tex.components
+
+        np_arr = np.frombuffer(tex_data, dtype=f4).reshape((tex_width, tex_height, channels))
+
+        return torch.from_numpy(np_arr)

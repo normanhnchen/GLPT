@@ -3,7 +3,6 @@ from glfw.GLFW import *
 import moderngl
 import sys
 import time
-import pickle
 from imgui_bundle import imgui
 from imgui_bundle.python_backends.glfw_backend import GlfwRenderer
 
@@ -17,6 +16,7 @@ from src.buffers import *
 from src.draw_passes import *
 from src.bvh_builder import *
 from src.settings_ui import *
+from src.network import *
 
 
 camera = Camera()
