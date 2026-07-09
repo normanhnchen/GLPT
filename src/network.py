@@ -99,11 +99,22 @@ class UNet(nn.Module):
 
         return self.conv_out(x8)
 
+    def denoise(self, combined, albedo, normal, depth):
+        with torch.no_grad():
+            self.eval()
+            denoised = self.forward(combined, albedo, normal, depth)
+            return denoised
+
     def tex_to_tensor(self, tex):
-        tex_data = tex.read()
-        tex_width, tex_height = tex.size
+        data = tex.read()
+        width, height = tex.size
         channels = tex.components
-
-        np_arr = np.frombuffer(tex_data, dtype=f4).reshape((tex_width, tex_height, channels))
-
-        return torch.from_numpy(np_arr)
+        
+        # Create 1d array from the texture data
+        t = torch.frombuffer(data, dtype=torch.float32)
+        # Reshape to OpenGL texture data (H, W, C)
+        t = t.reshape(height, width, channels)
+        # Reshape to 4d tensor PyTorch convention (B, C, H, W)
+        t = t.permute(2, 0, 1).contiguous()
+        t = t.unsqueeze(0) # Add batch dimension
+        return t

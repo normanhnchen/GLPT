@@ -124,6 +124,8 @@ def main():
         camera
     )
 
+    ai_denoiser = UNet()
+
     # Render loop
     while not glfwWindowShouldClose(window):
         frame_start = time.perf_counter()
