@@ -14,6 +14,7 @@ class PTState:
         self.saved_albedo = None
         self.saved_normal = None
         self.saved_depth = None
+        self.saved_denoised = None
 
         # Current tile position in pixels
         self.curr_tile_x = 0
@@ -99,6 +100,11 @@ class PTState:
 
         self.render_complete = True
         self.view_saved = True
+    
+    def denoise(self, ai_denoiser):
+        if self.saved_denoised is None:
+            self.saved_denoised = self.ctx.texture(screen.resolution, 3, dtype=f4)
+            ai_denoiser.denoise(self.saved_combined, self.saved_albedo, self.saved_normal, self.saved_depth, self.saved_denoised)
     
     def restart_render(self):
         self.total_samples = 0

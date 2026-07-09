@@ -227,10 +227,10 @@ def main():
         if pt_state.should_denoise:
             # Denoise
 
-            pass
+            pt_state.denoise(ai_denoiser)
 
             # Draw to screen
-            pt_state.saved_combined.use(location=0)
+            pt_state.saved_denoised.use(location=0)
 
             # Prevent resizing saved texture
             # Clips the image

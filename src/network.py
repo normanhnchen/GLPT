@@ -78,10 +78,10 @@ class UNet(nn.Module):
     
     def forward(self, combined, albedo, normal, depth):
         # Convert from OpenGL textures to torch tensors
-        combined = self.tex_to_tensor(combined)
-        albedo = self.tex_to_tensor(albedo)
-        normal = self.tex_to_tensor(normal)
-        depth = self.tex_to_tensor(depth)
+        combined = self.tex_to_tensor(combined, keep_channels=3) # RGBA -> RGB
+        albedo = self.tex_to_tensor(albedo, keep_channels=3) # RGBA -> RGB
+        normal = self.tex_to_tensor(normal, keep_channels=3) # RGBA -> RGB
+        depth = self.tex_to_tensor(depth, keep_channels=1) # RGBA -> R
 
         # 10 channels
         x = torch.cat([combined, albedo, normal, depth], dim=1)
@@ -105,7 +105,7 @@ class UNet(nn.Module):
             output = self.forward(combined, albedo, normal, depth)
             return self.tensor_to_tex(output, denoised)
 
-    def tex_to_tensor(self, tex):
+    def tex_to_tensor(self, tex, keep_channels=None):
         data = tex.read()
         width, height = tex.size
         channels = tex.components
@@ -114,15 +114,22 @@ class UNet(nn.Module):
         t = torch.frombuffer(data, dtype=torch.float32)
         # Reshape to OpenGL texture data (H, W, C)
         t = t.reshape(height, width, channels)
-        # Reshape to 4d tensor PyTorch convention (B, C, H, W)
+        # Reshape to 3d tensor PyTorch convention (C, H, W)
         t = t.permute(2, 0, 1).contiguous()
-        t = t.unsqueeze(0) # Add batch dimension
+        
+        if keep_channels is not None:
+            t = t[:keep_channels]
+        
+        # Add batch dimension (C, H, W) -> (B, C, H, W) with B = 1
+        t = t.unsqueeze(0)
+
         return t
     
     def tensor_to_tex(self, tensor, denoised_tex):
         # Reshape to OpenGL texture data (H, W, C)
         t = tensor.squeeze(0) # Remove batch dimension
+        
         t = t.permute(1, 2, 0).contiguous()
         
-        data = t.tobytes()
+        data = t.numpy().tobytes()
         denoised_tex.write(data)
