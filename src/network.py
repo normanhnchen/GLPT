@@ -106,7 +106,8 @@ class UNet(nn.Module):
             return self.tensor_to_tex(output, denoised)
 
     def tex_to_tensor(self, tex, keep_channels=None):
-        data = tex.read()
+        # bytearray() to copy the original as it is not writable (PyTorch requirement)
+        data = bytearray(tex.read())
         width, height = tex.size
         channels = tex.components
         

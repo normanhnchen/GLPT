@@ -225,8 +225,6 @@ def main():
             imgui.end()
         
         if pt_state.should_denoise:
-            # Denoise
-
             pt_state.denoise(ai_denoiser)
 
             # Draw to screen
