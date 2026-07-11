@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-import numpy as np
+import imageio.v3 as iio
+
 from src.dtypes import *
 
 
@@ -90,16 +91,7 @@ class UNet(nn.Module):
         # kernel_size=1 to reduce the 64 feature channels without reducing the image size
         self.conv_out = nn.Conv2d(64, out_channels, kernel_size=1)
     
-    def forward(self, combined, albedo, normal, depth):
-        # Convert from OpenGL textures to torch tensors
-        combined = self.tex_to_tensor(combined, keep_channels=3) # RGBA -> RGB
-        albedo = self.tex_to_tensor(albedo, keep_channels=3) # RGBA -> RGB
-        normal = self.tex_to_tensor(normal, keep_channels=3) # RGBA -> RGB
-        depth = self.tex_to_tensor(depth, keep_channels=1) # RGBA -> R
-
-        # 10 channels
-        x = torch.cat([combined, albedo, normal, depth], dim=1)
-
+    def forward(self, x):
         x0 = self.conv_in(x)
         x1 = self.e1(x0)
         x2 = self.e2(x1)
@@ -116,7 +108,15 @@ class UNet(nn.Module):
     def denoise(self, combined, albedo, normal, depth, denoised):
         with torch.no_grad():
             self.eval()
-            output = self.forward(combined, albedo, normal, depth)
+            # Convert from OpenGL textures to torch tensors
+            combined = self.tex_to_tensor(combined, keep_channels=3) # RGBA -> RGB
+            albedo = self.tex_to_tensor(albedo, keep_channels=3) # RGBA -> RGB
+            normal = self.tex_to_tensor(normal, keep_channels=3) # RGBA -> RGB
+            depth = self.tex_to_tensor(depth, keep_channels=1) # RGBA -> R
+            # 10 channels
+            x = torch.cat([combined, albedo, normal, depth], dim=1)
+
+            output = self.forward(x)
             return self.tensor_to_tex(output, denoised)
 
     def tex_to_tensor(self, tex, keep_channels=None):
@@ -149,12 +149,13 @@ class UNet(nn.Module):
         data = t.numpy().tobytes()
         denoised_tex.write(data)
     
-    def img_arr_to_tensor(self, img_arr, keep_channels=None):
-        channels = img_arr.components
-        
+    def exr_to_tensor(self, exr_path, keep_channels=None):
+        # Copy the original as it is not writable (PyTorch requirement)
+        img_arr = iio.imread(exr_path).copy()
+
         # Create 1d array from the texture data
-        t = torch.from_numpy(img_arr)
-        # Reshape to 3d tensor PyTorch convention (C, H, W)
+        t = torch.from_numpy(img_arr, dtype=torch.float32)
+        # Reshape from EXR to 3d tensor PyTorch convention (C, H, W)
         t = t.permute(2, 0, 1).contiguous()
         
         if keep_channels is not None:

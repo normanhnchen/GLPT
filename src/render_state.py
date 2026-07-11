@@ -171,10 +171,10 @@ class PTState:
         depth_array = np.flipud(depth_array)
         
         renders_dir = Path(file_paths.renders)
-        combined_path = self._get_next_exr_path(renders_dir, "combined")
-        albedo_path = self._get_next_exr_path(renders_dir, "albedo")
-        normal_path = self._get_next_exr_path(renders_dir, "normal")
-        depth_path = self._get_next_exr_path(renders_dir, "depth")
+        combined_path = self._get_next_exr_path(renders_dir / "combined", "combined")
+        albedo_path = self._get_next_exr_path(renders_dir / "albedo", "albedo")
+        normal_path = self._get_next_exr_path(renders_dir / "normal", "normal")
+        depth_path = self._get_next_exr_path(renders_dir / "depth", "depth")
 
         # Save to .exr files
         iio.imwrite(combined_path, combined_array)
@@ -182,12 +182,12 @@ class PTState:
         iio.imwrite(normal_path, normal_array)
         iio.imwrite(depth_path, depth_array)
     
-    def _get_next_exr_path(self, renders_dir, prefix):
+    def _get_next_exr_path(self, path, prefix):
         counter = 0
         while True:
-            path = renders_dir / f"{prefix}_{counter}.exr"
-            if not path.exists():
-                return path
+            file_path = path / f"{prefix}_{counter}.exr"
+            if not file_path.exists():
+                return file_path
             counter += 1
 
 
