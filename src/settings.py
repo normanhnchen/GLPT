@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import glm
+from pathlib import Path
 
 
 class Screen:
@@ -62,6 +63,7 @@ class FilePaths:
 
         self.scene = config["scene"]
         self.hdri = config["hdri"]
+        self.renders = ROOT_DIR / config["renders"]
         
         self.path_tracing = ShaderGroup(config["path_tracing"])
         self.background = ShaderGroup(config["rasterization"]["background"])
@@ -84,6 +86,8 @@ class RenderSettings:
 
 with open("src/settings.json") as f:
     json_settings = json.load(f)
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
 
 screen = Screen(json_settings)
 camera_settings = CameraSettings(json_settings)

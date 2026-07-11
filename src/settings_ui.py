@@ -165,6 +165,10 @@ class RenderingUI:
         # -----
         imgui.same_line()
         imgui.text("Tiles Y")
+    
+    def export_render_button(self):
+        if imgui.button("Export Render"):
+            self.pt_state.export_render()
 
 
 class PathTracingUI:
@@ -936,6 +940,7 @@ class SettingsUI(DebugUI, ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, R
             else:
                 self.viewport_button()
                 self.denoise_button()
+                self.export_render_button()
             
             self.restart_button()
         

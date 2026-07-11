@@ -127,7 +127,7 @@ class UNet(nn.Module):
         
         # Create 1d array from the texture data
         t = torch.frombuffer(data, dtype=torch.float32)
-        # Reshape to OpenGL texture data (H, W, C)
+        # Reshape to OpenGL convention (H, W, C)
         t = t.reshape(height, width, channels)
         # Reshape to 3d tensor PyTorch convention (C, H, W)
         t = t.permute(2, 0, 1).contiguous()
@@ -148,3 +148,19 @@ class UNet(nn.Module):
         
         data = t.numpy().tobytes()
         denoised_tex.write(data)
+    
+    def img_arr_to_tensor(self, img_arr, keep_channels=None):
+        channels = img_arr.components
+        
+        # Create 1d array from the texture data
+        t = torch.from_numpy(img_arr)
+        # Reshape to 3d tensor PyTorch convention (C, H, W)
+        t = t.permute(2, 0, 1).contiguous()
+        
+        if keep_channels is not None:
+            t = t[:keep_channels]
+        
+        # Add batch dimension (C, H, W) -> (B, C, H, W) with B = 1
+        t = t.unsqueeze(0)
+
+        return t

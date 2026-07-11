@@ -1,4 +1,10 @@
 import numpy as np
+import warnings
+# Disable warning from imageio of deprecated pkg_resources
+warnings.filterwarnings("ignore", module="imageio")
+import imageio.v3 as iio
+from pathlib import Path
+
 from src.dtypes import *
 from src.settings import *
 
@@ -128,6 +134,62 @@ class PTState:
         self.normal_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
         self.depth_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
     
+    def export_render(self):
+        combined_data = self.combined_pass.read()
+        combined_width, combined_height = self.combined_pass.size
+        combined_channels = self.combined_pass.components
+
+        albedo_data = self.albedo_pass.read()
+        albedo_width, albedo_height = self.albedo_pass.size
+        albedo_channels = self.albedo_pass.components
+        
+        normal_data = self.normal_pass.read()
+        normal_width, normal_height = self.normal_pass.size
+        normal_channels = self.normal_pass.components
+
+        depth_data = self.depth_pass.read()
+        depth_width, depth_height = self.depth_pass.size
+        depth_channels = self.depth_pass.components
+
+        # Convert to numpy arrays
+        combined_array = np.frombuffer(combined_data, dtype=f4)
+        albedo_array = np.frombuffer(albedo_data, dtype = f4)
+        normal_array = np.frombuffer(normal_data, dtype = f4)
+        depth_array = np.frombuffer(depth_data, dtype = f4)
+
+        # Reshape to OpenGL convention (H, W, C)
+        combined_array = combined_array.reshape(combined_height, combined_width, combined_channels)
+        albedo_array = albedo_array.reshape(albedo_height, albedo_width, albedo_channels)
+        normal_array = normal_array.reshape(normal_height, normal_width, normal_channels)
+        depth_array = depth_array.reshape(depth_height, depth_width, depth_channels)
+        
+        # Flip image vertically
+        # OpenGL is bottom-up, EXR is top-down
+        combined_array = np.flipud(combined_array)
+        albedo_array = np.flipud(albedo_array)
+        normal_array = np.flipud(normal_array)
+        depth_array = np.flipud(depth_array)
+        
+        renders_dir = Path(file_paths.renders)
+        combined_path = self._get_next_exr_path(renders_dir, "combined")
+        albedo_path = self._get_next_exr_path(renders_dir, "albedo")
+        normal_path = self._get_next_exr_path(renders_dir, "normal")
+        depth_path = self._get_next_exr_path(renders_dir, "depth")
+
+        # Save to .exr files
+        iio.imwrite(combined_path, combined_array)
+        iio.imwrite(albedo_path, albedo_array)
+        iio.imwrite(normal_path, normal_array)
+        iio.imwrite(depth_path, depth_array)
+    
+    def _get_next_exr_path(self, renders_dir, prefix):
+        counter = 0
+        while True:
+            path = renders_dir / f"{prefix}_{counter}.exr"
+            if not path.exists():
+                return path
+            counter += 1
+
 
 class RasterState:
     def __init__(self, ctx):

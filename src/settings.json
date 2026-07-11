@@ -1,7 +1,8 @@
 {   
     "file_paths": {
-        "scene": "src/assets/cornell_box.glb",
-        "hdri": "src/assets/day_sky_hdri.exr",
+        "scene": "src/assets/models/cornell_box.glb",
+        "hdri": "src/assets/hdris/day_sky_hdri.exr",
+        "renders": "src/assets/renders/",
         
         "path_tracing": {
             "vert": "src/shaders/path_tracing/final.vs",

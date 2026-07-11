@@ -12,9 +12,6 @@ from src.dtypes import *
 from src.bvh import *
 
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-
-
 def get_cache_path(path, cache_dir, type):
     abs_path = Path(path).resolve()
     abs_cache_dir = Path(cache_dir).resolve()
