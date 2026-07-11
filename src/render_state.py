@@ -133,62 +133,6 @@ class PTState:
         self.albedo_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
         self.normal_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
         self.depth_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-    
-    def export_render(self):
-        combined_data = self.combined_pass.read()
-        combined_width, combined_height = self.combined_pass.size
-        combined_channels = self.combined_pass.components
-
-        albedo_data = self.albedo_pass.read()
-        albedo_width, albedo_height = self.albedo_pass.size
-        albedo_channels = self.albedo_pass.components
-        
-        normal_data = self.normal_pass.read()
-        normal_width, normal_height = self.normal_pass.size
-        normal_channels = self.normal_pass.components
-
-        depth_data = self.depth_pass.read()
-        depth_width, depth_height = self.depth_pass.size
-        depth_channels = self.depth_pass.components
-
-        # Convert to numpy arrays
-        combined_array = np.frombuffer(combined_data, dtype=f4)
-        albedo_array = np.frombuffer(albedo_data, dtype = f4)
-        normal_array = np.frombuffer(normal_data, dtype = f4)
-        depth_array = np.frombuffer(depth_data, dtype = f4)
-
-        # Reshape to OpenGL convention (H, W, C)
-        combined_array = combined_array.reshape(combined_height, combined_width, combined_channels)
-        albedo_array = albedo_array.reshape(albedo_height, albedo_width, albedo_channels)
-        normal_array = normal_array.reshape(normal_height, normal_width, normal_channels)
-        depth_array = depth_array.reshape(depth_height, depth_width, depth_channels)
-        
-        # Flip image vertically
-        # OpenGL is bottom-up, EXR is top-down
-        combined_array = np.flipud(combined_array)
-        albedo_array = np.flipud(albedo_array)
-        normal_array = np.flipud(normal_array)
-        depth_array = np.flipud(depth_array)
-        
-        renders_dir = Path(file_paths.renders)
-        combined_path = self._get_next_exr_path(renders_dir / "combined", "combined")
-        albedo_path = self._get_next_exr_path(renders_dir / "albedo", "albedo")
-        normal_path = self._get_next_exr_path(renders_dir / "normal", "normal")
-        depth_path = self._get_next_exr_path(renders_dir / "depth", "depth")
-
-        # Save to .exr files
-        iio.imwrite(combined_path, combined_array)
-        iio.imwrite(albedo_path, albedo_array)
-        iio.imwrite(normal_path, normal_array)
-        iio.imwrite(depth_path, depth_array)
-    
-    def _get_next_exr_path(self, path, prefix):
-        counter = 0
-        while True:
-            file_path = path / f"{prefix}_{counter}.exr"
-            if not file_path.exists():
-                return file_path
-            counter += 1
 
 
 class RasterState:
@@ -220,3 +164,115 @@ class PostProcessState:
         self.dof_enabled = False
         self.aperture = 0
         self.focus_dist = 10
+
+
+class ExportState:
+    def __init__(self, pt_state):
+        self.pt_state = pt_state
+    
+    def auto_capture_render(self):
+        if self.pt_state.total_samples == 32:
+            self._export_training_noisy()
+            print("Exported noisy render")
+        if self.pt_state.total_samples == 4096:
+            self._export_training_target()
+            print("Exported target render")
+
+    def _get_next_exr_path(self, path, prefix):
+        counter = 0
+        while True:
+            file_path = path / f"{prefix}_{counter}.exr"
+            if not file_path.exists():
+                return file_path
+            counter += 1
+        
+    def export_render(self):
+        combined_data = self.pt_state.combined_pass.read()
+        combined_width, combined_height = self.pt_state.combined_pass.size
+        combined_channels = self.pt_state.combined_pass.components
+
+        # Convert to numpy array
+        combined_array = np.frombuffer(combined_data, dtype=f4)
+
+        # Reshape to OpenGL convention (H, W, C)
+        combined_array = combined_array.reshape(combined_height, combined_width, combined_channels)
+        
+        # Flip image vertically
+        # OpenGL is bottom-up, EXR is top-down
+        combined_array = np.flipud(combined_array)
+        
+        renders_dir = Path(file_paths.ai_training_renders)
+        combined_path = self._get_next_exr_path(renders_dir / "combined", "combined")
+
+        # Save to .exr file
+        iio.imwrite(combined_path, combined_array)
+    
+    def _export_training_noisy(self):
+        combined_data = self.pt_state.combined_pass.read()
+        combined_width, combined_height = self.pt_state.combined_pass.size
+        combined_channels = self.pt_state.combined_pass.components
+
+        albedo_data = self.pt_state.albedo_pass.read()
+        albedo_width, albedo_height = self.pt_state.albedo_pass.size
+        albedo_channels = self.pt_state.albedo_pass.components
+        
+        normal_data = self.pt_state.normal_pass.read()
+        normal_width, normal_height = self.pt_state.normal_pass.size
+        normal_channels = self.pt_state.normal_pass.components
+
+        depth_data = self.pt_state.depth_pass.read()
+        depth_width, depth_height = self.pt_state.depth_pass.size
+        depth_channels = self.pt_state.depth_pass.components
+
+        # Convert to numpy arrays
+        combined_array = np.frombuffer(combined_data, dtype=f4)
+        albedo_array = np.frombuffer(albedo_data, dtype = f4)
+        normal_array = np.frombuffer(normal_data, dtype = f4)
+        depth_array = np.frombuffer(depth_data, dtype = f4)
+
+        # Reshape to OpenGL convention (H, W, C)
+        combined_array = combined_array.reshape(combined_height, combined_width, combined_channels)
+        albedo_array = albedo_array.reshape(albedo_height, albedo_width, albedo_channels)
+        normal_array = normal_array.reshape(normal_height, normal_width, normal_channels)
+        depth_array = depth_array.reshape(depth_height, depth_width, depth_channels)
+        
+        # Flip image vertically
+        # OpenGL is bottom-up, EXR is top-down
+        combined_array = np.flipud(combined_array)
+        albedo_array = np.flipud(albedo_array)
+        normal_array = np.flipud(normal_array)
+        depth_array = np.flipud(depth_array)
+        
+        renders_dir = Path(file_paths.ai_training_renders)
+        combined_path = self._get_next_exr_path(renders_dir / "combined", "combined")
+        albedo_path = self._get_next_exr_path(renders_dir / "albedo", "albedo")
+        normal_path = self._get_next_exr_path(renders_dir / "normal", "normal")
+        depth_path = self._get_next_exr_path(renders_dir / "depth", "depth")
+
+        # Save to .exr files
+        iio.imwrite(combined_path, combined_array)
+        iio.imwrite(albedo_path, albedo_array)
+        iio.imwrite(normal_path, normal_array)
+        iio.imwrite(depth_path, depth_array)
+    
+    def _export_training_target(self):
+        target_data = self.pt_state.combined_pass.read()
+        target_width, target_height = self.pt_state.combined_pass.size
+        target_channels = self.pt_state.combined_pass.components
+
+        # Convert to numpy array
+        target_array = np.frombuffer(target_data, dtype=f4)
+
+        # Reshape to OpenGL convention (H, W, C)
+        target_array = target_array.reshape(target_height, target_width, target_channels)
+        
+        # Flip image vertically
+        # OpenGL is bottom-up, EXR is top-down
+        target_array = np.flipud(target_array)
+        
+        renders_dir = Path(file_paths.ai_training_renders)
+        target_path = self._get_next_exr_path(renders_dir / "target", "target")
+
+        # Save to .exr file
+        iio.imwrite(target_path, target_array)
+    

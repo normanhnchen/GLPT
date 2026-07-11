@@ -73,6 +73,7 @@ def main():
     pt_state = PTState(ctx)
     raster_state = RasterState(ctx)
     post_process_state = PostProcessState()
+    export_state = ExportState(pt_state)
 
     pt_quad = FullScreenQuad(ctx, pt_shaders.final)
     raster_quad = FullScreenQuad(ctx, raster_shaders.final)
@@ -335,6 +336,8 @@ def main():
                         pt_state.total_samples += samples_left
                     else:
                         pt_state.total_samples += pt_settings.spp
+                        
+                        export_state.auto_capture_render()
                 
                 # Run compute shader
                 pt_state.combined_pass.bind_to_image(0, read=True, write=True)

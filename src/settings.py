@@ -63,6 +63,7 @@ class FilePaths:
 
         self.scene = config["scene"]
         self.hdri = config["hdri"]
+        self.ai_training_renders = ROOT_DIR / config["ai_training_renders"]
         self.renders = ROOT_DIR / config["renders"]
         
         self.path_tracing = ShaderGroup(config["path_tracing"])

@@ -940,7 +940,9 @@ class SettingsUI(DebugUI, ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, R
             else:
                 self.viewport_button()
                 self.denoise_button()
-                self.export_render_button()
+                # Disable for now!
+                # Fix render exporting by adding an FBO to include tonemapping / gamma correction
+                # self.export_render_button()
             
             self.restart_button()
         
