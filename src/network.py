@@ -49,6 +49,20 @@ class DecoderBlock(nn.Module):
     
     def forward(self, x, skip_connection):
         x = self.up(x)
+
+        # Apply padding if needed to prevent shape mismatches
+        # when concatenating with the skip connection
+        delta_height = skip_connection.shape[2] - x.shape[2]
+        delta_width = skip_connection.shape[3] - x.shape[3]
+        if delta_height != 0 or delta_width != 0:
+            pad = nn.ReplicationPad2d([
+                delta_width // 2, # Left
+                delta_width - delta_width // 2, # Right
+                delta_height // 2, # Top
+                delta_height - delta_height // 2 # Bottom
+            ])
+            x = pad(x)
+        
         # Concatenate UNet skip connection
         x = torch.cat([x, skip_connection], dim=1)
         return self.conv(x)
