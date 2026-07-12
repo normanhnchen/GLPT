@@ -2,6 +2,7 @@ import json
 import numpy as np
 import glm
 from pathlib import Path
+import torch
 
 
 class Screen:
@@ -98,8 +99,13 @@ post_process_settings = PostProcessSettings(json_settings)
 file_paths = FilePaths(json_settings)
 render_settings = RenderSettings(json_settings)
 screen_default = Screen(json_settings)
+
 _camera_settings_default = CameraSettings(json_settings)
 _pt_settings_default = PTSettings(json_settings)
 _post_process_settings_default = PostProcessSettings(json_settings)
 _file_paths_default = FilePaths(json_settings)
 _render_settings_default = RenderSettings(json_settings)
+
+AI_DEVICE = torch.device("cpu")
+if torch.cuda.is_available():
+    AI_DEVICE = torch.device("cuda")

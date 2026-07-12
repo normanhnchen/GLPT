@@ -154,20 +154,3 @@ class UNet(nn.Module):
         
         data = t.numpy().tobytes()
         denoised_tex.write(data)
-    
-    def exr_to_tensor(self, exr_path, keep_channels=None):
-        # Copy the original as it is not writable (PyTorch requirement)
-        img_arr = iio.imread(exr_path).copy()
-
-        # Create 1d array from the texture data
-        t = torch.from_numpy(img_arr, dtype=torch.float32)
-        # Reshape from EXR to 3d tensor PyTorch convention (C, H, W)
-        t = t.permute(2, 0, 1).contiguous()
-        
-        if keep_channels is not None:
-            t = t[:keep_channels]
-        
-        # Add batch dimension (C, H, W) -> (B, C, H, W) with B = 1
-        t = t.unsqueeze(0)
-
-        return t

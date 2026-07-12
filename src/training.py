@@ -56,7 +56,7 @@ class DenoiseDataset(Dataset):
 train_dataset = DenoiseDataset(file_paths.ai_training_renders)
 train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
 
-denoiser = UNet()
+denoiser = UNet().to(AI_DEVICE)
 optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
 criterion = nn.L1Loss()
 
@@ -64,6 +64,9 @@ epochs = 10
 
 for epoch in range(epochs):
     for x, target in train_loader:
+        x = x.to(AI_DEVICE)
+        target = target.to(AI_DEVICE)
+        
         optim.zero_grad()
         prediction = denoiser.forward(x)
         loss = criterion(prediction, target)
