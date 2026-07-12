@@ -127,7 +127,7 @@ def main():
 
     ai_denoiser = UNet()
     # Load saved weights and biases
-    ai_denoiser.load_state_dict(torch.load("src/denoiser/denoiser.pt"))
+    ai_denoiser.load_state_dict(torch.load("src/denoiser/checkpoint.pt")["model_state_dict"])
 
     # Render loop
     while not glfwWindowShouldClose(window):

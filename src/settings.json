@@ -1,6 +1,6 @@
 {   
     "file_paths": {
-        "scene": "src/assets/models/glass_test.glb",
+        "scene": "src/assets/models/cornell_box.glb",
         "hdri": "src/assets/hdris/day_sky_hdri.exr",
         "ai_training_renders": "src/assets/renders/ai_training",
         "renders": "src/assets/renders/images",

@@ -65,15 +65,26 @@ class DenoiseDataset(Dataset):
 
 
 train_dataset = DenoiseDataset(file_paths.ai_training_renders)
-train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
 
 denoiser = UNet().to(AI_DEVICE)
 optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
 criterion = nn.L1Loss()
 
 epochs = 100
+starting_epoch = 0
 
-for epoch in range(epochs):
+try:
+    checkpoint = torch.load("src/denoiser/checkpoint.pt", map_location=AI_DEVICE)
+    denoiser.load_state_dict(checkpoint["model_state_dict"])
+    optim.load_state_dict(checkpoint["optimizer_state_dict"])
+    start_epoch = checkpoint["epoch"] + 1
+    print(f"Resumed from epoch {start_epoch}")
+except:
+    pass
+
+for epoch in range(starting_epoch, epochs):
+    avg_loss = 0
     for x, target in train_loader:
         x = x.to(AI_DEVICE)
         target = target.to(AI_DEVICE)
@@ -84,7 +95,16 @@ for epoch in range(epochs):
         loss.backward()
         optim.step()
 
-        print(f"Epoch: {epoch} | Loss: {loss}")
+        avg_loss += loss.item() / len(train_loader)
+    
+    checkpoint = {
+        "epoch": epoch,
+        "model_state_dict": denoiser.state_dict(),
+        "optimizer_state_dict": optim.state_dict(),
+        "loss": avg_loss
+    }
 
-    torch.save(denoiser.state_dict(), "src/denoiser/denoiser.pt")
+    print(f"Epoch: {epoch} | Loss: {avg_loss}")
+
+    torch.save(checkpoint, "src/denoiser/checkpoint.pt")
 
