@@ -1,8 +1,14 @@
 import torch
 import torch.nn as nn
+import warnings
+# Disable warning from imageio of deprecated pkg_resources
+warnings.filterwarnings("ignore", module="imageio")
 import imageio.v3 as iio
 
 from src.dtypes import *
+
+
+# https://dl.acm.org/doi/10.1145/3072959.3073708
 
 
 class ConvBlock(nn.Module):

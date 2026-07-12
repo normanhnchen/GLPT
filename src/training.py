@@ -1,7 +1,16 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
+import warnings
+# Disable warning from imageio of deprecated pkg_resources
+warnings.filterwarnings("ignore", module="imageio")
 import imageio.v3 as iio
 from pathlib import Path
+
+from src.settings import *
+from src.network import *
+
+
+# https://dl.acm.org/doi/10.1145/3072959.3073708
 
 
 def exr_to_tensor(exr_path, keep_channels=None):
@@ -9,7 +18,7 @@ def exr_to_tensor(exr_path, keep_channels=None):
     img_arr = iio.imread(exr_path).copy()
 
     # Create 1d array from the texture data
-    t = torch.from_numpy(img_arr)
+    t = torch.from_numpy(img_arr).float()
     # Reshape from EXR to 3d tensor PyTorch convention (C, H, W)
     t = t.permute(2, 0, 1).contiguous()
     
@@ -42,3 +51,26 @@ class DenoiseDataset(Dataset):
         x = torch.cat([combined, albedo, normal, depth])
 
         return x, target
+
+
+train_dataset = DenoiseDataset(file_paths.ai_training_renders)
+train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+
+denoiser = UNet()
+optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
+criterion = nn.L1Loss()
+
+epochs = 10
+
+for epoch in range(epochs):
+    for x, target in train_loader:
+        optim.zero_grad()
+        prediction = denoiser.forward(x)
+        loss = criterion(prediction, target)
+        loss.backward()
+        optim.step()
+
+        print(f"Epoch: {epoch} | Loss: {loss}")
+
+    torch.save(denoiser.state_dict(), "src/denoiser/denoiser.pt")
+

@@ -126,6 +126,8 @@ def main():
     )
 
     ai_denoiser = UNet()
+    # Load saved weights and biases
+    ai_denoiser.load_state_dict(torch.load("src/denoiser/denoiser.pt"))
 
     # Render loop
     while not glfwWindowShouldClose(window):
@@ -337,7 +339,8 @@ def main():
                     else:
                         pt_state.total_samples += pt_settings.spp
                         
-                        export_state.auto_capture_render()
+                        if render_settings.auto_save_training_renders:
+                            export_state.auto_save_training_renders()
                 
                 # Run compute shader
                 pt_state.combined_pass.bind_to_image(0, read=True, write=True)

@@ -83,6 +83,7 @@ class RenderSettings:
         self.texture_size = config["texture_size"]
         self.tiles_x = config["tiles_x"]
         self.tiles_y = config["tiles_y"]
+        self.auto_save_training_renders = config["auto_save_training_renders"]
 
 
 with open("src/settings.json") as f:

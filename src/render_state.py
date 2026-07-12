@@ -170,7 +170,7 @@ class ExportState:
     def __init__(self, pt_state):
         self.pt_state = pt_state
     
-    def auto_capture_render(self):
+    def auto_save_training_renders(self):
         if self.pt_state.total_samples == 32:
             self._export_training_noisy()
             print("Exported noisy render")
