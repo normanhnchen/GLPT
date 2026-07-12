@@ -4,7 +4,7 @@ import warnings
 # Disable warning from imageio of deprecated pkg_resources
 warnings.filterwarnings("ignore", module="imageio")
 import imageio.v3 as iio
-from pathlib import Path
+import random
 
 from src.settings import *
 from src.network import *
@@ -29,7 +29,7 @@ def exr_to_tensor(exr_path, keep_channels=None):
 
 
 class DenoiseDataset(Dataset):
-    def __init__(self, renders_path):
+    def __init__(self, renders_path, patch_size=256):
         self.combined_path = renders_path / "combined/"
         self.albedo_path = renders_path / "albedo/"
         self.normal_path = renders_path / "normal/"
@@ -37,6 +37,7 @@ class DenoiseDataset(Dataset):
         self.target_path = renders_path / "target/"
 
         self.num_samples = sum(1 for item in self.combined_path.iterdir() if item.is_file())
+        self.patch_size = patch_size
 
     def __len__(self):
         return self.num_samples
@@ -50,6 +51,16 @@ class DenoiseDataset(Dataset):
 
         x = torch.cat([combined, albedo, normal, depth])
 
+        _, h, w = x.shape
+
+        top = random.randint(0, h - self.patch_size)
+        bottom = top + self.patch_size
+        left = random.randint(0, w - self.patch_size)
+        right = left + self.patch_size
+
+        x = x[:, top:bottom, left:right]
+        target = target[:, top:bottom, left:right]
+
         return x, target
 
 
@@ -60,13 +71,13 @@ denoiser = UNet().to(AI_DEVICE)
 optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
 criterion = nn.L1Loss()
 
-epochs = 10
+epochs = 100
 
 for epoch in range(epochs):
     for x, target in train_loader:
         x = x.to(AI_DEVICE)
         target = target.to(AI_DEVICE)
-        
+
         optim.zero_grad()
         prediction = denoiser.forward(x)
         loss = criterion(prediction, target)
