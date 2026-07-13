@@ -101,7 +101,13 @@ class Camera:
         self.up = glm.normalize(glm.cross(self.right, self.front))
 
     def get_state(self):
-        return tuple(self.pos), tuple(self.front), self.fov
+        return {
+            "pos": list(self.pos),
+            "front": list(self.front),
+            "up": list(self.up),
+            "right": list(self.right),
+            "fov": self.fov
+        }
     
     def has_moved(self):
         current_state = self.get_state()

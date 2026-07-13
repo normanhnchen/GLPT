@@ -4,6 +4,7 @@ import warnings
 warnings.filterwarnings("ignore", module="imageio")
 import imageio.v3 as iio
 from pathlib import Path
+import json
 
 from src.dtypes import *
 from src.settings import *
@@ -280,3 +281,23 @@ class ExportState:
         # Save to .exr file
         iio.imwrite(target_path, target_array)
     
+
+class CameraCaptureState:
+    def __init__(self, camera):
+        self.camera = camera
+        self.scenes_path = Path(file_paths.ai_training_scenes)
+        self.scene_files = [scene for scene in self.scenes_path.iterdir()]
+
+        self.curr_scene_idx = 0
+
+        self.camera_capture_states = {scene_file:{} for scene_file in self.scene_files}
+
+    def save_state(self, scene_file):
+        state = self.camera.get_state()
+        
+        scene_captures = self.camera_capture_states[str(scene_file)]
+        scene_capture_count = len(scene_captures)
+        scene_captures[scene_capture_count] = state
+
+        with open(file_paths.camera_capture_states, "w") as file:
+            json.dump(self.camera_capture_states, file)

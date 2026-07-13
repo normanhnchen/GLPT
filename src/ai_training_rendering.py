@@ -78,6 +78,7 @@ def main():
         raster_state = RasterState(ctx)
         post_process_state = PostProcessState()
         export_state = ExportState(pt_state)
+        camera_capture_state = CameraCaptureState(camera)
 
         pt_quad = FullScreenQuad(ctx, pt_shaders.final)
         raster_quad = FullScreenQuad(ctx, raster_shaders.final)

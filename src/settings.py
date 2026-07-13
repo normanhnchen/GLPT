@@ -67,6 +67,7 @@ class FilePaths:
         self.hdri = config["hdri"]
         self.ai_training_renders = ROOT_DIR / config["ai_training_renders"]
         self.renders = ROOT_DIR / config["renders"]
+        self.camera_capture_states = config["camera_capture_states"]
         
         self.path_tracing = ShaderGroup(config["path_tracing"])
         self.background = ShaderGroup(config["rasterization"]["background"])
