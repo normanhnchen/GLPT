@@ -912,18 +912,31 @@ class DebugUI:
             imgui.text_disabled("No saved renders")
 
 
-class SettingsUI(DebugUI, ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
+class CameraCapturingUI:
+    def __init__(self, **kwargs):
+        self.camera_capture_state = kwargs.get("camera_capture_state")
+
+        super().__init__(**kwargs)
+    
+    def save_state_button(self):
+        if imgui.button("Save Camera State"):
+            self.camera_capture_state.save_state()
+
+
+class SettingsUI(CameraCapturingUI, DebugUI, ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
     def __init__(self,
             pt_state,
             post_process_state,
             camera_buffer,
-            camera
+            camera,
+            camera_capture_state
         ):
         super().__init__(
             pt_state=pt_state,
             post_process_state=post_process_state,
             camera_buffer=camera_buffer,
-            camera=camera
+            camera=camera,
+            camera_capture_state=camera_capture_state
         )
 
     def rendering_ui(self):
@@ -983,3 +996,6 @@ class SettingsUI(DebugUI, ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, R
     
     def debug_ui(self):
         self.debug_mode_button()
+    
+    def camera_capturing_ui(self):
+        self.save_state_button()

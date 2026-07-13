@@ -290,9 +290,10 @@ class CameraCaptureState:
 
         self.curr_scene_idx = 0
 
-        self.camera_capture_states = {scene_file:{} for scene_file in self.scene_files}
+        self.camera_capture_states = {str(scene_file):{} for scene_file in self.scene_files}
 
-    def save_state(self, scene_file):
+    def save_state(self):
+        scene_file = self.scene_files[self.curr_scene_idx]
         state = self.camera.get_state()
         
         scene_captures = self.camera_capture_states[str(scene_file)]

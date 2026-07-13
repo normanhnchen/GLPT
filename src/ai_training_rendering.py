@@ -131,7 +131,8 @@ def main():
             pt_state,
             post_process_state,
             camera_buffer,
-            camera
+            camera,
+            camera_capture_state
         )
 
         # Render loop
@@ -196,9 +197,14 @@ def main():
                             imgui.tree_pop()
                         
                         if imgui.tree_node("Screen"):
-                                settings_ui.screen_ui()
+                            settings_ui.screen_ui()
 
-                                imgui.tree_pop()
+                            imgui.tree_pop()
+                            
+                        if imgui.tree_node("Camera Capturing"):
+                            settings_ui.camera_capturing_ui()
+
+                            imgui.tree_pop()
                 
                 else:
                     if is_expand:

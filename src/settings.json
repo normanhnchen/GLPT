@@ -5,7 +5,7 @@
         "hdri": "src/assets/hdris/day_sky_hdri.exr",
         "ai_training_renders": "src/assets/renders/ai_training",
         "renders": "src/assets/renders/images",
-        "camera_capture_states": "src/camera_capture_states",
+        "camera_capture_states": "src/camera_capture_states.json",
         
         "path_tracing": {
             "vert": "src/shaders/path_tracing/final.vs",
