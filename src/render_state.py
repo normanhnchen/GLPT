@@ -303,16 +303,29 @@ class CameraCaptureState:
     def __init__(self, scene_state, camera):
         self.scene_state = scene_state
         self.camera = camera
-        self.camera_capture_states = {str(scene_file):{} for scene_file in self.scene_state.scene_files}
+        self.states = {str(scene_file):{} for scene_file in self.scene_state.scene_files}
+
+        print(self.states)
 
     def save_state(self):
         scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]
         state = self.camera.get_state()
         
-        scene_captures = self.camera_capture_states[str(scene_file)]
+        scene_captures = self.states[str(scene_file)]
         scene_capture_count = len(scene_captures)
         scene_captures[scene_capture_count] = state
 
         with open(file_paths.camera_capture_states, "w") as file:
-            json.dump(self.camera_capture_states, file)
+            json.dump(self.states, file)
+        
+        print(self.states)
     
+    def remove_state(self):
+        # Remove the last captured state from the current scene
+
+        scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]
+        scene_captures = self.states[str(scene_file)]
+        removed_capture = scene_captures.popitem()
+
+        print(f"Removed{removed_capture}")
+        print(self.states)

@@ -939,13 +939,27 @@ class SceneUI:
 
 class CameraCapturingUI:
     def __init__(self, **kwargs):
+        self.scene_state = kwargs.get("scene_state")
         self.camera_capture_state = kwargs.get("camera_capture_state")
 
         super().__init__(**kwargs)
     
     def save_state_button(self):
-        if imgui.button("Save Camera State"):
+        if imgui.button("Save Current Camera State"):
             self.camera_capture_state.save_state()
+    
+    def remove_state_button(self):
+        scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]
+        scene_captures = self.camera_capture_state.states[str(scene_file)]
+        scene_capture_count = len(scene_captures)
+
+        enabled = scene_capture_count > 0
+        imgui.begin_disabled(not enabled)
+
+        if imgui.button("Remove Last Camera State From This Scene"):
+            self.camera_capture_state.remove_state()
+        
+        imgui.end_disabled()
 
 
 class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
@@ -1030,3 +1044,4 @@ class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI
     
     def camera_capturing_ui(self):
         self.save_state_button()
+        self.remove_state_button()
