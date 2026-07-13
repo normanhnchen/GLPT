@@ -169,14 +169,18 @@ class PostProcessState:
 class ExportState:
     def __init__(self, pt_state):
         self.pt_state = pt_state
+        self.noisy_saved = False
+        self.target_saved = True
     
     def auto_save_training_renders(self):
         if self.pt_state.total_samples == 32:
-            self._export_training_noisy()
-            print("Exported noisy render")
+            self.noisy_saved = True
         if self.pt_state.total_samples == 4096:
+            self.target_saved = True
+        
+        if self.noisy_saved and self.target_saved:
+            self._export_training_noisy()
             self._export_training_target()
-            print("Exported target render")
 
     def _get_next_exr_path(self, path, prefix):
         counter = 0

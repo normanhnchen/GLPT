@@ -62,6 +62,7 @@ class FilePaths:
     def __init__(self, json_settings):
         config = json_settings["file_paths"]
 
+        self.ai_training_scenes = config["ai_training_scenes"]
         self.scene = config["scene"]
         self.hdri = config["hdri"]
         self.ai_training_renders = ROOT_DIR / config["ai_training_renders"]
@@ -84,7 +85,14 @@ class RenderSettings:
         self.texture_size = config["texture_size"]
         self.tiles_x = config["tiles_x"]
         self.tiles_y = config["tiles_y"]
-        self.auto_save_training_renders = config["auto_save_training_renders"]
+
+
+class AITrainingSettings:
+    def __init__(self, json_settings):
+        config = json_settings["ai_training"]
+
+        self.ai_training_mode = config["ai_training_mode"]
+        self.camera_setup_mode = config["camera_setup_mode"]
 
 
 with open("src/settings.json") as f:
@@ -98,13 +106,15 @@ pt_settings = PTSettings(json_settings)
 post_process_settings = PostProcessSettings(json_settings)
 file_paths = FilePaths(json_settings)
 render_settings = RenderSettings(json_settings)
-screen_default = Screen(json_settings)
+ai_training_settings = AITrainingSettings(json_settings)
 
+_screen_default = Screen(json_settings)
 _camera_settings_default = CameraSettings(json_settings)
 _pt_settings_default = PTSettings(json_settings)
 _post_process_settings_default = PostProcessSettings(json_settings)
 _file_paths_default = FilePaths(json_settings)
 _render_settings_default = RenderSettings(json_settings)
+_ai_training_settings_default = AITrainingSettings(json_settings)
 
 AI_DEVICE = torch.device("cpu")
 if torch.cuda.is_available():

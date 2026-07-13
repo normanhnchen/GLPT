@@ -1,5 +1,6 @@
 {   
     "file_paths": {
+        "ai_training_scenes": "src/assets/models/ai_training/",
         "scene": "src/assets/models/cornell_box.glb",
         "hdri": "src/assets/hdris/day_sky_hdri.exr",
         "ai_training_renders": "src/assets/renders/ai_training",
@@ -62,9 +63,12 @@
     },
     "render": {
         "render_mode": "rasterization",
-        "texture_size": [4096, 4096],
+        "texture_size": [1024, 1024],
         "tiles_x": 4,
-        "tiles_y": 2,
-        "auto_save_training_renders": false
+        "tiles_y": 2
+    },
+    "ai_training": {
+        "ai_training_mode": true,
+        "camera_setup_mode": true
     }
 }

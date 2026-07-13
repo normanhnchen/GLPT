@@ -101,7 +101,6 @@ class Camera:
         self.up = glm.normalize(glm.cross(self.right, self.front))
 
     def get_state(self):
-        # Check for any camera movements which affect static rendering
         return tuple(self.pos), tuple(self.front), self.fov
     
     def has_moved(self):

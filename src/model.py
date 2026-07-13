@@ -292,7 +292,7 @@ class Scene:
             print("Loaded BVH from cache")
         except:
             start_time = time.perf_counter()
-            print("Building BVH in the background...")
+            print("Building BVH...")
 
             bvh = BVH(self)
             self.bvh = bvh

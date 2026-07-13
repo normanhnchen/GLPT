@@ -86,7 +86,7 @@ def main():
     triangle_buffer = TriangleBuffer(material_buffer, scene)
     light_buffer = LightBuffer(scene)
 
-    bvh_builder = BVHBuilder(scene)
+    bvh_builder = BVHBackgroundBuilder(scene)
     bvh_ready = False
 
     camera_buffer.bind(ctx, 0)
@@ -339,7 +339,7 @@ def main():
                     else:
                         pt_state.total_samples += pt_settings.spp
                         
-                        if render_settings.auto_save_training_renders:
+                        if render_settings.ai_training_mode:
                             export_state.auto_save_training_renders()
                 
                 # Run compute shader
