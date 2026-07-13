@@ -289,14 +289,20 @@ class SceneState:
         self.num_scenes = len(self.scene_files)
         self.curr_scene_idx = 0
         self.curr_scene_file = self.scene_files[self.curr_scene_idx]
+
+        self.changed_scene = False
     
     def next_scene(self):
         self.curr_scene_idx += 1
         self.curr_scene_file = self.scene_files[self.curr_scene_idx]
+
+        self.changed_scene = True
     
     def previous_scene(self):
         self.curr_scene_idx -= 1
         self.curr_scene_file = self.scene_files[self.curr_scene_idx]
+
+        self.changed_scene = True
 
 
 class CameraCaptureState:
@@ -305,7 +311,14 @@ class CameraCaptureState:
         self.camera = camera
         self.states = {str(scene_file):{} for scene_file in self.scene_state.scene_files}
 
-        print(self.states)
+        self._load_states()
+    
+    def _load_states(self):
+        try:
+            with open(file_paths.camera_capture_states) as f:
+                self.states = json.load(f)
+        except:
+            pass
 
     def save_state(self):
         scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]
@@ -315,17 +328,15 @@ class CameraCaptureState:
         scene_capture_count = len(scene_captures)
         scene_captures[scene_capture_count] = state
 
-        with open(file_paths.camera_capture_states, "w") as file:
-            json.dump(self.states, file)
-        
-        print(self.states)
+        with open(file_paths.camera_capture_states, "w") as f:
+            json.dump(self.states, f)
     
     def remove_state(self):
         # Remove the last captured state from the current scene
 
         scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]
         scene_captures = self.states[str(scene_file)]
-        removed_capture = scene_captures.popitem()
+        scene_captures.popitem()
 
-        print(f"Removed{removed_capture}")
-        print(self.states)
+        with open(file_paths.camera_capture_states, "w") as f:
+            json.dump(self.states, f)

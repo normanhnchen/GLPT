@@ -61,24 +61,24 @@ def main():
     # Set callbacks after so imgui doesn't override them
     glfw_set_callbacks(window)
 
+    pt_shaders = PTShaders(ctx)
+    raster_shaders = RasterShaders(ctx)
+    
+    global pt_state
+    global raster_state
+    global post_process_state
+    pt_state = PTState(ctx)
+    raster_state = RasterState(ctx)
+    post_process_state = PostProcessState()
+    export_state = ExportState(pt_state)
+    scene_state = SceneState()
+    camera_capture_state = CameraCaptureState(scene_state, camera)
+
+    pt_quad = FullScreenQuad(ctx, pt_shaders.final)
+    raster_quad = FullScreenQuad(ctx, raster_shaders.final)
+
     while not glfwWindowShouldClose(window):
         glfwSetWindowShouldClose(window, False)
-        
-        pt_shaders = PTShaders(ctx)
-        raster_shaders = RasterShaders(ctx)
-        
-        global pt_state
-        global raster_state
-        global post_process_state
-        pt_state = PTState(ctx)
-        raster_state = RasterState(ctx)
-        post_process_state = PostProcessState()
-        export_state = ExportState(pt_state)
-        scene_state = SceneState()
-        camera_capture_state = CameraCaptureState(scene_state, camera)
-
-        pt_quad = FullScreenQuad(ctx, pt_shaders.final)
-        raster_quad = FullScreenQuad(ctx, raster_shaders.final)
 
         file_paths.scene = scene_state.curr_scene_file
         scene = load_scene(file_paths.scene, hdri_path=file_paths.hdri)
@@ -165,6 +165,10 @@ def main():
                 ctx.viewport = (0, 0, screen.width, screen.height)
 
                 need_resize = False
+            
+            if scene_state.changed_scene:
+                scene_state.changed_scene = False
+                break
             
             update_stats(window, avg_fps, pt_state.total_samples, pt_state.render_complete)
             
