@@ -61,12 +61,8 @@ def main():
     # Set callbacks after so imgui doesn't override them
     glfw_set_callbacks(window)
 
-    for scene_path in Path(file_paths.ai_training_scenes).iterdir():
-        file_paths.scene = scene_path
-
+    while not glfwWindowShouldClose(window):
         glfwSetWindowShouldClose(window, False)
-
-        scene = load_scene(file_paths.scene, hdri_path=file_paths.hdri)
         
         pt_shaders = PTShaders(ctx)
         raster_shaders = RasterShaders(ctx)
@@ -78,10 +74,14 @@ def main():
         raster_state = RasterState(ctx)
         post_process_state = PostProcessState()
         export_state = ExportState(pt_state)
-        camera_capture_state = CameraCaptureState(camera)
+        scene_state = SceneState()
+        camera_capture_state = CameraCaptureState(scene_state, camera)
 
         pt_quad = FullScreenQuad(ctx, pt_shaders.final)
         raster_quad = FullScreenQuad(ctx, raster_shaders.final)
+
+        file_paths.scene = scene_state.curr_scene_file
+        scene = load_scene(file_paths.scene, hdri_path=file_paths.hdri)
 
         pbr_pass = PBRPass(ctx, scene, raster_shaders.pbr)
         bg_pass = BGPass(ctx, raster_shaders.bg)
@@ -130,9 +130,10 @@ def main():
         settings_ui = SettingsUI(
             pt_state,
             post_process_state,
+            scene_state,
+            camera_capture_state,
             camera_buffer,
-            camera,
-            camera_capture_state
+            camera
         )
 
         # Render loop
@@ -201,7 +202,8 @@ def main():
 
                             imgui.tree_pop()
                             
-                        if imgui.tree_node("Camera Capturing"):
+                        if imgui.tree_node("AI Training"):
+                            settings_ui.scene_ui()
                             settings_ui.camera_capturing_ui()
 
                             imgui.tree_pop()

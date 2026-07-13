@@ -280,20 +280,33 @@ class ExportState:
 
         # Save to .exr file
         iio.imwrite(target_path, target_array)
-    
 
-class CameraCaptureState:
-    def __init__(self, camera):
-        self.camera = camera
+
+class SceneState:
+    def __init__(self):
         self.scenes_path = Path(file_paths.ai_training_scenes)
         self.scene_files = [scene for scene in self.scenes_path.iterdir()]
-
+        self.num_scenes = len(self.scene_files)
         self.curr_scene_idx = 0
+        self.curr_scene_file = self.scene_files[self.curr_scene_idx]
+    
+    def next_scene(self):
+        self.curr_scene_idx += 1
+        self.curr_scene_file = self.scene_files[self.curr_scene_idx]
+    
+    def previous_scene(self):
+        self.curr_scene_idx -= 1
+        self.curr_scene_file = self.scene_files[self.curr_scene_idx]
 
-        self.camera_capture_states = {str(scene_file):{} for scene_file in self.scene_files}
+
+class CameraCaptureState:
+    def __init__(self, scene_state, camera):
+        self.scene_state = scene_state
+        self.camera = camera
+        self.camera_capture_states = {str(scene_file):{} for scene_file in self.scene_state.scene_files}
 
     def save_state(self):
-        scene_file = self.scene_files[self.curr_scene_idx]
+        scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]
         state = self.camera.get_state()
         
         scene_captures = self.camera_capture_states[str(scene_file)]
@@ -302,3 +315,4 @@ class CameraCaptureState:
 
         with open(file_paths.camera_capture_states, "w") as file:
             json.dump(self.camera_capture_states, file)
+    

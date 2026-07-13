@@ -912,6 +912,31 @@ class DebugUI:
             imgui.text_disabled("No saved renders")
 
 
+class SceneUI:
+    def __init__(self, **kwargs):
+        self.scene_state = kwargs.get("scene_state")
+
+        super().__init__(**kwargs)
+    
+    def next_scene_button(self):
+        enabled = self.scene_state.curr_scene_idx < self.scene_state.num_scenes - 1
+        imgui.begin_disabled(not enabled)
+
+        if imgui.button("Next Scene"):
+            self.scene_state.next_scene()
+        
+        imgui.end_disabled()
+    
+    def previous_scene_button(self):
+        enabled = self.scene_state.curr_scene_idx > 0
+        imgui.begin_disabled(not enabled)
+
+        if imgui.button("Previous Scene"):
+            self.scene_state.previous_scene()
+        
+        imgui.end_disabled()
+
+
 class CameraCapturingUI:
     def __init__(self, **kwargs):
         self.camera_capture_state = kwargs.get("camera_capture_state")
@@ -923,20 +948,22 @@ class CameraCapturingUI:
             self.camera_capture_state.save_state()
 
 
-class SettingsUI(CameraCapturingUI, DebugUI, ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
+class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
     def __init__(self,
             pt_state,
             post_process_state,
+            scene_state,
+            camera_capture_state,
             camera_buffer,
-            camera,
-            camera_capture_state
+            camera
         ):
         super().__init__(
             pt_state=pt_state,
             post_process_state=post_process_state,
+            scene_state=scene_state,
+            camera_capture_state=camera_capture_state,
             camera_buffer=camera_buffer,
-            camera=camera,
-            camera_capture_state=camera_capture_state
+            camera=camera
         )
 
     def rendering_ui(self):
@@ -996,6 +1023,10 @@ class SettingsUI(CameraCapturingUI, DebugUI, ScreenUI, PostProcessingUI, CameraU
     
     def debug_ui(self):
         self.debug_mode_button()
+    
+    def scene_ui(self):
+        self.next_scene_button()
+        self.previous_scene_button()
     
     def camera_capturing_ui(self):
         self.save_state_button()
