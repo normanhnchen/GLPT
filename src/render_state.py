@@ -171,17 +171,20 @@ class ExportState:
     def __init__(self, pt_state):
         self.pt_state = pt_state
         self.noisy_saved = False
-        self.target_saved = True
+        self.target_saved = False
     
     def auto_save_training_renders(self):
         if self.pt_state.total_samples == 32:
             self.noisy_saved = True
-        if self.pt_state.total_samples == 4096:
+        if self.pt_state.total_samples == 128:
             self.target_saved = True
         
         if self.noisy_saved and self.target_saved:
             self._export_training_noisy()
             self._export_training_target()
+
+            self.noisy_saved = False
+            self.target_saved = False
 
     def _get_next_exr_path(self, path, prefix):
         counter = 0
@@ -285,24 +288,30 @@ class ExportState:
 class SceneState:
     def __init__(self):
         self.scenes_path = Path(file_paths.ai_training_scenes)
-        self.scene_files = [scene for scene in self.scenes_path.iterdir()]
+        self.scene_files = sorted([scene for scene in self.scenes_path.iterdir()])
         self.num_scenes = len(self.scene_files)
         self.curr_scene_idx = 0
         self.curr_scene_file = self.scene_files[self.curr_scene_idx]
 
         self.changed_scene = False
+        self.ai_training_finished = False
     
     def next_scene(self):
-        self.curr_scene_idx += 1
-        self.curr_scene_file = self.scene_files[self.curr_scene_idx]
+        if self.curr_scene_idx < self.num_scenes - 1:
+            self.curr_scene_idx += 1
+            self.curr_scene_file = self.scene_files[self.curr_scene_idx]
 
-        self.changed_scene = True
+            self.changed_scene = True
+        
+        else:
+            self.ai_training_finished = True
     
     def previous_scene(self):
-        self.curr_scene_idx -= 1
-        self.curr_scene_file = self.scene_files[self.curr_scene_idx]
+        if self.curr_scene_idx > 0:
+            self.curr_scene_idx -= 1
+            self.curr_scene_file = self.scene_files[self.curr_scene_idx]
 
-        self.changed_scene = True
+            self.changed_scene = True
 
 
 class CameraCaptureState:
@@ -310,6 +319,7 @@ class CameraCaptureState:
         self.scene_state = scene_state
         self.camera = camera
         self.states = {str(scene_file):{} for scene_file in self.scene_state.scene_files}
+        self.curr_state_idx = 0
 
         self._load_states()
     
@@ -325,8 +335,8 @@ class CameraCaptureState:
         state = self.camera.get_state()
         
         scene_captures = self.states[str(scene_file)]
-        scene_capture_count = len(scene_captures)
-        scene_captures[scene_capture_count] = state
+        num_scene_captures = len(scene_captures)
+        scene_captures[str(num_scene_captures)] = state
 
         with open(file_paths.camera_capture_states, "w") as f:
             json.dump(self.states, f)
@@ -340,3 +350,21 @@ class CameraCaptureState:
 
         with open(file_paths.camera_capture_states, "w") as f:
             json.dump(self.states, f)
+    
+    def load_next_state(self):
+        scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]
+        scene_captures = self.states[str(scene_file)]
+        num_scene_captures = len(scene_captures)
+
+        if num_scene_captures - self.curr_state_idx:
+            self.camera.load_state(scene_captures[str(self.curr_state_idx)])
+            self.curr_state_idx += 1
+            return
+        
+        self.scene_state.next_scene()
+
+        if self.scene_state.ai_training_finished:
+            return
+        
+        self.curr_state_idx = 0
+        self.load_next_state()

@@ -108,6 +108,13 @@ class Camera:
             "right": list(self.right),
             "fov": self.fov
         }
+
+    def load_state(self, state):
+        self.pos = glm.vec3(state["pos"])
+        self.front = glm.vec3(state["front"])
+        self.up = glm.vec3(state["up"])
+        self.right = glm.vec3(state["right"])
+        self.fov = state["fov"]
     
     def has_moved(self):
         current_state = self.get_state()
@@ -117,8 +124,8 @@ class Camera:
         return False
 
     def get_perspective(self):
-        near = 0.1
-        far = 100
+        near = 0.01
+        far = 1000
         return glm.perspective(glm.radians(self.fov), screen.width / screen.height, near, far)
 
     def get_view(self):

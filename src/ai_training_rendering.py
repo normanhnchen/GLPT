@@ -80,12 +80,17 @@ def main():
     while not glfwWindowShouldClose(window):
         glfwSetWindowShouldClose(window, False)
 
+        if scene_state.ai_training_finished:
+            break
+
         file_paths.scene = scene_state.curr_scene_file
         scene = load_scene(file_paths.scene, hdri_path=file_paths.hdri)
 
         pbr_pass = PBRPass(ctx, scene, raster_shaders.pbr)
         bg_pass = BGPass(ctx, raster_shaders.bg)
         
+        if not ai_training_settings.camera_setup_mode:
+            camera_capture_state.load_next_state()
         camera_buffer = CameraBuffer(camera)
         material_buffer = MaterialBuffer(scene)
         triangle_buffer = TriangleBuffer(material_buffer, scene)
@@ -166,10 +171,9 @@ def main():
 
                 need_resize = False
             
-            if scene_state.changed_scene:
-                scene_state.changed_scene = False
+            if scene_state.ai_training_finished:
                 break
-            
+
             update_stats(window, avg_fps, pt_state.total_samples, pt_state.render_complete)
             
             ctx.clear(0, 0, 0, 1)
@@ -181,9 +185,6 @@ def main():
             impl.process_inputs()
             
             imgui.new_frame()
-            
-            if pt_state.total_samples == pt_settings.max_samples and not pt_state.render_complete:
-                pt_state.save_render()
 
             if settings_window:
                 imgui.set_next_window_size((600, 600))
@@ -243,46 +244,25 @@ def main():
                             settings_ui.debug_ui()
 
                             imgui.tree_pop()
-                    
+                
                 imgui.end()
             
-            if pt_state.view_saved:
-                # Draw texture to screen depending on the debug mode
-                if pt_state.debug_mode == "off":
-                    pt_state.saved_combined.use(location=0)
-                elif pt_state.debug_mode == "albedo":
-                    pt_state.saved_albedo.use(location=0)
-                elif pt_state.debug_mode == "normal":
-                    pt_state.saved_normal.use(location=0)
-                elif pt_state.debug_mode == "depth":
-                    pt_state.saved_depth.use(location=0)
+            if not ai_training_settings.camera_setup_mode:
+                render_settings.render_mode = "path_tracing"
+                pt_state.should_render = True
 
-                # Prevent resizing saved texture to new screen dimensions
-                # Doesn't matter which saved texture to use since all are saved at the same dimensions
-                ctx.viewport = (0, 0, *pt_state.saved_combined.size)
-
-                # Post Processing
-                # ---------------
-                pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
-                
-                # Options:
-                #   - None
-                #   - ACESFilm
-                #   - AgX, AgXGolden, AgXPunchy
-                #   - Filmic
-                #   - Lottes
-                #   - Neutral
-                #   - Reinhard, Reinhard2
-                #   - Uchimura
-                #   - Uncharted2
-                #   - Unreal
-                pt_shaders.final.set_tonemap(post_process_settings.tonemap)
-
-                pt_quad.draw()
-
-            elif render_settings.render_mode == "path_tracing":
+            if render_settings.render_mode == "path_tracing":
                 if pt_state.total_samples >= pt_settings.max_samples:
-                    pt_state.should_render = False
+                    camera_capture_state.load_next_state()
+                    
+                    if scene_state.changed_scene:
+                        imgui.render()
+                        impl.render(imgui.get_draw_data())
+                        glfwSwapBuffers(window)
+                        scene_state.changed_scene = False
+                        break
+ 
+                    pt_state.start_render(camera_buffer)
                 
                 if pt_state.should_render:
                     aspect_ratio = screen.width / max(screen.height, 1)
@@ -329,7 +309,7 @@ def main():
                         else:
                             pt_state.total_samples += pt_settings.spp
                             
-                            if render_settings.ai_training_mode:
+                            if ai_training_settings.ai_training_mode:
                                 export_state.auto_save_training_renders()
                     
                     # Run compute shader
@@ -422,6 +402,10 @@ def main():
             stats_frame_count += 1
 
             cap_fps(frame_start, screen.fps_cap)
+
+            if scene_state.changed_scene:
+                scene_state.changed_scene = False
+                break
         
     impl.shutdown()
     glfwTerminate()
