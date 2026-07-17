@@ -5,6 +5,7 @@ warnings.filterwarnings("ignore", module="imageio")
 import imageio.v3 as iio
 from pathlib import Path
 import json
+import random
 
 from src.dtypes import *
 from src.settings import *
@@ -293,6 +294,13 @@ class SceneState:
         self.curr_scene_idx = 0
         self.curr_scene_file = self.scene_files[self.curr_scene_idx]
 
+        self.hdris_path = Path(file_paths.ai_training_hdris)
+        self.hdri_files = [hdri for hdri in self.hdris_path.iterdir()]
+        random.shuffle(self.hdri_files)
+        self.num_hdris = len(self.hdri_files)
+        self.curr_hdri_idx = 0
+        self.curr_hdri_file = self.hdri_files[self.curr_hdri_idx]
+
         self.changed_scene = False
         self.ai_training_finished = False
     
@@ -300,6 +308,10 @@ class SceneState:
         if self.curr_scene_idx < self.num_scenes - 1:
             self.curr_scene_idx += 1
             self.curr_scene_file = self.scene_files[self.curr_scene_idx]
+            
+            # Wrap back to the first HDRI once we've cycled through all of them
+            self.curr_hdri_idx = (self.curr_hdri_idx + 1) % self.num_hdris
+            self.curr_hdri_file = self.hdri_files[self.curr_hdri_idx]
 
             self.changed_scene = True
         
@@ -310,6 +322,10 @@ class SceneState:
         if self.curr_scene_idx > 0:
             self.curr_scene_idx -= 1
             self.curr_scene_file = self.scene_files[self.curr_scene_idx]
+
+            # Wrap back to the last HDRI if we go below the first one
+            self.curr_hdri_idx = (self.curr_hdri_idx - 1) % self.num_hdris
+            self.curr_hdri_file = self.hdri_files[self.curr_hdri_idx]
 
             self.changed_scene = True
 

@@ -2,6 +2,7 @@
     "file_paths": {
         "ai_training_scenes": "src/assets/models/ai_training/",
         "scene": "src/assets/models/cornell_box.glb",
+        "ai_training_hdris": "src/assets/hdris/ai_training/",
         "hdri": "src/assets/hdris/day_sky_hdri.exr",
         "ai_training_renders": "src/assets/renders/ai_training",
         "renders": "src/assets/renders/images",
@@ -70,6 +71,6 @@
     },
     "ai_training": {
         "ai_training_mode": true,
-        "camera_setup_mode": false
+        "camera_setup_mode": true
     }
 }

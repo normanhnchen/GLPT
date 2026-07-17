@@ -64,6 +64,7 @@ class FilePaths:
 
         self.ai_training_scenes = config["ai_training_scenes"]
         self.scene = config["scene"]
+        self.ai_training_hdris = config["ai_training_hdris"]
         self.hdri = config["hdri"]
         self.ai_training_renders = ROOT_DIR / config["ai_training_renders"]
         self.renders = ROOT_DIR / config["renders"]

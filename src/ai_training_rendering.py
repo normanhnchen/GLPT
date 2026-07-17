@@ -84,7 +84,9 @@ def main():
             break
 
         file_paths.scene = scene_state.curr_scene_file
-        scene = load_scene(file_paths.scene, hdri_path=file_paths.hdri)
+        file_paths.hdri = scene_state.curr_hdri_file
+        scene = load_scene(file_paths.scene)
+        scene.hdri = HDRI(file_paths.hdri)
 
         pbr_pass = PBRPass(ctx, scene, raster_shaders.pbr)
         bg_pass = BGPass(ctx, raster_shaders.bg)

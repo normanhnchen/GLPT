@@ -158,9 +158,8 @@ class HDRI:
 
 
 class Scene:
-    def __init__(self, scene_path, hdri_path=None):
+    def __init__(self, scene_path):
         self.scene_path = scene_path
-        self.hdri_path = hdri_path
         self.scene_name = Path(scene_path).stem
 
         self.scene_cache_path = get_cache_path(scene_path, file_paths.scene_cache, "scene")
@@ -269,8 +268,6 @@ class Scene:
         self.lights = all_lights
 
         self.hdri = None
-        if self.hdri_path is not None:
-            self.hdri = HDRI(self.hdri_path)
 
         self.num_lights = len(self.lights)
 
@@ -464,7 +461,7 @@ class Scene:
             self.texture_arrays["occlusion"].use(location=occlusion_tex_loc)
 
 
-def load_scene(scene_path, hdri_path=None):
+def load_scene(scene_path):
     scene_cache_path = get_cache_path(scene_path, file_paths.scene_cache, "scene")
 
     try:
@@ -476,7 +473,7 @@ def load_scene(scene_path, hdri_path=None):
         print("Building scene...")
         start_time = time.perf_counter()
 
-        scene = Scene(scene_path, hdri_path=hdri_path)
+        scene = Scene(scene_path)
 
         end_time = time.perf_counter()
         print(f"Scene built in {end_time - start_time:.4f}s")
