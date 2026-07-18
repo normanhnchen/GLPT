@@ -52,7 +52,7 @@
     "path_tracing": {
         "samples_per_pixel": 32,
         "max_bounces": 16,
-        "max_samples": 128
+        "max_samples": 4096
     },
     "post_processing": {
         "blur": 1.0,
@@ -71,6 +71,6 @@
     },
     "ai_training": {
         "ai_training_mode": true,
-        "camera_setup_mode": true
+        "camera_setup_mode": false
     }
 }

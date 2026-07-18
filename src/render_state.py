@@ -18,6 +18,12 @@ class PTState:
         self.albedo_pass = ctx.texture(screen.resolution, 4, dtype=f4)
         self.normal_pass = ctx.texture(screen.resolution, 4, dtype=f4)
         self.depth_pass = ctx.texture(screen.resolution, 4, dtype=f4)
+
+        self.combined_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        self.albedo_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        self.normal_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        self.depth_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        
         self.saved_combined = None
         self.saved_albedo = None
         self.saved_normal = None
@@ -177,7 +183,7 @@ class ExportState:
     def auto_save_training_renders(self):
         if self.pt_state.total_samples == 32:
             self.noisy_saved = True
-        if self.pt_state.total_samples == 128:
+        if self.pt_state.total_samples == 4096:
             self.target_saved = True
         
         if self.noisy_saved and self.target_saved:

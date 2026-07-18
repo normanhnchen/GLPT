@@ -62,7 +62,8 @@ def main():
     # Set callbacks after so imgui doesn't override them
     glfw_set_callbacks(window)
 
-    scene = load_scene(file_paths.scene, hdri_path=file_paths.hdri)
+    scene = load_scene(file_paths.scene)
+    scene.hdri = HDRI(file_paths.hdri)
     
     pt_shaders = PTShaders(ctx)
     raster_shaders = RasterShaders(ctx)
@@ -74,6 +75,8 @@ def main():
     raster_state = RasterState(ctx)
     post_process_state = PostProcessState()
     export_state = ExportState(pt_state)
+    scene_state = SceneState()
+    camera_capture_state = CameraCaptureState(scene_state, camera)
 
     pt_quad = FullScreenQuad(ctx, pt_shaders.final)
     raster_quad = FullScreenQuad(ctx, raster_shaders.final)
@@ -119,13 +122,15 @@ def main():
     global need_resize
 
     settings_ui = SettingsUI(
-        pt_state,
-        post_process_state,
-        camera_buffer,
-        camera
-    )
+            pt_state,
+            post_process_state,
+            scene_state,
+            camera_capture_state,
+            camera_buffer,
+            camera
+        )
 
-    ai_denoiser = UNet()
+    ai_denoiser = KPCN()
     # Load saved weights and biases
     ai_denoiser.load_state_dict(torch.load("src/denoiser/checkpoint.pt")["model_state_dict"])
 
@@ -338,9 +343,6 @@ def main():
                         pt_state.total_samples += samples_left
                     else:
                         pt_state.total_samples += pt_settings.spp
-                        
-                        if render_settings.ai_training_mode:
-                            export_state.auto_save_training_renders()
                 
                 # Run compute shader
                 pt_state.combined_pass.bind_to_image(0, read=True, write=True)

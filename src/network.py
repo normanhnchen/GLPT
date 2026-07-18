@@ -111,21 +111,60 @@ class UNet(nn.Module):
 
         return self.conv_out(x8)
 
+
+# Kernel Predicting Convolution Network
+class KPCN(nn.Module):
+    def __init__(self, in_channels=10, kernel_size=21):
+        super().__init__()
+
+        self.kernel_size = kernel_size
+        self.unet = UNet(in_channels=in_channels, out_channels=kernel_size**2)
+    
+    def forward(self, x, combined):
+        # (B, K*K, H, W)
+        weights = self.unet(x)
+        # Normalize
+        weights = torch.softmax(weights, dim=1)
+        combined = self._apply_kernel(weights, combined)
+        return combined
+    
+    def _apply_kernel(self, weights, combined):
+        B, _, H, W = weights.shape
+        K = self.kernel_size
+        pad_size = K // 2
+
+        # Pad for the kernel neighborhood around the edge pixels
+        pad = nn.ReflectionPad2d([pad_size, pad_size, pad_size, pad_size])
+        # (B, 3, H, W) -> # (B, 3, H+2*pad, W+2*pad)
+        padded = pad(combined)
+        
+        # (B, 3, H+2*pad, W+2*pad) -> (B, 3*K*K, H*W)
+        patches = nn.functional.unfold(padded, K)
+        # (B, 3*K*K, H*W) -> (B, 3, K*K, H, W)
+        patches = patches.view(B, 3, K * K, H, W)
+
+        # Add batch dimension at index 1
+        # (B, K*K, H, W) -> (B, 1, K*K, H, W)
+        w = weights.unsqueeze(1)
+
+        # Apply weights to the combined image RGB channels
+        return (patches * w).sum(dim=2) # (B, 3, H, W)
+
     def denoise(self, combined, albedo, normal, depth, denoised):
         with torch.no_grad():
             self.eval()
             # Convert from OpenGL textures to torch tensors
-            combined = self.tex_to_tensor(combined, keep_channels=3) # RGBA -> RGB
-            albedo = self.tex_to_tensor(albedo, keep_channels=3) # RGBA -> RGB
-            normal = self.tex_to_tensor(normal, keep_channels=3) # RGBA -> RGB
-            depth = self.tex_to_tensor(depth, keep_channels=1) # RGBA -> R
+            combined = self._tex_to_tensor(combined, keep_channels=3) # RGBA -> RGB
+            albedo = self._tex_to_tensor(albedo, keep_channels=3) # RGBA -> RGB
+            normal = self._tex_to_tensor(normal, keep_channels=3) # RGBA -> RGB
+            depth = self._tex_to_tensor(depth, keep_channels=1) # RGBA -> R
             # 10 channels
             x = torch.cat([combined, albedo, normal, depth], dim=1)
 
-            output = self.forward(x)
-            return self.tensor_to_tex(output, denoised)
-
-    def tex_to_tensor(self, tex, keep_channels=None):
+            output = self(x, combined)
+            return self._tensor_to_tex(output, denoised)
+    
+    def _tex_to_tensor(self, tex, keep_channels=None):
         # bytearray() to copy the original as it is not writable (PyTorch requirement)
         data = bytearray(tex.read())
         width, height = tex.size
@@ -141,12 +180,12 @@ class UNet(nn.Module):
         if keep_channels is not None:
             t = t[:keep_channels]
         
-        # Add batch dimension (C, H, W) -> (B, C, H, W) with B = 1
+        # Add batch dimension at index 0 (C, H, W) -> (1, C, H, W)
         t = t.unsqueeze(0)
 
         return t
     
-    def tensor_to_tex(self, tensor, denoised_tex):
+    def _tensor_to_tex(self, tensor, denoised_tex):
         # Reshape to OpenGL texture data (H, W, C)
         t = tensor.squeeze(0) # Remove batch dimension
         

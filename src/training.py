@@ -67,30 +67,30 @@ class DenoiseDataset(Dataset):
 train_dataset = DenoiseDataset(file_paths.ai_training_renders)
 train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
 
-denoiser = UNet().to(AI_DEVICE)
+denoiser = KPCN().to(AI_DEVICE)
 optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
 criterion = nn.L1Loss()
 
 epochs = 100
-starting_epoch = 0
 
 try:
     checkpoint = torch.load("src/denoiser/checkpoint.pt", map_location=AI_DEVICE)
     denoiser.load_state_dict(checkpoint["model_state_dict"])
     optim.load_state_dict(checkpoint["optimizer_state_dict"])
-    start_epoch = checkpoint["epoch"] + 1
-    print(f"Resumed from epoch {start_epoch}")
-except:
-    pass
+    starting_epoch = checkpoint["epoch"] + 1
+    print(f"Resumed from epoch {starting_epoch}")
+except FileNotFoundError:
+    starting_epoch = 0
 
 for epoch in range(starting_epoch, epochs):
     avg_loss = 0
     for x, target in train_loader:
         x = x.to(AI_DEVICE)
+        combined = x[:, :3].to(AI_DEVICE)
         target = target.to(AI_DEVICE)
 
         optim.zero_grad()
-        prediction = denoiser.forward(x)
+        prediction = denoiser(x, combined)
         loss = criterion(prediction, target)
         loss.backward()
         optim.step()
