@@ -409,6 +409,8 @@ def main():
                 scene_state.changed_scene = False
                 break
         
+        scene.release_all()
+    
     impl.shutdown()
     glfwTerminate()
 

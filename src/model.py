@@ -146,15 +146,21 @@ class HDRI:
         
         self.height, self.width, self.channels = self.img.shape
         self.img_bytes = self.img.tobytes()
+
+        self.hdri_tex = None
     
     def bind(self, ctx, loc):
-        hdri_tex = ctx.texture(
+        self.hdri_tex = ctx.texture(
             (self.width, self.height),
             self.channels,
             self.img_bytes,
             dtype=f4
             )
-        hdri_tex.use(location=loc)
+        self.hdri_tex.use(location=loc)
+    
+    def release(self):
+        if self.hdri_tex is not None:
+            self.hdri_tex.release()
 
 
 class Scene:
@@ -459,6 +465,12 @@ class Scene:
             
         if "occlusion" in self.texture_arrays:
             self.texture_arrays["occlusion"].use(location=occlusion_tex_loc)
+        
+    def release_all(self):
+        for tex_array in self.texture_arrays.keys():
+            self.texture_arrays[tex_array].release()
+        if self.hdri is not None:
+            self.hdri.release()
 
 
 def load_scene(scene_path):
