@@ -12,7 +12,7 @@ from src.shader import *
 from src.camera import *
 from src.model import *
 from src.render_state import *
-from src.buffers import *
+from src.buffer_loading import *
 from src.draw_passes import *
 from src.bvh_builder import *
 from src.settings_ui import *

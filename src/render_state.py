@@ -295,7 +295,7 @@ class ExportState:
 class SceneState:
     def __init__(self):
         self.scenes_path = Path(file_paths.ai_training_scenes)
-        self.scene_files = sorted([scene for scene in self.scenes_path.iterdir()])
+        self.scene_files = [scene for scene in self.scenes_path.iterdir()]
         self.num_scenes = len(self.scene_files)
         self.curr_scene_idx = 0
         self.curr_scene_file = self.scene_files[self.curr_scene_idx]

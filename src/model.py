@@ -10,6 +10,7 @@ from pathlib import Path
 from src.settings import *
 from src.dtypes import *
 from src.bvh import *
+from src.buffers import *
 
 
 def get_cache_path(path, cache_dir, type):
@@ -19,7 +20,7 @@ def get_cache_path(path, cache_dir, type):
     rel_path = abs_path.relative_to(ROOT_DIR)
 
     cache_name = str(rel_path.parent / rel_path.stem).replace("/", "_").replace("\\", "_")
-    return abs_cache_dir / f"{type}_{cache_name}.pkl"
+    return abs_cache_dir / f"{type}_{cache_name}"
 
 
 class Texture:
@@ -39,7 +40,7 @@ class Texture:
 
 
 class Material:
-    def __init__(self, trimesh_material):
+    def __init__(self, trimesh_material, extensions):
         alpha_mode = getattr(trimesh_material, "alphaMode", "OPAQUE")
         if alpha_mode == "MASK":
             self.alpha_mode = 1
@@ -87,6 +88,10 @@ class Material:
             self.occlusion_tex
         ]
 
+        width, height = render_settings.texture_size
+        for tex in self.textures:
+            tex.resize(width, height)
+
         if base_color is not None:
             self.base_color = self._to_float_rgb(trimesh_material.baseColorFactor)
         else:
@@ -127,9 +132,29 @@ class Material:
         self.metallic_tex_id = set_i4(-1)
         self.normal_tex_id = set_i4(-1)
         self.occlusion_tex_id = set_i4(-1)
+        
+        # glTF extensions
+        # ---------------
+        extensions = extensions or {}
 
-        self.extensions = {}
-    
+        KHR_materials_emissive_strength = extensions.get("KHR_materials_emissive_strength")
+        if KHR_materials_emissive_strength:
+            self.emissive_strength = KHR_materials_emissive_strength["emissiveStrength"]
+        else:
+            self.emissive_strength = 0.0
+
+        KHR_materials_transmission = extensions.get("KHR_materials_transmission")
+        if KHR_materials_transmission:
+            self.transmission = KHR_materials_transmission["transmissionFactor"]
+        else:
+            self.transmission = set_f4(0.0)
+
+        KHR_materials_ior = extensions.get("KHR_materials_ior")
+        if KHR_materials_ior:
+            self.ior = KHR_materials_ior["ior"]
+        else:
+            self.ior = set_f4(1.5)
+
     def _to_float_rgb(self, color):
         color = np.asarray(color, dtype=f4)
         if np.max(color) > 1.0:
@@ -171,9 +196,7 @@ class Scene:
         self.scene_cache_path = get_cache_path(scene_path, file_paths.scene_cache, "scene")
         self.bvh_cache_path = get_cache_path(scene_path, file_paths.bvh_cache, "bvh")
 
-        self._build()
-
-    def _build(self):
+    def build(self):
         scene = trimesh.load(self.scene_path)
 
         all_extensions, all_lights = self._get_extensions()
@@ -198,7 +221,7 @@ class Scene:
         vertex_offset = 0
 
         # Iterate through all scene geometries
-        for i, node_name in enumerate(scene.graph.nodes_geometry):
+        for _, node_name in enumerate(scene.graph.nodes_geometry):
             transform, geometry_name = scene.graph[node_name]
             mesh = scene.geometry[geometry_name]
 
@@ -209,13 +232,11 @@ class Scene:
                 trimesh_material = mesh.visual.material
             else:
                 trimesh_material = None
-            material = Material(trimesh_material)
-
+            
             material_name = getattr(trimesh_material, "name", None)
             mat_extensions = all_extensions.get(material_name)
-
-            if mat_extensions:
-                material.extensions.update(mat_extensions)
+            
+            material = Material(trimesh_material, mat_extensions)
 
             material.base_color_tex_id = self._get_texture_id(material.base_color_tex, self.base_color_textures)
             material.emissive_tex_id = self._get_texture_id(material.emissive_tex, self.emissive_textures)
@@ -266,7 +287,21 @@ class Scene:
 
         self._compute_tangents()
 
-        self.mgl_texture_arrays = {}
+        def to_array(tex_list):
+            width, height = render_settings.texture_size
+            if not tex_list:
+                return np.zeros((0, height, width, 4), dtype=np.uint8)
+            arr = np.zeros((len(tex_list), height, width, 4), dtype=np.uint8)
+            for i, tex in enumerate(tex_list):
+                arr[i] = tex.image
+            return arr
+        
+        self.base_color_textures = to_array(self.base_color_textures)
+        self.emissive_textures = to_array(self.emissive_textures)
+        self.roughness_textures = to_array(self.roughness_textures)
+        self.metallic_textures = to_array(self.metallic_textures)
+        self.normal_textures = to_array(self.normal_textures)
+        self.occlusion_textures = to_array(self.occlusion_textures)
 
         self.num_triangles = len(self.triangles)
         self.num_materials = len(self.materials)
@@ -341,15 +376,24 @@ class Scene:
                 glm.mat4_cast(glm.quat(r[3], r[0], r[1], r[2])) * glm.vec4(0, 0, -1, 0)
             ))
 
-            lights.append({
-                "type":      light_def.get("type", "point"),
-                "color":     light_def.get("color", [1, 1, 1]),
-                "intensity": light_def.get("intensity", 1.0),
-                "range":     light_def.get("range", 0.0),
-                "spot":      light_def.get("spot", {}),
-                "position":  position,
-                "direction": direction,
-            })
+            light_type_str = light_def.get("type", "point")
+            type_id = {"point": 0, "direction": 1, "spot": 2}[light_type_str]
+            spot = light_def.get("spot", {})
+
+            lights.append((
+                light_def.get("color", [1, 1, 1]),
+                type_id,
+                list(position),
+                light_def.get("intensity", 1),
+                list(direction),
+                light_def.get("range", 0),
+                1 if spot else 0,
+                spot.get("innerConeAngle", 0),
+                spot.get("outerConeAngle", 0),
+                0
+            ))
+        
+        lights = np.array(lights, dtype=light_dtype)
         
         return material_extensions, lights
         
@@ -413,17 +457,23 @@ class Scene:
         # Retrieve perpendicular vector B with the cross product of T and N
         self.bitangents = np.cross(self.tangents, self.normals)
 
-    def create_texture_arrays(self, ctx, width, height):
+    def strip_material_images(self):
+        for mat in self.materials:
+            for tex in mat.textures:
+                tex.image = None
+
+    def create_texture_arrays(self, ctx):
         self.texture_arrays = {}
 
         def build_array(tex_list, name):
-            if not tex_list:
+            if tex_list is None:
                 return
             
             data = bytearray()
-            for tex in tex_list:
-                tex.resize(width, height)
-                data.extend(tex.image.tobytes())
+            for img in tex_list:
+                data.extend(img.tobytes())
+            
+            width, height = render_settings.texture_size
                 
             self.texture_arrays[name] = ctx.texture_array(
                 size=(width, height, len(tex_list)),
@@ -473,28 +523,83 @@ class Scene:
             self.hdri.release()
 
 
+def save_scene_data(scene, cache_path):
+    # Unduplicate material textures by stripping texture images
+    scene.strip_material_images()
+
+    np.savez_compressed(
+        cache_path,
+        vertices=scene.vertices,
+        triangles=scene.triangles,
+        centroids=scene.centroids,
+        normals=scene.normals,
+        uvs=scene.uvs,
+        tangents=scene.tangents,
+        bitangents=scene.bitangents,
+        material_ids=scene.material_ids,
+        extent=scene.extent,
+        lights=scene.lights,
+        materials=scene.materials,
+        base_color_textures=scene.base_color_textures,
+        emissive_textures=scene.emissive_textures,
+        roughness_textures=scene.roughness_textures,
+        metallic_textures=scene.metallic_textures,
+        normal_textures=scene.normal_textures,
+        occlusion_textures=scene.occlusion_textures,
+    )
+
+
+def load_scene_data(scene, cache_path):
+    # allow_pickle=True because of the Material objects in scene.materials
+    data = np.load(cache_path, allow_pickle=True)
+
+    scene.vertices = data["vertices"]
+    scene.triangles = data["triangles"]
+    scene.centroids = data["centroids"]
+    scene.normals = data["normals"]
+    scene.uvs = data["uvs"]
+    scene.tangents = data["tangents"]
+    scene.bitangents = data["bitangents"]
+    scene.material_ids = data["material_ids"]
+    scene.extent = data["extent"].item()
+    scene.lights = data["lights"]
+    scene.num_lights = len(scene.lights)
+    scene.materials = data["materials"]
+    scene.num_materials = len(scene.materials)
+    scene.base_color_textures = data["base_color_textures"]
+    scene.emissive_textures = data["emissive_textures"]
+    scene.roughness_textures = data["roughness_textures"]
+    scene.metallic_textures = data["metallic_textures"]
+    scene.normal_textures = data["normal_textures"]
+    scene.occlusion_textures = data["occlusion_textures"]
+    scene.num_triangles = len(scene.triangles)
+    scene.bvh = None
+    scene.num_bvh_nodes = None
+    scene.hdri = None
+
+
 def load_scene(scene_path):
     scene_cache_path = get_cache_path(scene_path, file_paths.scene_cache, "scene")
 
-    try:
-        with open(scene_cache_path, "rb") as f:
-            scene = pickle.load(f)
+    scene = Scene(scene_path)
 
-        print("Loaded scene from cache")
+    try:
+        load_scene_data(scene, scene_cache_path)
+
+        print("Loaded scene data from cache")
     except:
         print("Building scene...")
         start_time = time.perf_counter()
 
-        scene = Scene(scene_path)
+        scene.build()
 
         end_time = time.perf_counter()
         print(f"Scene built in {end_time - start_time:.4f}s")
 
         print("Scene saving to cache...")
 
-        with open(scene_cache_path, "wb") as f:
-            pickle.dump(scene, f)
+        save_scene_data(scene, scene_cache_path)
         
-        print("Scene saved to cache")
+        print("Scene data saved to cache")
     
     return scene

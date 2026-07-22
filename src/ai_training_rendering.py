@@ -5,7 +5,6 @@ import sys
 import time
 from imgui_bundle import imgui
 from imgui_bundle.python_backends.glfw_backend import GlfwRenderer
-from pathlib import Path
 
 from src.settings import *
 from src.dtypes import *
@@ -13,7 +12,7 @@ from src.shader import *
 from src.camera import *
 from src.model import *
 from src.render_state import *
-from src.buffers import *
+from src.buffer_loading import *
 from src.draw_passes import *
 from src.settings_ui import *
 
@@ -95,7 +94,7 @@ def main():
             camera_capture_state.load_next_state()
         camera_buffer = CameraBuffer(camera)
         material_buffer = MaterialBuffer(scene)
-        triangle_buffer = TriangleBuffer(material_buffer, scene)
+        triangle_buffer = TriangleBuffer(scene)
         light_buffer = LightBuffer(scene)
 
         if not ai_training_settings.camera_setup_mode:
@@ -110,7 +109,7 @@ def main():
         material_buffer.bind(ctx, 2)
         light_buffer.bind(ctx, 3)
 
-        scene.create_texture_arrays(ctx, *render_settings.texture_size)
+        scene.create_texture_arrays(ctx)
         scene.bind_texture_arrays()
 
         scene.hdri.bind(ctx, 6)

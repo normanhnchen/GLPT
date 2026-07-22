@@ -74,7 +74,8 @@ struct Material {
 
 struct Triangle {
     Vertex v0, v1, v2;
-    Material mat;
+    int matId;
+    float pad1, pad2, pad3;
 };
 
 struct BVHNode {
@@ -449,7 +450,9 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar,
     rec.TBN = mat3(tangent, bitangent, normal);
     rec.InvTBN = transpose(rec.TBN);
 
-    float eta = backFace ? tri.mat.ior / 1.0 : 1.0 / tri.mat.ior;
+    Material triMat = materials[tri.matId];
+
+    float eta = backFace ? triMat.ior / 1.0 : 1.0 / triMat.ior;
 
     rec.t = t;
     rec.point = GetRayPoint(ray, t);
@@ -458,7 +461,7 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar,
     rec.tangent = tangent;
     rec.bitangent = bitangent;
     rec.uv = texCoords;
-    rec.mat = tri.mat;
+    rec.mat = triMat;
     rec.eta = eta;
     rec.triIdx = triIdx;
     rec.backFace = backFace;
