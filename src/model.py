@@ -208,7 +208,7 @@ class Scene:
         all_uvs = []
         all_material_ids = []
         
-        materials_list = []
+        material_dict = {}
         materials = []
 
         self.base_color_textures = []
@@ -233,23 +233,25 @@ class Scene:
             else:
                 trimesh_material = None
             
-            material_name = getattr(trimesh_material, "name", None)
-            mat_extensions = all_extensions.get(material_name)
-            
-            material = Material(trimesh_material, mat_extensions)
+            mat_name = getattr(trimesh_material, "name", None)
+            mat_extensions = all_extensions.get(mat_name)
 
-            material.base_color_tex_id = self._get_texture_id(material.base_color_tex, self.base_color_textures)
-            material.emissive_tex_id = self._get_texture_id(material.emissive_tex, self.emissive_textures)
-            material.roughness_tex_id = self._get_texture_id(material.roughness_tex, self.roughness_textures)
-            material.metallic_tex_id = self._get_texture_id(material.metallic_tex, self.metallic_textures)
-            material.normal_tex_id = self._get_texture_id(material.normal_tex, self.normal_textures)
-            material.occlusion_tex_id = self._get_texture_id(material.occlusion_tex, self.occlusion_textures)
+            mat_key = mat_name if mat_name is not None else id(trimesh_material)
+        
+            if mat_key not in material_dict:
+                material = Material(trimesh_material, mat_extensions)
 
-            if material not in materials_list:
-                materials_list.append(material)
+                material.base_color_tex_id = self._get_texture_id(material.base_color_tex, self.base_color_textures)
+                material.emissive_tex_id = self._get_texture_id(material.emissive_tex, self.emissive_textures)
+                material.roughness_tex_id = self._get_texture_id(material.roughness_tex, self.roughness_textures)
+                material.metallic_tex_id = self._get_texture_id(material.metallic_tex, self.metallic_textures)
+                material.normal_tex_id = self._get_texture_id(material.normal_tex, self.normal_textures)
+                material.occlusion_tex_id = self._get_texture_id(material.occlusion_tex, self.occlusion_textures)
+
+                material_dict[mat_key] = material
                 materials.append(material)
                 
-            mat_id = materials_list.index(material)
+            mat_id = materials.index(material_dict[mat_key])
 
             vertices = mesh.vertices
             centroids = mesh.triangles_center
@@ -579,9 +581,11 @@ def load_scene_data(scene, cache_path):
 
 
 def load_scene(scene_path):
-    scene_cache_path = get_cache_path(scene_path, file_paths.scene_cache, "scene")
+    # Note: numpy adds the file suffix automatically
+    scene_cache_path = get_cache_path(scene_path, file_paths.scene_cache, "scene").with_suffix(".npz")
 
     scene = Scene(scene_path)
+    print(scene_path)
 
     try:
         load_scene_data(scene, scene_cache_path)
