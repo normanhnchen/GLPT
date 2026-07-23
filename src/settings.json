@@ -50,8 +50,8 @@
         "_world_up": [0, 1, 0]
     },
     "path_tracing": {
-        "samples_per_pixel": 32,
-        "max_bounces": 16,
+        "samples_per_pixel": 4,
+        "max_bounces": 64,
         "max_samples": 4096
     },
     "post_processing": {
@@ -71,6 +71,6 @@
     },
     "ai_training": {
         "ai_training_mode": true,
-        "camera_setup_mode": true
+        "camera_setup_mode": false
     }
 }

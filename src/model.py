@@ -20,7 +20,10 @@ def get_cache_path(path, cache_dir, type):
     rel_path = abs_path.relative_to(ROOT_DIR)
 
     cache_name = str(rel_path.parent / rel_path.stem).replace("/", "_").replace("\\", "_")
-    return abs_cache_dir / f"{type}_{cache_name}"
+    if type == "scene":
+        return abs_cache_dir / f"{type}_{cache_name}"
+    elif type == "bvh":
+        return abs_cache_dir / f"{type}_{cache_name}.pkl"
 
 
 class Texture:
@@ -585,7 +588,6 @@ def load_scene(scene_path):
     scene_cache_path = get_cache_path(scene_path, file_paths.scene_cache, "scene").with_suffix(".npz")
 
     scene = Scene(scene_path)
-    print(scene_path)
 
     try:
         load_scene_data(scene, scene_cache_path)

@@ -92,6 +92,7 @@ def main():
         
         if not ai_training_settings.camera_setup_mode:
             camera_capture_state.load_next_state()
+        
         camera_buffer = CameraBuffer(camera)
         material_buffer = MaterialBuffer(scene)
         triangle_buffer = TriangleBuffer(scene)
@@ -141,6 +142,8 @@ def main():
             camera_buffer,
             camera
         )
+
+        is_first_render = True
 
         # Render loop
         while not glfwWindowShouldClose(window):
@@ -249,6 +252,10 @@ def main():
                 imgui.end()
             
             if not ai_training_settings.camera_setup_mode:
+                if is_first_render:
+                    pt_state.start_render(camera_buffer)
+                    is_first_render = False
+                
                 render_settings.render_mode = "path_tracing"
                 pt_state.should_render = True
 
@@ -264,6 +271,7 @@ def main():
                         break
  
                     pt_state.start_render(camera_buffer)
+                    pt_state.should_render = False
                 
                 if pt_state.should_render:
                     aspect_ratio = screen.width / max(screen.height, 1)
@@ -309,7 +317,7 @@ def main():
                             pt_state.total_samples += samples_left
                         else:
                             pt_state.total_samples += pt_settings.spp
-                            
+                        
                             if ai_training_settings.ai_training_mode:
                                 export_state.auto_save_training_renders()
                     
