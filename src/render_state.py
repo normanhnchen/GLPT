@@ -1,14 +1,16 @@
 import numpy as np
-import warnings
-# Disable warning from imageio of deprecated pkg_resources
-warnings.filterwarnings("ignore", module="imageio")
-import imageio.v3 as iio
 from pathlib import Path
 import json
 import random
+import cv2
+import os
 
 from src.dtypes import *
 from src.settings import *
+
+
+# Required as OpenCV disables EXR support by default
+os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 
 
 class PTState:
@@ -220,7 +222,7 @@ class ExportState:
         combined_path = self._get_next_exr_path(renders_dir / "combined", "combined")
 
         # Save to .exr file
-        iio.imwrite(combined_path, combined_array)
+        self._export_exr(combined_path, combined_array)
     
     def _export_training_noisy(self):
         combined_data = self.pt_state.combined_pass.read()
@@ -265,10 +267,10 @@ class ExportState:
         depth_path = self._get_next_exr_path(renders_dir / "depth", "depth")
 
         # Save to .exr files
-        iio.imwrite(combined_path, combined_array)
-        iio.imwrite(albedo_path, albedo_array)
-        iio.imwrite(normal_path, normal_array)
-        iio.imwrite(depth_path, depth_array)
+        self._export_exr(combined_path, combined_array)
+        self._export_exr(albedo_path, albedo_array)
+        self._export_exr(normal_path, normal_array)
+        self._export_exr(depth_path, depth_array)
     
     def _export_training_target(self):
         target_data = self.pt_state.combined_pass.read()
@@ -289,7 +291,12 @@ class ExportState:
         target_path = self._get_next_exr_path(renders_dir / "target", "target")
 
         # Save to .exr file
-        iio.imwrite(target_path, target_array)
+        self._export_exr(target_path, target_array)
+    
+    def _export_exr(export_path, img_arr):
+        # Convert image to BGR as OpenCV expects BGR order
+        img = cv2.cvtColor(img_arr.astype(np.float32), cv2.COLOR_RGB2BGR)
+        cv2.imwrite(str(export_path), img)
 
 
 class SceneState:

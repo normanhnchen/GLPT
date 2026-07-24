@@ -1,8 +1,5 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-import warnings
-# Disable warning from imageio of deprecated pkg_resources
-warnings.filterwarnings("ignore", module="imageio")
 import cv2
 import os
 import random
@@ -14,7 +11,7 @@ from src.network import *
 # https://dl.acm.org/doi/10.1145/3072959.3073708
 
 
-# Required; OpenCV disables EXR support by default
+# Required as OpenCV disables EXR support by default
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 
 
@@ -85,6 +82,24 @@ class DenoiseDataset(Dataset):
         x = x[:, top:bottom, left:right]
         target = target[:, top:bottom, left:right]
 
+        x, target = self._augment(x, target)
+
+        return x, target
+
+    def _augment(self, x, target):
+        if random.random() < 0.5:
+            # Horizontal flip
+            x = x.flip(2)
+            target = target.flip(2)
+        if random.random() < 0.5:
+            # Vertical flip
+            x = x.flip(1)
+            target = target.flip(1)
+        k = random.randint(0, 3)
+        if k > 0:
+            x = torch.rot90(x, k, dims=[1, 2])
+            target = torch.rot90(target, k, dims=[1, 2])
+        
         return x, target
 
 
