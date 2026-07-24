@@ -268,7 +268,7 @@ void main() {
         mat.ao = ao;
     }
 
-    vec3 color = SamplePBR(N, mat);
+    vec3 color = SamplePBR(N, mat) + N;
     
     fragColor = vec4(color, 1.0);
 }

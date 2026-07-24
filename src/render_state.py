@@ -183,7 +183,7 @@ class ExportState:
     def auto_save_training_renders(self):
         if self.pt_state.total_samples == 32:
             self.noisy_saved = True
-        if self.pt_state.total_samples == 4096:
+        if self.pt_state.total_samples == 16384:
             self.target_saved = True
         
         if self.noisy_saved and self.target_saved:

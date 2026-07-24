@@ -86,7 +86,7 @@ def main():
 
     camera_buffer = CameraBuffer(camera)
     material_buffer = MaterialBuffer(scene)
-    triangle_buffer = TriangleBuffer(material_buffer, scene)
+    triangle_buffer = TriangleBuffer(scene)
     light_buffer = LightBuffer(scene)
 
     bvh_builder = BVHBackgroundBuilder(scene)
@@ -97,7 +97,7 @@ def main():
     material_buffer.bind(ctx, 2)
     light_buffer.bind(ctx, 3)
 
-    scene.create_texture_arrays(ctx, *render_settings.texture_size)
+    scene.create_texture_arrays(ctx)
     scene.bind_texture_arrays()
 
     scene.hdri.bind(ctx, 6)

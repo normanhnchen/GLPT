@@ -3,7 +3,8 @@ from torch.utils.data import Dataset, DataLoader
 import warnings
 # Disable warning from imageio of deprecated pkg_resources
 warnings.filterwarnings("ignore", module="imageio")
-import imageio.v3 as iio
+import cv2
+import os
 import random
 
 from src.settings import *
@@ -13,12 +14,23 @@ from src.network import *
 # https://dl.acm.org/doi/10.1145/3072959.3073708
 
 
-def exr_to_tensor(exr_path, keep_channels=None):
-    # Copy the original as it is not writable (PyTorch requirement)
-    img_arr = iio.imread(exr_path).copy()
+# Required; OpenCV disables EXR support by default
+os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 
+
+def load_exr(path, nan=0, posinf=0, neginf=0):
+    img = cv2.imread(str(path), cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+    # OpenCV loads as BGR, so convert to RGB
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    # Remove possible NaNs to prevent it from propagating through the network
+    img = np.nan_to_num(img, nan=nan, posinf=posinf, neginf=neginf)
+
+    return img
+
+
+def exr_to_tensor(exr_img, keep_channels=None):
     # Create 1d array from the texture data
-    t = torch.from_numpy(img_arr).float()
+    t = torch.from_numpy(exr_img).float()
     # Reshape from EXR to 3d tensor PyTorch convention (C, H, W)
     t = t.permute(2, 0, 1).contiguous()
     
@@ -43,14 +55,26 @@ class DenoiseDataset(Dataset):
         return self.num_samples
     
     def __getitem__(self, idx):
-        combined = exr_to_tensor(self.combined_path / f"combined_{idx}.exr", keep_channels=3)
-        albedo = exr_to_tensor(self.albedo_path / f"albedo_{idx}.exr", keep_channels=3)
-        normal = exr_to_tensor(self.normal_path / f"normal_{idx}.exr", keep_channels=3)
-        depth = exr_to_tensor(self.depth_path / f"depth_{idx}.exr", keep_channels=1)
-        target = exr_to_tensor(self.target_path / f"target_{idx}.exr", keep_channels=3)
+        # Load EXR images from their paths
+        # --------------------------------
+        combined = load_exr(self.combined_path / f"combined_{idx}.exr")
+        albedo = load_exr(self.albedo_path / f"albedo_{idx}.exr")
+        normal = load_exr(self.normal_path / f"normal_{idx}.exr")
+        depth = load_exr(self.depth_path / f"depth_{idx}.exr")
+        target = load_exr(self.target_path / f"target_{idx}.exr")
+
+        # Convert EXR images to PyTorch tensors
+        # -------------------------------------
+        combined = exr_to_tensor(combined, keep_channels=3)
+        albedo = exr_to_tensor(albedo, keep_channels=3)
+        normal = exr_to_tensor(normal, keep_channels=3)
+        depth = exr_to_tensor(depth, keep_channels=1)
+        target = exr_to_tensor(target, keep_channels=3)
 
         x = torch.cat([combined, albedo, normal, depth])
 
+        # Get random image patch
+        # ----------------------
         _, h, w = x.shape
 
         top = random.randint(0, h - self.patch_size)
