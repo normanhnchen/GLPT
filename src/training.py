@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 import cv2
 import os
 import random
@@ -102,9 +102,16 @@ class DenoiseDataset(Dataset):
         
         return x, target
 
+full_dataset = DenoiseDataset(file_paths.ai_training_renders)
+# Split 10% of the dataset to be validation cases
+val_size = max(1, int(0.1 * len(full_dataset)))
+# Split the rest of the dataset to be train cases
+train_size = len(full_dataset) - val_size
 
-train_dataset = DenoiseDataset(file_paths.ai_training_renders)
+train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
+
 train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False)
 
 denoiser = KPCN().to(AI_DEVICE)
 optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
@@ -113,16 +120,23 @@ criterion = nn.L1Loss()
 epochs = 100
 
 try:
-    checkpoint = torch.load("src/denoiser/checkpoint.pt", map_location=AI_DEVICE)
+    checkpoint = torch.load(file_paths.denoiser_last_checkpoint, map_location=AI_DEVICE)
     denoiser.load_state_dict(checkpoint["model_state_dict"])
     optim.load_state_dict(checkpoint["optimizer_state_dict"])
     starting_epoch = checkpoint["epoch"] + 1
+    best_val_loss = checkpoint.get("best_val_loss", torch.inf)
     print(f"Resumed from epoch {starting_epoch}")
+
 except FileNotFoundError:
+    best_val_loss = torch.inf
     starting_epoch = 0
 
+
 for epoch in range(starting_epoch, epochs):
-    avg_loss = 0
+    # Training loop
+    # -------------
+    denoiser.train()
+    epoch_loss = 0
     for x, target in train_loader:
         x = x.to(AI_DEVICE)
         combined = x[:, :3].to(AI_DEVICE)
@@ -134,16 +148,35 @@ for epoch in range(starting_epoch, epochs):
         loss.backward()
         optim.step()
 
-        avg_loss += loss.item() / len(train_loader)
+        epoch_loss += loss.item() / len(train_loader)
     
-    checkpoint = {
+    # Validation loop
+    # ---------------
+    denoiser.eval()
+    val_loss = 0
+    with torch.no_grad():
+        for x, target in val_loader:
+            x = x.to(AI_DEVICE)
+            combined = x[:, :3].to(AI_DEVICE)
+            target = target.to(AI_DEVICE)
+
+            prediction = denoiser(x, combined)
+            
+            val_loss += criterion(prediction, target).item() / len(val_loader)
+
+    print(f"Epoch: {epoch} | Epoch Loss: {epoch_loss:.6f} | Val Loss: {val_loss:.6f}")
+    
+    curr_checkpoint = {
         "epoch": epoch,
         "model_state_dict": denoiser.state_dict(),
         "optimizer_state_dict": optim.state_dict(),
-        "loss": avg_loss
+        "loss": epoch_loss,
+        "best_val_loss": best_val_loss,
     }
 
-    print(f"Epoch: {epoch} | Loss: {avg_loss}")
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        curr_checkpoint["best_val_loss"] = best_val_loss
+        torch.save(curr_checkpoint, file_paths.denoise_checkpoint)
 
-    torch.save(checkpoint, "src/denoiser/checkpoint.pt")
-
+    torch.save(curr_checkpoint, file_paths.denoiser_last_checkpoint)

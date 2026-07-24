@@ -56,27 +56,30 @@ class PostProcessSettings:
 class ShaderGroup:
     def __init__(self, config):
         for key, value in config.items():
+            value = ROOT_DIR / value
             setattr(self, key, value)
 
 class FilePaths:
     def __init__(self, json_settings):
         config = json_settings["file_paths"]
 
-        self.ai_training_scenes = config["ai_training_scenes"]
-        self.scene = config["scene"]
-        self.ai_training_hdris = config["ai_training_hdris"]
-        self.hdri = config["hdri"]
+        self.ai_training_scenes = ROOT_DIR / config["ai_training_scenes"]
+        self.scene = ROOT_DIR / config["scene"]
+        self.ai_training_hdris = ROOT_DIR / config["ai_training_hdris"]
+        self.hdri = ROOT_DIR / config["hdri"]
         self.ai_training_renders = ROOT_DIR / config["ai_training_renders"]
         self.renders = ROOT_DIR / config["renders"]
-        self.camera_capture_states = config["camera_capture_states"]
+        self.camera_capture_states = ROOT_DIR / config["camera_capture_states"]
+        self.denoise_checkpoint = ROOT_DIR / config["denoiser_checkpoint"]
+        self.denoiser_last_checkpoint = ROOT_DIR / config["denoiser_last_checkpoint"]
         
         self.path_tracing = ShaderGroup(config["path_tracing"])
         self.background = ShaderGroup(config["rasterization"]["background"])
         self.pbr = ShaderGroup(config["rasterization"]["pbr"])
         self.final = ShaderGroup(config["rasterization"]["final"])
 
-        self.scene_cache = config["cache"]["scene"]
-        self.bvh_cache = config["cache"]["bvh"]
+        self.scene_cache = ROOT_DIR / config["cache"]["scene"]
+        self.bvh_cache = ROOT_DIR / config["cache"]["bvh"]
 
 
 class RenderSettings:
