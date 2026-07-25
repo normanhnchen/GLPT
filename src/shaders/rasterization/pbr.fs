@@ -265,6 +265,10 @@ void main() {
     }
 
     vec3 color = SamplePBR(N, mat);
+
+    if (mat.hasEmission == 1) {
+        color += mat.emissive * mat.emissiveStrength;
+    }
     
     fragColor = vec4(color, 1.0);
 }
