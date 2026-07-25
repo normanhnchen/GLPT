@@ -428,7 +428,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float k) {
 }
 
 // https://learnopengl.com/PBR/Theory
-vec3 EvaluateBRDF(inout uvec3 v, vec3 L, Ray ray, HitRecord rec) {
+vec3 EvaluateBRDF(vec3 L, Ray ray, HitRecord rec) {
     Material mat = rec.mat;
 
     vec3 N = rec.normal;
@@ -592,6 +592,35 @@ bool Hit(Ray ray, inout HitRecord rec) {
     return hitAnything;
 }
 
+vec3 SampleNEE(HitRecord rec, Ray ray, Light light) {
+    vec3 L; float dist; vec3 Li;
+    // Point
+    // https://www.pbr-book.org/3ed-2018/Light_Sources/Point_Lights#PointLight
+    if (light.type == 0) {
+        L = normalize(light.pos - rec.point);
+        dist = length(light.pos - rec.point);
+        Li = light.col * light.intensity / (dist * dist);
+    }
+
+    // Check if light is below the surface
+    vec3 N = rec.normal;
+    float NdotL = dot(N, L);
+    if (NdotL <= 0.0) return vec3(0.0);
+
+    // Shadow ray
+    Ray shadowRay;
+    shadowRay.orig = rec.point + rec.geoNormal * EPSILON;
+    shadowRay.dir = L;
+
+    HitRecord shadowRec;
+    if (Hit(shadowRay, shadowRec) && shadowRec.t < dist) {
+        return vec3(0.0); // Occluded
+    }
+
+    vec3 f = EvaluateBRDF(L, ray, rec);
+    return f * Li;
+}
+
 vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut, out float depthOut) {
     HitRecord rec;
 
@@ -694,47 +723,54 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
 
         rec.mat = mat;
 
-        vec3 bounceDir;
-        vec3 brdf = SamplePBR(v, ray, rec, bounceDir);
-
-        if (isFirstHit) {
-            baseColorOut = mat.baseCol;
-            normalOut = rec.normal;
-            // Subtract from 1 as depth color reduces with distance
-            float depth = 1.0 - rec.t * depthFactor / 2.0;
-            depthOut = clamp(depth, 0.0, 1.0);
-
-            isFirstHit = false;
+        vec3 direct = vec3(0.0);
+        for (int li = 0; li < lights.length(); li++) {
+            direct += SampleNEE(rec, ray, lights[li]);
         }
 
-        bool didRefract = dot(bounceDir, rec.geoNormal) < 0.0;
+        return direct;
 
-        vec3 transmittance;
-        BeerLambert(insideMedium, entryPoint, rec, transmittance, didRefract);
+        // vec3 bounceDir;
+        // vec3 brdf = SamplePBR(v, ray, rec, bounceDir);
 
-        throughput *= transmittance;
-        throughput *= brdf;
+        // if (isFirstHit) {
+        //     baseColorOut = mat.baseCol;
+        //     normalOut = rec.normal;
+        //     // Subtract from 1 as depth color reduces with distance
+        //     float depth = 1.0 - rec.t * depthFactor / 2.0;
+        //     depthOut = clamp(depth, 0.0, 1.0);
 
-        ray.dir = bounceDir;
+        //     isFirstHit = false;
+        // }
 
-        vec3 offsetDir = didRefract ? -rec.geoNormal : rec.geoNormal;
-        ray.orig = rec.point + offsetDir * EPSILON;
+        // bool didRefract = dot(bounceDir, rec.geoNormal) < 0.0;
 
-        // Russian Roulette
-        // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Russian_Roulette_and_Splitting
+        // vec3 transmittance;
+        // BeerLambert(insideMedium, entryPoint, rec, transmittance, didRefract);
 
-        if (i > 3) {
-            // Termination probability
-            float q = 1.0 - max(throughput.r, max(throughput.g, throughput.b));
-            float xi = PCG3d(v).x;
+        // throughput *= transmittance;
+        // throughput *= brdf;
 
-            if (xi < q) {
-                // Return radiance so far
-                break;
-            } else {
-                throughput = throughput / (1.0 - q);
-            }
-        }
+        // ray.dir = bounceDir;
+
+        // vec3 offsetDir = didRefract ? -rec.geoNormal : rec.geoNormal;
+        // ray.orig = rec.point + offsetDir * EPSILON;
+
+        // // Russian Roulette
+        // // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Russian_Roulette_and_Splitting
+
+        // if (i > 3) {
+        //     // Termination probability
+        //     float q = 1.0 - max(throughput.r, max(throughput.g, throughput.b));
+        //     float xi = PCG3d(v).x;
+
+        //     if (xi < q) {
+        //         // Return radiance so far
+        //         break;
+        //     } else {
+        //         throughput = throughput / (1.0 - q);
+        //     }
+        // }
     }
 
     return radiance;

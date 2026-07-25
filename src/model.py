@@ -382,7 +382,7 @@ class Scene:
             ))
 
             light_type_str = light_def.get("type", "point")
-            type_id = {"point": 0, "direction": 1, "spot": 2}[light_type_str]
+            type_id = {"point": 0, "directional": 1, "spot": 2}[light_type_str]
             spot = light_def.get("spot", {})
 
             lights.append((
