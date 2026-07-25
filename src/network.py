@@ -1,10 +1,5 @@
 import torch
 import torch.nn as nn
-import warnings
-# Disable warning from imageio of deprecated pkg_resources
-warnings.filterwarnings("ignore", module="imageio")
-import imageio.v3 as iio
-
 from src.dtypes import *
 
 
@@ -56,19 +51,6 @@ class DecoderBlock(nn.Module):
     
     def forward(self, x, skip_connection):
         x = self.up(x)
-
-        # Apply padding if needed to prevent shape mismatches
-        # when concatenating with the skip connection
-        delta_height = skip_connection.shape[2] - x.shape[2]
-        delta_width = skip_connection.shape[3] - x.shape[3]
-        if delta_height != 0 or delta_width != 0:
-            pad = nn.ReplicationPad2d([
-                delta_width // 2, # Left
-                delta_width - delta_width // 2, # Right
-                delta_height // 2, # Top
-                delta_height - delta_height // 2 # Bottom
-            ])
-            x = pad(x)
         
         # Concatenate UNet skip connection
         x = torch.cat([x, skip_connection], dim=1)
@@ -120,13 +102,43 @@ class KPCN(nn.Module):
         self.kernel_size = kernel_size
         self.unet = UNet(in_channels=in_channels, out_channels=kernel_size**2)
     
+    def _pad_to_multiple(self, x, multiple=16):
+        """
+        Pads tensors on the right and bottom sides to a multiple to prevent
+        size mismatches when concatenating skip connections.
+        """
+
+        _, _, h, w = x.shape
+
+        pad_h = (multiple - (h % multiple)) % multiple
+        pad_w = (multiple - (w % multiple)) % multiple
+
+        if pad_h == 0 and pad_w == 0:
+            return x
+    
+        pad = nn.ReflectionPad2d([
+            0, # Left
+            pad_w, # Right
+            0, # Top
+            pad_h, # Bottom
+        ])
+        
+        return pad(x)
+    
     def forward(self, x, combined):
+        # Original spatial dimensions
+        _, _, h, w = x.shape
+
+        x = self._pad_to_multiple(x)
+        combined = self._pad_to_multiple(combined)
+
         # (B, K*K, H, W)
         weights = self.unet(x)
         # Normalize
         weights = torch.softmax(weights, dim=1)
         combined = self._apply_kernel(weights, combined)
-        return combined
+
+        return combined[:, :, :h, :w]
     
     def _apply_kernel(self, weights, combined):
         B, _, H, W = weights.shape
