@@ -592,8 +592,6 @@ bool Hit(Ray ray, inout HitRecord rec) {
     return hitAnything;
 }
 
-// NOTE: Scale radiance by arbitrary values for now for adjustment
-// Add proper fix in the future: Convert from the gltf export units
 // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md
 // https://www.pbr-book.org/4ed/Light_Sources/Point_Lights
 vec3 SampleNEE(HitRecord rec, Ray ray, Light light) {
@@ -622,8 +620,6 @@ vec3 SampleNEE(HitRecord rec, Ray ray, Light light) {
 
         Li = light.col * light.intensity * attenuation;
     }
-
-    Li /= 4.0 * PI * 100.0;
 
     // Check if light is below the surface
     vec3 N = rec.normal;

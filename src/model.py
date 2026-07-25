@@ -385,11 +385,17 @@ class Scene:
             type_id = {"point": 0, "directional": 1, "spot": 2}[light_type_str]
             spot = light_def.get("spot", {})
 
+            # glTF KHR_lights_punctual defines intensity in photometric units
+            # Convert to radiometric units matching Blender's export constant
+            LUMENS_TO_WATTS = 1.0 / 683.0
+
+            intensity = light_def.get("intensity", 1) * LUMENS_TO_WATTS
+
             lights.append((
                 light_def.get("color", [1, 1, 1]),
                 type_id,
                 list(position),
-                light_def.get("intensity", 1),
+                intensity,
                 list(direction),
                 light_def.get("range", 0),
                 1 if spot else 0,
