@@ -117,19 +117,13 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
+// NOTE: Scale radiance by arbitrary values for now for adjustment
+// Add proper fix in the future: Convert from the gltf export units
 // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md
 // https://www.pbr-book.org/4ed/Light_Sources/Point_Lights
 void SampleLight(Light light, out vec3 L, out vec3 radiance) {
-    // Directional
-    if (light.type == 1) {
-        L = normalize(-light.dir);
-        radiance = light.col * light.intensity;
-        return;
-    }
-
     L = normalize(light.pos - worldPos);
     float dist = length(light.pos - worldPos);
-
     // Prevent division by zero
     float attenuation = 1.0 / max(dist * dist, 0.0001);
 
@@ -138,20 +132,26 @@ void SampleLight(Light light, out vec3 L, out vec3 radiance) {
         radiance = light.col * light.intensity * attenuation;
         radiance /= 4.0 * PI * 100.0;
         return;
-    } 
-    
+    }
+    // Directional
+    else if (light.type == 1) {
+        L = normalize(-light.dir);
+        radiance = light.col * light.intensity / 10000.0;
+        return;
+    }
     // Spot
+    else if (light.type == 2) {
+        float lightAngleScale = 1.0 / max(0.001, cos(light.innerConeAngle) - cos(light.outerConeAngle));
+        float lightAngleOffset = -cos(light.outerConeAngle) * lightAngleScale;
 
-    float lightAngleScale = 1.0 / max(0.001, cos(light.innerConeAngle) - cos(light.outerConeAngle));
-    float lightAngleOffset = -cos(light.outerConeAngle) * lightAngleScale;
+        float cd = dot(normalize(-light.dir), L);
+        float angularAttenuation = clamp(cd * lightAngleScale + lightAngleOffset, 0.0, 1.0);
+        angularAttenuation *= angularAttenuation;
+        attenuation *= angularAttenuation;
 
-    float cd = dot(normalize(-light.dir), L);
-    float angularAttenuation = clamp(cd * lightAngleScale + lightAngleOffset, 0.0, 1.0);
-    angularAttenuation *= angularAttenuation;
-    attenuation *= angularAttenuation;
-
-    radiance = light.col * light.intensity * attenuation;
-    radiance /= 4.0 * PI * 100.0;
+        radiance = light.col * light.intensity * attenuation;
+        radiance /= 4.0 * PI * 100.0;
+    }
 }
 
 vec3 SampleHDRI(vec3 dir) {

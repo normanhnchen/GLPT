@@ -592,15 +592,38 @@ bool Hit(Ray ray, inout HitRecord rec) {
     return hitAnything;
 }
 
+// NOTE: Scale radiance by arbitrary values for now for adjustment
+// Add proper fix in the future: Convert from the gltf export units
+// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md
+// https://www.pbr-book.org/4ed/Light_Sources/Point_Lights
 vec3 SampleNEE(HitRecord rec, Ray ray, Light light) {
-    vec3 L; float dist; vec3 Li;
+    vec3 L = normalize(light.pos - rec.point);
+    float dist = length(light.pos - rec.point);
+    vec3 Li;
     // Point
-    // https://www.pbr-book.org/3ed-2018/Light_Sources/Point_Lights#PointLight
     if (light.type == 0) {
-        L = normalize(light.pos - rec.point);
-        dist = length(light.pos - rec.point);
-        Li = light.col * light.intensity / (dist * dist);
+        Li = light.col * light.intensity / max(dist * dist, 0.0001);
     }
+    // Directional
+    else if (light.type == 1) {
+        L = normalize(-light.dir);
+        dist = INF;
+        Li = light.col * light.intensity;
+    }
+    // Spot
+    else if (light.type == 2) {
+        float lightAngleScale = 1.0 / max(0.001, cos(light.innerConeAngle) - cos(light.outerConeAngle));
+        float lightAngleOffset = -cos(light.outerConeAngle) * lightAngleScale;
+
+        float cd = dot(normalize(-light.dir), L);
+        float angularAttenuation = clamp(cd * lightAngleScale + lightAngleOffset, 0.0, 1.0);
+        angularAttenuation *= angularAttenuation;
+        float attenuation = angularAttenuation / max(dist * dist, 0.0001);
+
+        Li = light.col * light.intensity * attenuation;
+    }
+
+    Li /= 4.0 * PI * 100.0;
 
     // Check if light is below the surface
     vec3 N = rec.normal;
@@ -728,7 +751,7 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
             direct += SampleNEE(rec, ray, lights[li]);
         }
 
-        return direct;
+        return direct + depthFactor * 0.000001;
 
         // vec3 bounceDir;
         // vec3 brdf = SamplePBR(v, ray, rec, bounceDir);
