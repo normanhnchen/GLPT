@@ -122,6 +122,10 @@ layout(std430, binding = 5) buffer TriIndicesBuffer {
     int triIndices[];
 };
 
+layout(std430, binding = 5) buffer EmissiveTriIndicesBuffer {
+    int emissiveTriIndices[];
+};
+
 layout(binding = 0) uniform sampler2DArray baseColorTextures;
 layout(binding = 1) uniform sampler2DArray emissiveTextures;
 layout(binding = 2) uniform sampler2DArray roughnessTextures;
@@ -504,7 +508,7 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar,
     vec3 tangent = normalize(w * tri.v0.tangent + u * tri.v1.tangent + v * tri.v2.tangent);
     vec3 bitangent = normalize(w * tri.v0.bitangent + u * tri.v1.bitangent + v * tri.v2.bitangent);
     
-    bool backFace = dot(normal, ray.dir) > 0.0;
+    bool backFace = dot(geoNormal, ray.dir) > 0.0;
 
     if (backFace) {
         geoNormal = -geoNormal;

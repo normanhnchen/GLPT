@@ -88,6 +88,7 @@ def main():
     material_buffer = MaterialBuffer(scene)
     triangle_buffer = TriangleBuffer(scene)
     light_buffer = LightBuffer(scene)
+    emissive_tri_indices_buffer = EmissiveTriangleIndicesBuffer(scene)
 
     bvh_builder = BVHBackgroundBuilder(scene)
     bvh_ready = False
@@ -96,6 +97,7 @@ def main():
     triangle_buffer.bind(ctx, 1)
     material_buffer.bind(ctx, 2)
     light_buffer.bind(ctx, 3)
+    emissive_tri_indices_buffer.bind(ctx, 6)
 
     scene.create_texture_arrays(ctx)
     scene.bind_texture_arrays()

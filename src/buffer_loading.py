@@ -158,3 +158,11 @@ class TriangleIndicesBuffer:
     def bind(self, ctx, loc):
         self.tri_indices_buffer = ctx.buffer(self.tri_indices_data.tobytes())
         self.tri_indices_buffer.bind_to_storage_buffer(loc)
+
+class EmissiveTriangleIndicesBuffer:
+    def __init__(self, scene):
+        self.emissive_tri_indices_data = scene.emissive_triangles.astype(i4)
+
+    def bind(self, ctx, loc):
+        self.emissive_tri_indices_buffer = ctx.buffer(self.emissive_tri_indices_data.tobytes())
+        self.emissive_tri_indices_buffer.bind_to_storage_buffer(loc)

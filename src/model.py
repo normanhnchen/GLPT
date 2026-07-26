@@ -317,13 +317,19 @@ class Scene:
 
         self.num_lights = len(self.lights)
 
+        self._find_emissive_triangles()
+
         scene_min = np.min(self.vertices, axis=0)
         scene_max = np.max(self.vertices, axis=0)
-
         self.extent = np.linalg.norm(scene_max - scene_min)
-    
+
         self.bvh = None
         self.num_bvh_nodes = None
+
+    def _find_emissive_triangles(self):
+        mat_has_emission = np.array([bool(mat.has_emission) for mat in self.materials])
+        triangle_has_emission = mat_has_emission[self.material_ids]
+        self.emissive_triangles = np.where(triangle_has_emission)[0]
     
     def build_bvh(self):
         try:
@@ -557,6 +563,7 @@ def save_scene_data(scene, cache_path):
         metallic_textures=scene.metallic_textures,
         normal_textures=scene.normal_textures,
         occlusion_textures=scene.occlusion_textures,
+        emissive_triangles=scene.emissive_triangles
     )
 
 
@@ -583,6 +590,7 @@ def load_scene_data(scene, cache_path):
     scene.metallic_textures = data["metallic_textures"]
     scene.normal_textures = data["normal_textures"]
     scene.occlusion_textures = data["occlusion_textures"]
+    scene.emissive_triangles = data["emissive_triangles"]
     scene.num_triangles = len(scene.triangles)
     scene.bvh = None
     scene.num_bvh_nodes = None
