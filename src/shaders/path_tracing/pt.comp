@@ -465,6 +465,104 @@ vec3 SampleBSDF(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir, out f
     }
 }
 
+float GGXVNDF_PDF(vec3 N, vec3 V, vec3 L, float a) {
+    float NdotV = abs(dot(N, V));
+    vec3 H = normalize(V + L);
+    float a2 = a * a;
+
+    float D = DistributionGGX(N, H, a);
+    float G1 = SmithGGXMasking(L, V, N, a2);
+
+    return (D * G1) / (4.0 * NdotV);
+}
+
+float CosineSamplePDF(vec3 N, vec3 L) {
+    float NdotL = max(dot(N, L), 0.0);
+    return NdotL / PI;
+}
+
+// https://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf
+float BTDF_PDF(vec3 N, vec3 V, vec3 L, float a, float eta) {
+    float NdotV = abs(dot(N, V));
+    float a2 = a * a;
+
+    vec3 H = normalize(V + eta * L);
+    if (dot(N, H) < 0.0) H = -H;
+
+    float D = DistributionGGX(N, H, a);
+    float G1 = SmithGGXMasking(L, V, N, a2);
+
+    float VdotH = dot(V, H);
+    float LdotH = dot(L, H);
+
+    float denom = VdotH + eta * LdotH;
+    float dwh_dwi = abs((eta * eta * LdotH) / max(denom * denom, 0.0001));
+    return D * G1 * abs(VdotH) / max(NdotV, 0.0001) * dwh_dwi;
+}
+
+float BSDF_PDF(vec3 L, Ray ray, HitRecord rec) {
+    Material mat = rec.mat;
+    vec3 N = rec.normal;
+    vec3 V = -ray.dir;
+
+    float NdotV = abs(dot(N, V));
+
+    vec3 F0 = vec3(0.04);
+    F0 = mix(F0, mat.baseCol, mat.metallic);
+    
+    vec3 F_approx = FresnelSchlick(NdotV, F0);
+
+    // AI method: average the Fresnel approximation for a single float probability
+    float weight = (F_approx.r + F_approx.g + F_approx.b) / 3.0;
+    
+    float specularChance = clamp(weight, 0.05, 0.95);
+    float refractChance = mat.transmission * (1.0 - specularChance);
+    // Fully metal objects cannot refract
+    refractChance *= (1.0 - mat.metallic);
+    float diffuseChance = 1.0 - specularChance - refractChance;
+
+    float NdotL = dot(N, L);
+
+    float a = mat.roughness * mat.roughness;
+
+    if (NdotL > 0.0) {
+        float specularPdf = GGXVNDF_PDF(N, V, L, a) * specularChance;
+        float diffusePdf = CosineSamplePDF(N, L) * diffuseChance;
+
+        return specularPdf + diffusePdf;
+    } else {
+        return BTDF_PDF(N, V, L, a, rec.eta) * refractChance;
+    }
+}
+
+float LightPDF(HitRecord rec, Ray ray, vec3 prevPoint) {
+    int numEmissive = emissiveTriIndices.length();
+
+    Triangle tri = triangles[rec.triIdx];
+    vec3 L = normalize(rec.point - prevPoint);
+    float dist = length(rec.point - prevPoint);
+
+    // Check if ray hit light's backface
+    float cosLight = dot(rec.normal, -L);
+    if (cosLight <= 0.0) {
+        return 0.0;
+    }
+
+    float triArea = 0.5 * length(cross(tri.v1.pos - tri.v0.pos, tri.v2.pos - tri.v0.pos));
+
+    float pdfTri = 1.0 / float(numEmissive);
+    float pdfPoint = (dist * dist) / (cosLight * triArea);
+    float pdf = pdfTri * pdfPoint;
+    return pdf;
+}
+
+// https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Importance_Sampling#MultipleImportanceSampling
+float PowerHeuristic(int nf, float fPdf, float gPdf) {
+    float f = float(nf) * fPdf;
+    float g = float(nf) * gPdf;
+    return (f * f) / (f * f + g * g);
+}
+
 // https://learnopengl.com/PBR/Theory
 vec3 EvaluateBRDF(vec3 L, Ray ray, HitRecord rec) {
     Material mat = rec.mat;
@@ -739,40 +837,16 @@ vec3 SampleAreaLight(HitRecord rec, Ray ray, inout uvec3 v) {
 
     float pdfTri = 1.0 / float(numEmissive);
     float pdfPoint = (dist * dist) / (cosLight * triArea);
-    float pdf = pdfTri * pdfPoint;
+    float lightPdf = pdfTri * pdfPoint;
 
     Material lightMat = materials[tri.matId];
 
     vec3 f = EvaluateBRDF(L, ray, rec);
-    return (f * lightMat.emissive * lightMat.emissiveStrength) / pdf;
-}
+    // Multiple Importance Sample (MIS)
+    float bsdfPdf = BSDF_PDF(L, ray, rec);
+    float misWeight = PowerHeuristic(1, bsdfPdf, lightPdf);
 
-float LightPDF(HitRecord rec, Ray ray, vec3 prevPoint) {
-    int numEmissive = emissiveTriIndices.length();
-
-    Triangle tri = triangles[rec.triIdx];
-    vec3 L = normalize(rec.point - prevPoint);
-    float dist = length(rec.point - prevPoint);
-
-    // Check if ray hit light's backface
-    float cosLight = dot(rec.normal, -L);
-    if (cosLight <= 0.0) {
-        return 0.0;
-    }
-
-    float triArea = 0.5 * length(cross(tri.v1.pos - tri.v0.pos, tri.v2.pos - tri.v0.pos));
-
-    float pdfTri = 1.0 / float(numEmissive);
-    float pdfPoint = (dist * dist) / (cosLight * triArea);
-    float pdf = pdfTri * pdfPoint;
-    return pdf;
-}
-
-// https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Importance_Sampling#MultipleImportanceSampling
-float PowerHeuristic(int nf, float fPdf, float gPdf) {
-    float f = float(nf) * fPdf;
-    float g = float(nf) * gPdf;
-    return (f * f) / (f * f + g * g);
+    return (f * lightMat.emissive * lightMat.emissiveStrength) / lightPdf * misWeight;
 }
 
 vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut, out float depthOut) {
@@ -792,6 +866,9 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
     baseColorOut = vec3(0.0);
     normalOut = vec3(0.0);
     depthOut = 0.0;
+
+    float prevBsdfPdf = 0.0;
+    vec3 prevPoint = vec3(0.0);
 
     for (int i = 0; i < maxBounces; i++) {
         if (!Hit(ray, rec)) {
@@ -851,7 +928,14 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
         
         // Add light contribution
         if (mat.hasEmission == 1) {
-            radiance += throughput * mat.emissive * mat.emissiveStrength;
+            if (isFirstHit) {
+                radiance += throughput * mat.emissive * mat.emissiveStrength;
+            } else {
+                // Multiple Importance Sample (MIS)
+                float lightPdf = LightPDF(rec, ray, prevPoint);
+                float misWeight = PowerHeuristic(1, prevBsdfPdf, lightPdf);
+                radiance += throughput * mat.emissive * mat.emissiveStrength * misWeight;
+            }
         }
 
         if (mat.alphaMode == 1) {
@@ -878,8 +962,6 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
         for (int li = 0; li < lights.length(); li++) {
             direct += SamplePunctualLight(rec, ray, lights[li]);
         }
-        // NOTE: Currently add area light sampling until MIS is implemented
-        // Causes double sampling because of area sampling + BRDF sampling
         direct += SampleAreaLight(rec, ray, v);
 
         radiance += direct;
@@ -897,6 +979,9 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
 
             isFirstHit = false;
         }
+
+        prevBsdfPdf = bsdfPdf;
+        prevPoint = rec.point;
 
         bool didRefract = dot(bounceDir, rec.geoNormal) < 0.0;
 
