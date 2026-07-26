@@ -122,7 +122,7 @@ layout(std430, binding = 5) buffer TriIndicesBuffer {
     int triIndices[];
 };
 
-layout(std430, binding = 5) buffer EmissiveTriIndicesBuffer {
+layout(std430, binding = 6) buffer EmissiveTriIndicesBuffer {
     int emissiveTriIndices[];
 };
 
@@ -598,7 +598,7 @@ bool Hit(Ray ray, inout HitRecord rec) {
 
 // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md
 // https://www.pbr-book.org/4ed/Light_Sources/Point_Lights
-vec3 SampleNEE(HitRecord rec, Ray ray, Light light) {
+vec3 SamplePunctualLight(HitRecord rec, Ray ray, Light light) {
     vec3 L = normalize(light.pos - rec.point);
     float dist = length(light.pos - rec.point);
     vec3 Li;
@@ -625,7 +625,7 @@ vec3 SampleNEE(HitRecord rec, Ray ray, Light light) {
         Li = light.col * light.intensity * attenuation;
     }
 
-    // Check if light is below the surface
+    // Check if light is above the surface
     vec3 N = rec.normal;
     float NdotL = dot(N, L);
     if (NdotL <= 0.0) return vec3(0.0);
@@ -642,6 +642,75 @@ vec3 SampleNEE(HitRecord rec, Ray ray, Light light) {
 
     vec3 f = EvaluateBRDF(L, ray, rec);
     return f * Li;
+}
+
+vec3 SampleAreaLight(HitRecord rec, Ray ray, inout uvec3 v) {
+    int numEmissive = emissiveTriIndices.length();
+    if (numEmissive == 0) {
+        return vec3(0.0);
+    }
+
+    vec3 Xi = PCG3d(v);
+
+    // Uniformly sample random emissive triangle
+    int emissiveTriIdx = int(Xi.x * float(numEmissive));
+    int triIdx = emissiveTriIndices[emissiveTriIdx];
+    Triangle tri = triangles[triIdx];
+
+    // Uniformly sample random point on triangle
+    // https://pbr-book.org/4ed/Shapes/Triangle_Meshes#Sampling
+    float b0, b1, b2;
+    if (Xi.y < Xi.z) {
+        b0 = Xi.y / 2.0;
+        b1 = Xi.z - b0;
+        b2 = 1.0 - b0 - b1;
+    } else {
+        b1 = Xi.z / 2.0;
+        b0 = Xi.y - b1;
+        b2 = 1.0 - b0 - b1;
+    }
+    vec3 p = b0 * tri.v0.pos + b1 * tri.v1.pos + b2 * tri.v2.pos;
+    vec3 lightNormal = normalize(b0 * tri.v0.normal + b1 * tri.v1.normal + b2 * tri.v2.normal);
+
+    vec3 L = normalize(p - rec.point);
+    float dist = length(p - rec.point);
+
+    vec3 N = rec.normal;
+
+    // Check if ray hit light's backface
+    float cosLight = dot(lightNormal, -L);
+    if (cosLight <= 0.0) {
+        return vec3(0.0);
+    }
+    // Check if light is above the surface
+    float NdotL = dot(N, L);
+    if (NdotL <= 0.0) {
+        return vec3(0.0);
+    }
+
+    // Shadow ray
+    Ray shadowRay;
+    shadowRay.orig = rec.point + rec.geoNormal * EPSILON;
+    shadowRay.dir = L;
+
+    // Tested value which currently works to prevent self-intersection
+    float offset = EPSILON * 10.0;
+
+    HitRecord shadowRec;
+    if (Hit(shadowRay, shadowRec) && shadowRec.t < dist - offset) {
+        return vec3(0.0); // Occluded
+    }
+
+    float triArea = 0.5 * length(cross(tri.v1.pos - tri.v0.pos, tri.v2.pos - tri.v0.pos));
+
+    float pdfTri = 1.0 / float(numEmissive);
+    float pdfPoint = (dist * dist) / (cosLight * triArea);
+    float pdf = pdfTri * pdfPoint;
+
+    Material lightMat = materials[tri.matId];
+
+    vec3 f = EvaluateBRDF(L, ray, rec);
+    return (f * lightMat.emissive * lightMat.emissiveStrength) / pdf;
 }
 
 vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut, out float depthOut) {
@@ -720,10 +789,7 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
         
         // Add light contribution
         if (mat.hasEmission == 1) {
-            // Get glTF extension
-            float emissiveStrength = mat.emissiveStrength;
-            mat.emissive *= emissiveStrength;
-            radiance += throughput * mat.emissive;
+            radiance += throughput * mat.emissive * mat.emissiveStrength;
         }
 
         if (mat.alphaMode == 1) {
@@ -748,8 +814,11 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
 
         vec3 direct = vec3(0.0);
         for (int li = 0; li < lights.length(); li++) {
-            direct += SampleNEE(rec, ray, lights[li]);
+            direct += SamplePunctualLight(rec, ray, lights[li]);
         }
+        // NOTE: Currently add area light sampling until MIS is implemented
+        // Causes double sampling because of area sampling + BRDF sampling
+        direct += SampleAreaLight(rec, ray, v);
 
         radiance += direct;
 

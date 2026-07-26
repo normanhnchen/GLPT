@@ -106,7 +106,7 @@ class Material:
             self.has_emission = set_i4(1)
         else:
             # Set to no emission 
-            self.emissive_color = np.array([-1, -1, -1], dtype=f4)
+            self.emissive_color = np.array([0, 0, 0], dtype=f4)
             self.has_emission = set_i4(0)
 
         if roughness is not None:
