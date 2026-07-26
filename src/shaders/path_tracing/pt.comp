@@ -713,6 +713,13 @@ vec3 SampleAreaLight(HitRecord rec, Ray ray, inout uvec3 v) {
     return (f * lightMat.emissive * lightMat.emissiveStrength) / pdf;
 }
 
+// https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Importance_Sampling#MultipleImportanceSampling
+float PowerHeuristic(int nf, float fPdf, float gPdf) {
+    float f = float(nf) * fPdf;
+    float g = float(nf) * gPdf;
+    return (f * f) / (f * f + g * g);
+}
+
 vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut, out float depthOut) {
     HitRecord rec;
 
