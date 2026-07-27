@@ -124,6 +124,8 @@ class TriangleBuffer:
 
         triangle_data["matId"] = scene.material_ids
 
+        triangle_data["area"] = scene.triangle_areas
+
         self.triangle_data = triangle_data
 
     def bind(self, ctx, loc):
@@ -159,10 +161,15 @@ class TriangleIndicesBuffer:
         self.tri_indices_buffer = ctx.buffer(self.tri_indices_data.tobytes())
         self.tri_indices_buffer.bind_to_storage_buffer(loc)
 
-class EmissiveTriangleIndicesBuffer:
+class EmissiveTrianglesBuffer:
     def __init__(self, scene):
-        self.emissive_tri_indices_data = scene.emissive_triangles.astype(i4)
+        emissive_triangles_data = np.zeros(scene.num_emissive_triangles, dtype=emissive_triangles_dtype)
+
+        for i in range(scene.num_emissive_triangles):
+            emissive_triangles_data["triIdx"] = scene.emissive_triangle_indices[i]
+
+        self.emissive_triangles_data = emissive_triangles_data
 
     def bind(self, ctx, loc):
-        self.emissive_tri_indices_buffer = ctx.buffer(self.emissive_tri_indices_data.tobytes())
-        self.emissive_tri_indices_buffer.bind_to_storage_buffer(loc)
+        self.emissive_triangles_buffer = ctx.buffer(self.emissive_triangles_data.tobytes())
+        self.emissive_triangles_buffer.bind_to_storage_buffer(loc)

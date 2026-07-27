@@ -1,3 +1,5 @@
+import numpy as np
+
 from src.dtypes import *
 from src.settings import *
 
@@ -70,13 +72,14 @@ vertex_dtype = np.dtype([
     ("tangent", *vec3),
     ("pad4", f4),
     ("bitangent", *vec3),
-    ("pad5", f4),
+    ("pad5", f4)
 ])
 
 triangle_dtype = np.dtype([
     ("v0", vertex_dtype), ("v1", vertex_dtype), ("v2", vertex_dtype),
     ("matId", i4),
-    ("pad1", f4), ("pad2", f4), ("pad3", f4)
+    ("area", f4), # -1 if not emissive
+    ("pad1", f4), ("pad2", f4)
 ])
 
 bvh_node_dtype = np.dtype([
@@ -88,4 +91,8 @@ bvh_node_dtype = np.dtype([
     ("triCount", i4),
     ("isLeaf", i4),
     ("pad1", f4)
+])
+
+emissive_triangles_dtype = np.dtype([
+    ("triIdx", i4)
 ])

@@ -326,10 +326,30 @@ class Scene:
         self.bvh = None
         self.num_bvh_nodes = None
 
+    def _calculate_triangle_areas(self, vertices, indices):
+        v0 = vertices[indices][:, 0]
+        v1 = vertices[indices][:, 1]
+        v2 = vertices[indices][:, 2]
+
+        e1 = v1 - v0
+        e2 = v2 - v0
+
+        cross = np.cross(e1, e2)
+
+        areas = 0.5 * np.linalg.norm(cross, axis=1)
+        return areas
+
     def _find_emissive_triangles(self):
         mat_has_emission = np.array([bool(mat.has_emission) for mat in self.materials])
         triangle_has_emission = mat_has_emission[self.material_ids]
-        self.emissive_triangles = np.where(triangle_has_emission)[0]
+        self.emissive_triangle_indices = np.where(triangle_has_emission)[0]
+        self.num_emissive_triangles = len(self.emissive_triangle_indices)
+        emissive_triangle_areas = self._calculate_triangle_areas(
+            self.vertices,
+            self.triangles[self.emissive_triangle_indices]
+        )
+        self.triangle_areas = np.full(self.num_triangles, -1, dtype=f4)
+        self.triangle_areas[self.emissive_triangle_indices] = emissive_triangle_areas
     
     def build_bvh(self):
         try:
@@ -563,7 +583,8 @@ def save_scene_data(scene, cache_path):
         metallic_textures=scene.metallic_textures,
         normal_textures=scene.normal_textures,
         occlusion_textures=scene.occlusion_textures,
-        emissive_triangles=scene.emissive_triangles
+        emissive_triangle_indices=scene.emissive_triangle_indices,
+        triangle_areas=scene.triangle_areas
     )
 
 
@@ -590,7 +611,9 @@ def load_scene_data(scene, cache_path):
     scene.metallic_textures = data["metallic_textures"]
     scene.normal_textures = data["normal_textures"]
     scene.occlusion_textures = data["occlusion_textures"]
-    scene.emissive_triangles = data["emissive_triangles"]
+    scene.emissive_triangle_indices = data["emissive_triangle_indices"]
+    scene.triangle_areas = data["triangle_areas"]
+    scene.num_emissive_triangles = len(scene.emissive_triangle_indices)
     scene.num_triangles = len(scene.triangles)
     scene.bvh = None
     scene.num_bvh_nodes = None

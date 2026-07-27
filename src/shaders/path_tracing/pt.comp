@@ -75,7 +75,8 @@ struct Material {
 struct Triangle {
     Vertex v0, v1, v2;
     int matId;
-    float pad1, pad2, pad3;
+    float area; // -1 if not emissive
+    float pad1, pad2;
 };
 
 struct BVHNode {
@@ -102,6 +103,10 @@ struct Light {
     float pad1;
 };
 
+struct EmissiveTriangle {
+    int triIdx;
+};
+
 layout(std430, binding = 1) buffer TriangleBuffer {
     Triangle triangles[];
 };
@@ -122,8 +127,8 @@ layout(std430, binding = 5) buffer TriIndicesBuffer {
     int triIndices[];
 };
 
-layout(std430, binding = 6) buffer EmissiveTriIndicesBuffer {
-    int emissiveTriIndices[];
+layout(std430, binding = 6) buffer EmissiveTrianglesBuffer {
+    EmissiveTriangle emissiveTriangles[];
 };
 
 layout(binding = 0) uniform sampler2DArray baseColorTextures;
@@ -155,6 +160,8 @@ struct HitRecord {
     float t;
     int triIdx;
     bool backFace;
+    // Only used for emissive triangles
+    float triArea;
 };
 
 #define EPSILON 1e-4
@@ -536,7 +543,7 @@ float BSDF_PDF(vec3 L, Ray ray, HitRecord rec) {
 }
 
 float LightPDF(HitRecord rec, Ray ray, vec3 prevPoint) {
-    int numEmissive = emissiveTriIndices.length();
+    int numEmissive = emissiveTriangles.length();
 
     Triangle tri = triangles[rec.triIdx];
     vec3 L = normalize(rec.point - prevPoint);
@@ -548,10 +555,8 @@ float LightPDF(HitRecord rec, Ray ray, vec3 prevPoint) {
         return 0.0;
     }
 
-    float triArea = 0.5 * length(cross(tri.v1.pos - tri.v0.pos, tri.v2.pos - tri.v0.pos));
-
     float pdfTri = 1.0 / float(numEmissive);
-    float pdfPoint = (dist * dist) / (cosLight * triArea);
+    float pdfPoint = (dist * dist) / (cosLight * rec.triArea);
     float pdf = pdfTri * pdfPoint;
     return pdf;
 }
@@ -667,6 +672,7 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar,
     rec.eta = eta;
     rec.triIdx = triIdx;
     rec.backFace = backFace;
+    rec.triArea = tri.area;
     return true;
 }
 
@@ -777,7 +783,7 @@ vec3 SamplePunctualLight(HitRecord rec, Ray ray, Light light) {
 }
 
 vec3 SampleAreaLight(HitRecord rec, Ray ray, inout uvec3 v) {
-    int numEmissive = emissiveTriIndices.length();
+    int numEmissive = emissiveTriangles.length();
     if (numEmissive == 0) {
         return vec3(0.0);
     }
@@ -786,7 +792,7 @@ vec3 SampleAreaLight(HitRecord rec, Ray ray, inout uvec3 v) {
 
     // Uniformly sample random emissive triangle
     int emissiveTriIdx = int(Xi.x * float(numEmissive));
-    int triIdx = emissiveTriIndices[emissiveTriIdx];
+    int triIdx = emissiveTriangles[emissiveTriIdx].triIdx;
     Triangle tri = triangles[triIdx];
 
     // Uniformly sample random point on triangle
@@ -833,10 +839,8 @@ vec3 SampleAreaLight(HitRecord rec, Ray ray, inout uvec3 v) {
         return vec3(0.0); // Occluded
     }
 
-    float triArea = 0.5 * length(cross(tri.v1.pos - tri.v0.pos, tri.v2.pos - tri.v0.pos));
-
     float pdfTri = 1.0 / float(numEmissive);
-    float pdfPoint = (dist * dist) / (cosLight * triArea);
+    float pdfPoint = (dist * dist) / (cosLight * tri.area);
     float lightPdf = pdfTri * pdfPoint;
 
     Material lightMat = materials[tri.matId];

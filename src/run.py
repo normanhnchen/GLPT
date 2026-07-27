@@ -88,7 +88,7 @@ def main():
     material_buffer = MaterialBuffer(scene)
     triangle_buffer = TriangleBuffer(scene)
     light_buffer = LightBuffer(scene)
-    emissive_tri_indices_buffer = EmissiveTriangleIndicesBuffer(scene)
+    emissive_tri_indices_buffer = EmissiveTrianglesBuffer(scene)
 
     bvh_builder = BVHBackgroundBuilder(scene)
     bvh_ready = False
