@@ -176,8 +176,35 @@ class HDRI:
         self.img_bytes = self.img.tobytes()
 
         self.hdri_tex = None
+
+        self._build_hdri_distribution()
+
+    # https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
+    def _build_hdri_distribution(self):
+        img = self.img.astype(np.float64)
+        # Convert RGB to luminance values using standard weights
+        luminance = img[:, :, 0] * 0.2126 + img[:, :, 1] * 0.7152 + img[:, :, 2] * 0.0722
+
+        # Adjust for equirectangular map spherical distortion
+        theta = (np.arange(self.height) + 0.5) / self.height * np.pi
+        sin_theta = np.sin(theta)[:, None]
+        weighted = luminance * sin_theta
+
+        # Build the CDFs
+        # --------------
+        # Marginal distribution over rows
+        row_sums = weighted.sum(axis=1)
+        row_cdf = np.cumsum(row_sums)
+        row_cdf /= row_cdf[-1]
+
+        # Conditional distribution over column given a row
+        col_cdf = np.cumsum(weighted, axis=1)
+        col_cdf /= col_cdf[:, -1:]
+
+        self.row_cdf = row_cdf.astype(f4)
+        self.col_cdf = col_cdf.astype(f4)
     
-    def bind(self, ctx, loc):
+    def bind_img(self, ctx, loc):
         self.hdri_tex = ctx.texture(
             (self.width, self.height),
             self.channels,
@@ -185,6 +212,26 @@ class HDRI:
             dtype=f4
             )
         self.hdri_tex.use(location=loc)
+
+    def bind_cdfs(self, ctx, row_loc, col_loc):
+        row_height = self.row_cdf.shape[0]
+        col_height, col_width = self.col_cdf.shape
+
+        self.row_cdf_tex = ctx.texture(
+            (1, row_height),
+            1,
+            self.row_cdf.tobytes(),
+            dtype=f4
+        )
+        self.col_cdf_tex = ctx.texture(
+            (col_width, col_height),
+            1,
+            self.col_cdf.tobytes(),
+            dtype=f4
+        )
+
+        self.row_cdf_tex.use(location=row_loc)
+        self.col_cdf_tex.use(location=col_loc)
     
     def release(self):
         if self.hdri_tex is not None:

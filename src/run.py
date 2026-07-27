@@ -102,7 +102,8 @@ def main():
     scene.create_texture_arrays(ctx)
     scene.bind_texture_arrays()
 
-    scene.hdri.bind(ctx, 6)
+    scene.hdri.bind_img(ctx, 6)
+    scene.hdri.bind_cdfs(ctx, 7, 8)
     
     last_frame_start = 0
     stats_start_time = time.perf_counter()
