@@ -156,6 +156,8 @@ struct HitRecord {
     vec3 bitangent;
     mat3 TBN;
     mat3 InvTBN;
+    float baryU;
+    float baryV;
     vec2 uv;
     Material mat;
     float eta; // IOR ratio
@@ -630,42 +632,10 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar,
     // Check if the hit distance is positive and closer than current closest triangle
     if (t < EPSILON || t >= closestSoFar) return false;
 
-    float w = 1.0 - u - v;
-    vec2 texCoords = w * tri.v0.uv + u * tri.v1.uv + v * tri.v2.uv;
-
-    vec3 geoNormal = normalize(cross(e1, e2));
-    vec3 normal = normalize(w * tri.v0.normal + u * tri.v1.normal + v * tri.v2.normal);
-    vec3 tangent = normalize(w * tri.v0.tangent + u * tri.v1.tangent + v * tri.v2.tangent);
-    vec3 bitangent = normalize(w * tri.v0.bitangent + u * tri.v1.bitangent + v * tri.v2.bitangent);
-    
-    bool backFace = dot(geoNormal, ray.dir) > 0.0;
-
-    if (backFace) {
-        geoNormal = -geoNormal;
-        normal = -normal;
-        tangent = -tangent;
-        bitangent = -bitangent;
-    }
-
-    rec.TBN = mat3(tangent, bitangent, normal);
-    rec.InvTBN = transpose(rec.TBN);
-
-    Material triMat = materials[tri.matId];
-
-    float eta = backFace ? triMat.ior / 1.0 : 1.0 / triMat.ior;
-
+    rec.baryU = u;
+    rec.baryV = v;
     rec.t = t;
-    rec.point = GetRayPoint(ray, t);
-    rec.geoNormal = geoNormal;
-    rec.normal = normal;
-    rec.tangent = tangent;
-    rec.bitangent = bitangent;
-    rec.uv = texCoords;
-    rec.mat = triMat;
-    rec.eta = eta;
     rec.triIdx = triIdx;
-    rec.backFace = backFace;
-    rec.triArea = tri.area;
     return true;
 }
 
@@ -1023,7 +993,47 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
             break;
         }
 
-        Material mat = rec.mat;
+        Triangle tri = triangles[rec.triIdx];
+
+        float u = rec.baryU;
+        float vv = rec.baryV;
+
+        vec3 e1 = tri.v1.pos - tri.v0.pos;
+        vec3 e2 = tri.v2.pos - tri.v0.pos;
+
+        float w = 1.0 - u - vv;
+        vec2 texCoords = w * tri.v0.uv + u * tri.v1.uv + vv * tri.v2.uv;
+
+        vec3 geoNormal = normalize(cross(e1, e2));
+        vec3 normal = normalize(w * tri.v0.normal + u * tri.v1.normal + vv * tri.v2.normal);
+        vec3 tangent = normalize(w * tri.v0.tangent + u * tri.v1.tangent + vv * tri.v2.tangent);
+        vec3 bitangent = normalize(w * tri.v0.bitangent + u * tri.v1.bitangent + vv * tri.v2.bitangent);
+        
+        bool backFace = dot(geoNormal, ray.dir) > 0.0;
+
+        if (backFace) {
+            geoNormal = -geoNormal;
+            normal = -normal;
+            tangent = -tangent;
+            bitangent = -bitangent;
+        }
+
+        rec.TBN = mat3(tangent, bitangent, normal);
+        rec.InvTBN = transpose(rec.TBN);
+
+        Material mat = materials[tri.matId];
+
+        float eta = backFace ? mat.ior / 1.0 : 1.0 / mat.ior;
+        
+        rec.point = GetRayPoint(ray, rec.t);
+        rec.geoNormal = geoNormal;
+        rec.normal = normal;
+        rec.tangent = tangent;
+        rec.bitangent = bitangent;
+        rec.uv = texCoords;
+        rec.eta = eta;
+        rec.backFace = backFace;
+        rec.triArea = tri.area;
 
         if (mat.hasBaseColTex == 1) {
             vec4 baseCol = texture(baseColorTextures, vec3(rec.uv, mat.baseTexId));
