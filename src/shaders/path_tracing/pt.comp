@@ -637,9 +637,6 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar,
     // Check if the hit distance is positive and closer than current closest triangle
     if (t < EPSILON || t >= closestSoFar) return false;
 
-    float w = 1.0 - u - v;
-    vec2 texCoords = w * tri.v0.uv + u * tri.v1.uv + v * tri.v2.uv;
-
     rec.baryU = u;
     rec.baryV = v;
     rec.t = t;
@@ -649,7 +646,7 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar,
 
 // Möller-Trumbore ray-triangle intersection algorithm
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
-bool ShadowRayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar, inout ShadowRecord rec) {
+bool ShadowRayTriangleIntersect(inout uvec3 v, inout Ray ray, Triangle tri, int triIdx, float closestSoFar, inout ShadowRecord rec) {
     vec3 e1 = tri.v1.pos - tri.v0.pos;
     vec3 e2 = tri.v2.pos - tri.v0.pos;
     vec3 pvec = cross(ray.dir, e2);
@@ -665,12 +662,44 @@ bool ShadowRayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closest
     if (u < 0.0 || u > 1.0) return false;
 
     vec3 qvec = cross(tvec, e1);
-    float v = dot(ray.dir, qvec) * invDet;
-    if (v < 0.0 || u + v > 1.0) return false;
+    float vv = dot(ray.dir, qvec) * invDet;
+    if (vv < 0.0 || u + vv > 1.0) return false;
     
     float t = dot(e2, qvec) * invDet;
     // Check if the hit distance is positive and closer than current closest triangle
     if (t < EPSILON || t >= closestSoFar) return false;
+
+    float w = 1.0 - u - vv;
+    vec2 texCoords = w * tri.v0.uv + u * tri.v1.uv + vv * tri.v2.uv;
+
+    Material mat = materials[tri.matId];
+
+    if (mat.alphaMode != 0) {
+        if (mat.hasBaseColTex == 1) {
+            vec4 baseCol = texture(baseColorTextures, vec3(vec2(u, v), mat.baseTexId));
+            mat.alpha = baseCol.w;
+        }
+
+        vec3 point = GetRayPoint(ray, t);
+
+        if (mat.alphaMode == 1) {
+            // MASK
+            if (mat.alpha < mat.alphaCutoff) {
+                // Advance the ray and ignore the hit
+                ray.orig = point + ray.dir * EPSILON;
+                return false;
+            }
+        }
+        float blendRand = PCG3d(v).x;
+        if (mat.alphaMode == 2) {
+            // BLEND
+            if (PCG3d(v).x > mat.alpha) {
+                // Advance the ray and ignore the hit
+                ray.orig = point + ray.dir * EPSILON;
+                return false;
+            }
+        }
+    }
 
     rec.t = t;
     return true;
@@ -734,7 +763,7 @@ bool Hit(Ray ray, inout HitRecord rec) {
     return hitAnything;
 }
 
-bool TestVisibility(Ray ray, inout ShadowRecord rec) {
+bool TestVisibility(inout uvec3 v, Ray ray, inout ShadowRecord rec) {
     ShadowRecord tempRec = rec;
     bool occluded = false;
     float closestSoFar = INF;
@@ -756,7 +785,7 @@ bool TestVisibility(Ray ray, inout ShadowRecord rec) {
                 for (int i = 0; i < currNode.triCount; i++) {
                     int triIndex = triIndices[currNode.firstTriIdx + i];
                     Triangle tri = triangles[triIndex];
-                    if (ShadowRayTriangleIntersect(ray, tri, triIndex, closestSoFar, tempRec)) {
+                    if (ShadowRayTriangleIntersect(v, ray, tri, triIndex, closestSoFar, tempRec)) {
                         occluded = true;
                         closestSoFar = tempRec.t;
                         rec = tempRec;
@@ -882,7 +911,7 @@ vec3 SampleHDRILight(HitRecord rec, Ray ray, inout uvec3 v) {
     shadowRay.dir = L;
 
     ShadowRecord shadowRec;
-    bool occluded = TestVisibility(shadowRay, shadowRec);
+    bool occluded = TestVisibility(v, shadowRay, shadowRec);
     if (occluded) {
         return vec3(0.0); // Occluded
     }
@@ -923,7 +952,7 @@ float HDRI_PDF(vec3 dir) {
 
 // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md
 // https://www.pbr-book.org/4ed/Light_Sources/Point_Lights
-vec3 SamplePunctualLight(HitRecord rec, Ray ray, Light light) {
+vec3 SamplePunctualLight(HitRecord rec, Ray ray, Light light, inout uvec3 v) {
     vec3 L = normalize(light.pos - rec.point);
     float dist = length(light.pos - rec.point);
     vec3 Li;
@@ -961,7 +990,7 @@ vec3 SamplePunctualLight(HitRecord rec, Ray ray, Light light) {
     shadowRay.dir = L;
 
     ShadowRecord shadowRec;
-    bool occluded = TestVisibility(shadowRay, shadowRec);
+    bool occluded = TestVisibility(v, shadowRay, shadowRec);
     if (occluded && shadowRec.t < dist) {
         return vec3(0.0); // Occluded
     }
@@ -1023,7 +1052,7 @@ vec3 SampleAreaLight(HitRecord rec, Ray ray, inout uvec3 v) {
     float offset = EPSILON * 10.0;
 
     ShadowRecord shadowRec;
-    bool occluded = TestVisibility(shadowRay, shadowRec);
+    bool occluded = TestVisibility(v, shadowRay, shadowRec);
     if (occluded && shadowRec.t < dist - offset) {
         return vec3(0.0); // Occluded
     }
@@ -1161,9 +1190,6 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
             rec.TBN = mat3(T, B, N);
             rec.InvTBN = transpose(rec.TBN);
         }
-        if (mat.hasOcclTex == 1) {
-            // No implementation in path tracing
-        }
         
         // Add light contribution
         if (mat.hasEmission == 1) {
@@ -1199,7 +1225,7 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
 
         vec3 direct = vec3(0.0);
         for (int li = 0; li < lights.length(); li++) {
-            direct += SamplePunctualLight(rec, ray, lights[li]);
+            direct += SamplePunctualLight(rec, ray, lights[li], v);
         }
         direct += SampleAreaLight(rec, ray, v);
         direct += SampleHDRILight(rec, ray, v);
