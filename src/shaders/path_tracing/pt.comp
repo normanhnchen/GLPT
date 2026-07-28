@@ -168,6 +168,11 @@ struct HitRecord {
     float triArea;
 };
 
+struct ShadowRecord {
+    float t;
+    bool backFace;
+};
+
 #define EPSILON 1e-4
 #define INF 1e20
 #define PI 3.14159265359
@@ -632,10 +637,42 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar,
     // Check if the hit distance is positive and closer than current closest triangle
     if (t < EPSILON || t >= closestSoFar) return false;
 
+    float w = 1.0 - u - v;
+    vec2 texCoords = w * tri.v0.uv + u * tri.v1.uv + v * tri.v2.uv;
+
     rec.baryU = u;
     rec.baryV = v;
     rec.t = t;
     rec.triIdx = triIdx;
+    return true;
+}
+
+// Möller-Trumbore ray-triangle intersection algorithm
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
+bool ShadowRayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar, inout ShadowRecord rec) {
+    vec3 e1 = tri.v1.pos - tri.v0.pos;
+    vec3 e2 = tri.v2.pos - tri.v0.pos;
+    vec3 pvec = cross(ray.dir, e2);
+    float det = dot(e1, pvec);
+
+    // If det is close to 0, ray is parallel to the triangle
+    if (abs(det) < 1e-7) return false;
+
+    float invDet = 1.0 / det;
+
+    vec3 tvec = ray.orig - tri.v0.pos;
+    float u = dot(tvec, pvec) * invDet;
+    if (u < 0.0 || u > 1.0) return false;
+
+    vec3 qvec = cross(tvec, e1);
+    float v = dot(ray.dir, qvec) * invDet;
+    if (v < 0.0 || u + v > 1.0) return false;
+    
+    float t = dot(e2, qvec) * invDet;
+    // Check if the hit distance is positive and closer than current closest triangle
+    if (t < EPSILON || t >= closestSoFar) return false;
+
+    rec.t = t;
     return true;
 }
 
@@ -695,6 +732,50 @@ bool Hit(Ray ray, inout HitRecord rec) {
     }
 
     return hitAnything;
+}
+
+bool TestVisibility(Ray ray, inout ShadowRecord rec) {
+    ShadowRecord tempRec = rec;
+    bool occluded = false;
+    float closestSoFar = INF;
+
+    int nodeStack[64];
+    int stackIdx = 0;
+    // Push root node index onto the stack
+    nodeStack[stackIdx++] = 0;
+
+    vec3 invRayDir = 1.0 / ray.dir;
+
+    while (stackIdx > 0) {
+        // Pop the latest node index off
+        int currIdx = nodeStack[--stackIdx];
+        BVHNode currNode = BVHNodes[currIdx];
+
+        if (AABBIntersect(ray, invRayDir, currNode, closestSoFar)) {
+            if (currNode.isLeaf == 1) {
+                for (int i = 0; i < currNode.triCount; i++) {
+                    int triIndex = triIndices[currNode.firstTriIdx + i];
+                    Triangle tri = triangles[triIndex];
+                    if (ShadowRayTriangleIntersect(ray, tri, triIndex, closestSoFar, tempRec)) {
+                        occluded = true;
+                        closestSoFar = tempRec.t;
+                        rec = tempRec;
+                    }
+                }
+            } else {
+                // Push children onto the stack if there are children
+                
+                if (currNode.leftChildIdx != -1) {
+                    nodeStack[stackIdx++] = currNode.leftChildIdx;
+                }
+                if (currNode.rightChildIdx != -1) {
+                    nodeStack[stackIdx++] = currNode.rightChildIdx;
+                }
+            }
+        }
+    }
+
+    return occluded;
 }
 
 // https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
@@ -800,8 +881,9 @@ vec3 SampleHDRILight(HitRecord rec, Ray ray, inout uvec3 v) {
     shadowRay.orig = rec.point + rec.geoNormal * EPSILON;
     shadowRay.dir = L;
 
-    HitRecord shadowRec;
-    if (Hit(shadowRay, shadowRec)) {
+    ShadowRecord shadowRec;
+    bool occluded = TestVisibility(shadowRay, shadowRec);
+    if (occluded) {
         return vec3(0.0); // Occluded
     }
 
@@ -878,8 +960,9 @@ vec3 SamplePunctualLight(HitRecord rec, Ray ray, Light light) {
     shadowRay.orig = rec.point + rec.geoNormal * EPSILON;
     shadowRay.dir = L;
 
-    HitRecord shadowRec;
-    if (Hit(shadowRay, shadowRec) && shadowRec.t < dist) {
+    ShadowRecord shadowRec;
+    bool occluded = TestVisibility(shadowRay, shadowRec);
+    if (occluded && shadowRec.t < dist) {
         return vec3(0.0); // Occluded
     }
 
@@ -939,8 +1022,9 @@ vec3 SampleAreaLight(HitRecord rec, Ray ray, inout uvec3 v) {
     // Tested value which currently works to prevent self-intersection
     float offset = EPSILON * 10.0;
 
-    HitRecord shadowRec;
-    if (Hit(shadowRay, shadowRec) && shadowRec.t < dist - offset) {
+    ShadowRecord shadowRec;
+    bool occluded = TestVisibility(shadowRay, shadowRec);
+    if (occluded && shadowRec.t < dist - offset) {
         return vec3(0.0); // Occluded
     }
 
