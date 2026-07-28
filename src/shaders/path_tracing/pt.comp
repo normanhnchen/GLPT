@@ -653,6 +653,42 @@ vec3 SampleHDRI(vec3 dir) {
     return texture(hdri, uv).rgb;
 }
 
+// https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
+vec3 DirectSampleHDRI(inout uvec3 v, out vec3 dir, out float HDRIPdf) {
+    ivec2 size = textureSize(hdri, 0);
+    int width = size.x, height = size.y;
+
+    vec3 Xi = PCG3d(v);
+
+    float rowHigh, rowLow, rowPdf;
+    int row = SampleRowCDF(Xi.x, height, rowHigh, rowLow, rowPdf);
+    float colHigh, colLow, colPdf;
+    int col = SampleColCDF(Xi.y, row, width, colHigh, colLow, colPdf);
+
+    // Anti-aliasing sub-pixel jitter
+    float dv = (Xi.x - rowLow) / rowPdf;
+    float du = (Xi.y - colLow) / colPdf;
+
+    // Sampled continuous point in ranges [0, 1)
+    float u = (float(col) + du) / float(width);
+    float vv = (float(row) + dv) / float(height);
+
+    float theta = vv * PI;
+    float phi = u * 2.0 * PI;
+
+    dir = normalize(vec3(
+        sin(theta) * cos(phi),
+        cos(theta),
+        sin(theta) * sin(phi)
+    ));
+
+    float mapPdf = rowPdf * colPdf * float(width) * float(height);
+    float sinTheta = sin(theta);
+    HDRIPdf = sinTheta > 0.0 ?  mapPdf / (2.0 * PI * PI * sinTheta) : 0.0;
+
+    return texture(hdri, vec2(u, vv)).rgb;
+}
+
 // Möller-Trumbore ray-triangle intersection algorithm
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
 bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar, inout HitRecord rec) {
