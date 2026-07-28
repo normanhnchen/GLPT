@@ -1,7 +1,7 @@
 {   
     "file_paths": {
         "ai_training_scenes": "src/assets/models/ai_training/",
-        "scene": "src/assets/models/dragon_scene.glb",
+        "scene": "src/assets/models/alpha_test.glb",
         "ai_training_hdris": "src/assets/hdris/ai_training/",
         "hdri": "src/assets/hdris/day_sky_hdri.exr",
         "ai_training_renders": "src/assets/renders/ai_training",
@@ -52,9 +52,9 @@
         "_world_up": [0, 1, 0]
     },
     "path_tracing": {
-        "samples_per_pixel": 4,
+        "samples_per_pixel": 1,
         "max_bounces": 64,
-        "max_samples": 16384
+        "max_samples": 4096
     },
     "post_processing": {
         "blur": 1.0,
