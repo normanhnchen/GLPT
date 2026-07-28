@@ -605,90 +605,6 @@ vec3 EvaluateBRDF(vec3 L, Ray ray, HitRecord rec) {
     return brdf;
 }
 
-// https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
-int SampleRowCDF(float xi, int height, out float rowHigh, out float rowLow, out float rowPdf ) {
-    // Binary search to find the correct row
-    int lo = 0, hi = height - 1;
-    while (lo < hi) {
-        int mid = (hi - lo) / 2;
-        float val = texelFetch(hdriRowCDF, ivec2(0, mid), 0).r;
-        if (val < xi) {
-            lo = mid + 1;
-        } else {
-            hi = mid;
-        }
-    }
-    // Use lo as the chosen row index
-    rowHigh = texelFetch(hdriRowCDF, ivec2(0, lo), 0).r;
-    rowLow = lo > 0 ? texelFetch(hdriRowCDF, ivec2(0, lo - 1), 0).r : 0.0;
-    rowPdf = max(rowHigh - rowLow, 1e-8);
-    return lo;
-}
-
-// https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
-int SampleColCDF(float xi, int row, int width, out float colHigh, out float colLow, out float colPdf) {
-    // Binary search to find the correct column
-    int lo = 0, hi = width - 1;
-    while (lo < hi) {
-        int mid = (hi - lo) / 2;
-        float val = texelFetch(hdriColCDF, ivec2(mid, row), 0).r;
-        if (val < xi) {
-            lo = mid + 1;
-        } else {
-            hi = mid;
-        }
-    }
-    colHigh = texelFetch(hdriColCDF, ivec2(lo, row), 0).r;
-    colLow = lo > 0 ? texelFetch(hdriColCDF, ivec2(lo - 1, row), 0).r : 0.0;
-    colPdf = max(colHigh - colLow, 1e-8);
-    return lo;
-}
-
-vec3 SampleHDRI(vec3 dir) {
-    // Convert to spherical coordinates
-    float phi = atan(dir.z, dir.x);
-    float theta = acos(dir.y);
-    // Convert to uv coordinates
-    vec2 uv = vec2(phi / (2.0 * PI) + 0.5, theta / PI);
-    return texture(hdri, uv).rgb;
-}
-
-// https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
-vec3 DirectSampleHDRI(inout uvec3 v, out vec3 dir, out float HDRIPdf) {
-    ivec2 size = textureSize(hdri, 0);
-    int width = size.x, height = size.y;
-
-    vec3 Xi = PCG3d(v);
-
-    float rowHigh, rowLow, rowPdf;
-    int row = SampleRowCDF(Xi.x, height, rowHigh, rowLow, rowPdf);
-    float colHigh, colLow, colPdf;
-    int col = SampleColCDF(Xi.y, row, width, colHigh, colLow, colPdf);
-
-    // Anti-aliasing sub-pixel jitter
-    float dv = (Xi.x - rowLow) / rowPdf;
-    float du = (Xi.y - colLow) / colPdf;
-
-    // Sampled continuous point in ranges [0, 1)
-    float u = (float(col) + du) / float(width);
-    float vv = (float(row) + dv) / float(height);
-
-    float theta = vv * PI;
-    float phi = u * 2.0 * PI;
-
-    dir = normalize(vec3(
-        sin(theta) * cos(phi),
-        cos(theta),
-        sin(theta) * sin(phi)
-    ));
-
-    float mapPdf = rowPdf * colPdf * float(width) * float(height);
-    float sinTheta = sin(theta);
-    HDRIPdf = sinTheta > 0.0 ?  mapPdf / (2.0 * PI * PI * sinTheta) : 0.0;
-
-    return texture(hdri, vec2(u, vv)).rgb;
-}
-
 // Möller-Trumbore ray-triangle intersection algorithm
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
 bool RayTriangleIntersect(Ray ray, Triangle tri, int triIdx, float closestSoFar, inout HitRecord rec) {
@@ -809,6 +725,148 @@ bool Hit(Ray ray, inout HitRecord rec) {
     }
 
     return hitAnything;
+}
+
+// https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
+int SampleRowCDF(float xi, int height, out float rowHigh, out float rowLow, out float rowPdf ) {
+    // Binary search to find the correct row
+    int lo = 0, hi = height - 1;
+    while (lo < hi) {
+        int mid = (hi + lo) / 2;
+        float val = texelFetch(hdriRowCDF, ivec2(0, mid), 0).r;
+        if (val < xi) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    // Use lo as the chosen row index
+    rowHigh = texelFetch(hdriRowCDF, ivec2(0, lo), 0).r;
+    rowLow = lo > 0 ? texelFetch(hdriRowCDF, ivec2(0, lo - 1), 0).r : 0.0;
+    rowPdf = max(rowHigh - rowLow, 1e-8);
+    return lo;
+}
+
+// https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
+int SampleColCDF(float xi, int row, int width, out float colHigh, out float colLow, out float colPdf) {
+    // Binary search to find the correct column
+    int lo = 0, hi = width - 1;
+    while (lo < hi) {
+        int mid = (hi + lo) / 2;
+        float val = texelFetch(hdriColCDF, ivec2(mid, row), 0).r;
+        if (val < xi) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    colHigh = texelFetch(hdriColCDF, ivec2(lo, row), 0).r;
+    colLow = lo > 0 ? texelFetch(hdriColCDF, ivec2(lo - 1, row), 0).r : 0.0;
+    colPdf = max(colHigh - colLow, 1e-8);
+    return lo;
+}
+
+vec3 SampleHDRI(vec3 dir) {
+    // Convert to spherical coordinates
+    float phi = atan(dir.z, dir.x);
+    float theta = acos(dir.y);
+    // Convert to uv coordinates
+    vec2 uv = vec2(phi / (2.0 * PI) + 0.5, theta / PI);
+    return texture(hdri, uv).rgb;
+}
+
+// https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
+vec3 DirectSampleHDRI(inout uvec3 v, out vec3 dir, out float HDRIPdf) {
+    ivec2 size = textureSize(hdri, 0);
+    int width = size.x, height = size.y;
+
+    vec3 Xi = PCG3d(v);
+
+    float rowHigh, rowLow, rowPdf;
+    int row = SampleRowCDF(Xi.x, height, rowHigh, rowLow, rowPdf);
+    float colHigh, colLow, colPdf;
+    int col = SampleColCDF(Xi.y, row, width, colHigh, colLow, colPdf);
+
+    // Anti-aliasing sub-pixel jitter
+    float dv = (Xi.x - rowLow) / rowPdf;
+    float du = (Xi.y - colLow) / colPdf;
+
+    // Sampled continuous point in ranges [0, 1)
+    float u = (float(col) + du) / float(width);
+    float vv = (float(row) + dv) / float(height);
+
+    float theta = vv * PI;
+    float phi = (u - 0.5) * 2.0 * PI;
+
+    dir = normalize(vec3(
+        sin(theta) * cos(phi),
+        cos(theta),
+        sin(theta) * sin(phi)
+    ));
+
+    float mapPdf = rowPdf * colPdf * float(width) * float(height);
+    float sinTheta = sin(theta);
+    HDRIPdf = sinTheta > 0.0 ?  mapPdf / (2.0 * PI * PI * sinTheta) : 0.0;
+
+    return texture(hdri, vec2(u, vv)).rgb;
+}
+
+vec3 SampleHDRILight(HitRecord rec, Ray ray, inout uvec3 v) {
+    vec3 L;
+    float lightPdf;
+    vec3 Li = DirectSampleHDRI(v, L, lightPdf);
+    if (lightPdf <= 0.0) return vec3(0.0);
+
+    vec3 N = rec.normal;
+
+    // Check if light is above the surface
+    float NdotL = dot(N, L);
+    if (NdotL <= 0.0) {
+        return vec3(0.0);
+    }
+
+    // Shadow ray
+    Ray shadowRay;
+    shadowRay.orig = rec.point + rec.geoNormal * EPSILON;
+    shadowRay.dir = L;
+
+    HitRecord shadowRec;
+    if (Hit(shadowRay, shadowRec)) {
+        return vec3(0.0); // Occluded
+    }
+
+    vec3 f = EvaluateBRDF(L, ray, rec);
+    // Multiple Importance Sample (MIS)
+    float bsdfPdf = BSDF_PDF(L, ray, rec);
+    float misWeight = PowerHeuristic(1, lightPdf, bsdfPdf);
+
+    return (f * Li * hdriExposure) / lightPdf * misWeight;
+}
+
+float HDRI_PDF(vec3 dir) {
+    ivec2 size = textureSize(hdri, 0);
+    int width = size.x, height = size.y;
+
+    // Convert to spherical coordinates
+    float phi = atan(dir.z, dir.x);
+    float theta = acos(dir.y);
+    // Convert to uv coordinates
+    vec2 uv = vec2(phi / (2.0 * PI) + 0.5, theta / PI);
+
+    int col = int(uv.x * float(width));
+    int row = int(uv.y * float(height));
+
+    float rowHigh = texelFetch(hdriRowCDF, ivec2(0, row), 0).r;
+    float rowLow = row > 0 ? texelFetch(hdriRowCDF, ivec2(0, row - 1), 0).r : 0.0;
+    float rowPdf = max(rowHigh - rowLow, 1e-8);
+    
+    float colHigh = texelFetch(hdriColCDF, ivec2(col, row), 0).r;
+    float colLow = col > 0 ? texelFetch(hdriColCDF, ivec2(col - 1, row), 0).r : 0.0;
+    float colPdf = max(colHigh - colLow, 1e-8);
+
+    float mapPdf = rowPdf * colPdf * float(width) * float(height);
+    float sinTheta = sin(theta);
+    return sinTheta > 0.0 ?  mapPdf / (2.0 * PI * PI * sinTheta) : 0.0;
 }
 
 // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md
@@ -955,7 +1013,13 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
         if (!Hit(ray, rec)) {
             // Ray has exited the scene
             vec3 envColor = SampleHDRI(ray.dir);
-            radiance += throughput * envColor * hdriExposure;
+            if (isFirstHit) {
+                radiance += throughput * envColor * hdriExposure;
+            } else {
+                float lightPdf = HDRI_PDF(ray.dir);
+                float misWeight = PowerHeuristic(1, prevBsdfPdf, lightPdf);
+                radiance += throughput * envColor * hdriExposure * misWeight;
+            }
             break;
         }
 
@@ -1044,6 +1108,7 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
             direct += SamplePunctualLight(rec, ray, lights[li]);
         }
         direct += SampleAreaLight(rec, ray, v);
+        direct += SampleHDRILight(rec, ray, v);
 
         radiance += throughput * direct;
 
