@@ -163,7 +163,10 @@ class TriangleIndicesBuffer:
 
 class EmissiveTrianglesBuffer:
     def __init__(self, scene):
-        emissive_triangles_data = np.zeros(scene.num_emissive_triangles, dtype=emissive_triangles_dtype)
+        # Ensure there is atleast a buffer size
+        num_emissive_triangles = max(scene.num_emissive_triangles, 1)
+        
+        emissive_triangles_data = np.zeros(num_emissive_triangles, dtype=emissive_triangles_dtype)
 
         for i in range(scene.num_emissive_triangles):
             emissive_triangles_data["triIdx"] = scene.emissive_triangle_indices[i]

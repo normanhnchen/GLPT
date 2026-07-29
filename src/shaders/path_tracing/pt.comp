@@ -332,155 +332,6 @@ void BeerLambert(inout bool insideMedium, inout vec3 entryPoint, HitRecord rec, 
     }
 }
 
-// https://learnopengl.com/PBR/Theory
-// https://schuttejoe.github.io/post/ggximportancesamplingpart1/
-vec3 SampleBSDF(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir, out float bsdfPdf) {
-    Material mat = rec.mat;
-
-    bool enteringMedium = !rec.backFace;
-
-    vec3 N = rec.normal;
-    vec3 geoN = rec.geoNormal;
-    vec3 V = -ray.dir;
-
-    vec3 Xi = PCG3d(v);
-
-    float NdotV = abs(dot(N, V));
-
-    vec3 F0 = vec3(0.04);
-    F0 = mix(F0, mat.baseCol, mat.metallic);
-    
-    vec3 F_approx = FresnelSchlick(NdotV, F0);
-
-    // AI method: average the Fresnel approximation for a single float probability
-    float weight = (F_approx.r + F_approx.g + F_approx.b) / 3.0;
-    
-    float specularChance = clamp(weight, 0.05, 0.95);
-    float refractChance = mat.transmission * (1.0 - specularChance);
-    // Fully metal objects cannot refract
-    refractChance *= (1.0 - mat.metallic);
-    float diffuseChance = 1.0 - specularChance - refractChance;
-
-    if (Xi.z < specularChance) {
-        // Specular lobe
-
-        float a = mat.roughness * mat.roughness;
-        float a2 = a * a;
-
-        // Convert V to tangent space for the GGX VNDF importance sample
-        vec3 V_Tangent = rec.InvTBN * V;
-
-        vec3 H_Tangent = ImportanceSampleGGXVNDF(Xi.xy, V_Tangent, a);
-
-        // Transform H back to world space
-        vec3 H = normalize(rec.TBN * H_Tangent);
-        vec3 L = reflect(-V, H);
-        bounceDir = L;
-
-        // Below the surface
-        if (dot(N, L) <= 0.0) {
-            bsdfPdf = 0.0;
-            return vec3(0.0);
-        }
-
-        float LdotH = dot(L, H);
-        vec3 F = FresnelSchlick(LdotH, F0);
-
-        float G1 = SmithGGXMasking(L, V, N, a2);
-        float G2 = SmithGGXMaskingShadowing(L, V, N, a2);
-
-        vec3 specular = F * (G2 / G1);
-        specular = clamp(specular, 0.0, 1.0);
-
-        // Calculate the PDF for this lobe
-        float D = DistributionGGX(N, H, a);
-        bsdfPdf = (D * G1) / (4.0 * NdotV) * specularChance;
-
-        return specular / specularChance;
-    } else {
-        // Transmission/Diffuse lobe
-
-        if (Xi.z < specularChance + refractChance) {
-            // Transmission lobe
-
-            float a = mat.roughness * mat.roughness;
-            float a2 = a * a;
-
-            // Convert V to tangent space for the GGX VNDF importance sample
-            vec3 V_Tangent = rec.InvTBN * V;
-
-            vec3 H_Tangent = ImportanceSampleGGXVNDF(Xi.xy, V_Tangent, a);
-
-            // Transform H back to world space
-            vec3 H = normalize(rec.TBN * H_Tangent);
-
-            vec3 L = refract(ray.dir, H, rec.eta);
-
-            // Total internal reflection (TIR)
-            // GLSL refract function returns vec3(0.0) on TIR
-            if (L == vec3(0.0)) {
-                bounceDir = reflect(ray.dir, H);
-
-                // TIR acts as pure reflection off normal H
-                float D = DistributionGGX(N, H, a);
-                float G1 = SmithGGXMasking(bounceDir, V, N, a2);
-                bsdfPdf = (D * G1) / (4.0 * NdotV) * refractChance;
-
-                return vec3(1.0) / refractChance;
-            } else {
-                bounceDir = L;
-            }
-
-            // Calculate the PDF for this lobe
-            // https://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf
-            vec3 Ht = normalize(V + rec.eta * L);
-            if (dot(N, Ht) < 0.0) Ht = -Ht;
-
-            float D = DistributionGGX(N, Ht, a);
-            float G1 = SmithGGXMasking(L, V, N, a2);
-
-            float VdotH = dot(V, Ht);
-            float LdotH = dot(L, Ht);
-
-            float denom = VdotH + rec.eta * LdotH;
-            float dwh_dwi = abs((rec.eta * rec.eta * LdotH) / max(denom * denom, 0.0001));
-            bsdfPdf = D * G1 * abs(VdotH) / max(NdotV, 0.0001) * dwh_dwi * refractChance;
-
-            return mat.baseCol / refractChance;
-        } else {
-            // Diffuse lobe
-
-            vec3 L = CosineSampleHemisphere(v, N, rec);
-            bounceDir = L;
-
-            // Below surface
-            if (dot(N, bounceDir) <= 0.0) {
-                bsdfPdf = 0.0;
-                return vec3(0.0);
-            }
-
-            vec3 H = normalize(V + L);
-
-            float VdotH = abs(dot(V, H));
-
-            vec3 F = FresnelSchlick(VdotH, F0);
-
-            vec3 kS = F;
-            vec3 kD = vec3(1.0) - kS;
-            kD *= 1.0 - mat.metallic;
-            kD *= 1.0 - mat.transmission;
-
-            vec3 diffuse = kD * mat.baseCol;
-
-            // Calculate the PDF for this lobe
-            float NdotL = max(dot(N, L), 0.0);
-            bsdfPdf = NdotL / PI * diffuseChance;
-
-            return diffuse / diffuseChance;
-        }
-    }
-}
-
 float GGXVNDF_PDF(vec3 N, vec3 V, vec3 L, float a) {
     float NdotV = abs(dot(N, V));
     vec3 H = normalize(V + L);
@@ -570,10 +421,145 @@ float LightPDF(HitRecord rec, Ray ray, vec3 prevPoint) {
     return pdf;
 }
 
+// https://learnopengl.com/PBR/Theory
+// https://schuttejoe.github.io/post/ggximportancesamplingpart1/
+vec3 SampleBSDF(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir, out float bsdfPdf) {
+    Material mat = rec.mat;
+
+    bool enteringMedium = !rec.backFace;
+
+    vec3 N = rec.normal;
+    vec3 geoN = rec.geoNormal;
+    vec3 V = -ray.dir;
+
+    vec3 Xi = PCG3d(v);
+
+    float NdotV = abs(dot(N, V));
+
+    vec3 F0 = vec3(0.04);
+    F0 = mix(F0, mat.baseCol, mat.metallic);
+    
+    vec3 F_approx = FresnelSchlick(NdotV, F0);
+
+    // AI method: average the Fresnel approximation for a single float probability
+    float weight = (F_approx.r + F_approx.g + F_approx.b) / 3.0;
+    
+    float specularChance = clamp(weight, 0.05, 0.95);
+    float refractChance = mat.transmission * (1.0 - specularChance);
+    // Fully metal objects cannot refract
+    refractChance *= (1.0 - mat.metallic);
+    float diffuseChance = 1.0 - specularChance - refractChance;
+
+    if (Xi.z < specularChance) {
+        // Specular lobe
+
+        float a = mat.roughness * mat.roughness;
+        float a2 = a * a;
+
+        // Convert V to tangent space for the GGX VNDF importance sample
+        vec3 V_Tangent = rec.InvTBN * V;
+
+        vec3 H_Tangent = ImportanceSampleGGXVNDF(Xi.xy, V_Tangent, a);
+
+        // Transform H back to world space
+        vec3 H = normalize(rec.TBN * H_Tangent);
+        vec3 L = reflect(-V, H);
+        bounceDir = L;
+
+        // Below the surface
+        if (dot(N, L) <= 0.0) {
+            bsdfPdf = 0.0;
+            return vec3(0.0);
+        }
+
+        float LdotH = dot(L, H);
+        vec3 F = FresnelSchlick(LdotH, F0);
+
+        float G1 = SmithGGXMasking(L, V, N, a2);
+        float G2 = SmithGGXMaskingShadowing(L, V, N, a2);
+
+        vec3 specular = F * (G2 / G1);
+
+        bsdfPdf = BSDF_PDF(bounceDir, ray, rec);
+
+        return specular / specularChance;
+    } else {
+        // Transmission/Diffuse lobe
+
+        if (Xi.z < specularChance + refractChance) {
+            // Transmission lobe
+
+            float a = mat.roughness * mat.roughness;
+            float a2 = a * a;
+
+            // Convert V to tangent space for the GGX VNDF importance sample
+            vec3 V_Tangent = rec.InvTBN * V;
+
+            vec3 H_Tangent = ImportanceSampleGGXVNDF(Xi.xy, V_Tangent, a);
+
+            // Transform H back to world space
+            vec3 H = normalize(rec.TBN * H_Tangent);
+
+            vec3 L = refract(ray.dir, H, rec.eta);
+
+            // Total internal reflection (TIR)
+            // GLSL refract function returns vec3(0.0) on TIR
+            if (L == vec3(0.0)) {
+                bounceDir = reflect(ray.dir, H);
+                L = bounceDir;
+
+                vec3 F = vec3(1.0);
+                float G1 = SmithGGXMasking(L, V, N, a2);
+                float G2 = SmithGGXMaskingShadowing(L, V, N, a2);
+
+                vec3 specular = F * (G2 / G1);
+
+                bsdfPdf = BSDF_PDF(bounceDir, ray, rec);
+
+                return specular / refractChance;
+            } else {
+                bounceDir = L;
+            }
+
+            bsdfPdf = BSDF_PDF(bounceDir, ray, rec);
+
+            return mat.baseCol / refractChance;
+        } else {
+            // Diffuse lobe
+
+            vec3 L = CosineSampleHemisphere(v, N, rec);
+            bounceDir = L;
+
+            // Below surface
+            if (dot(N, bounceDir) <= 0.0) {
+                bsdfPdf = 0.0;
+                return vec3(0.0);
+            }
+
+            vec3 H = normalize(V + L);
+
+            float VdotH = abs(dot(V, H));
+
+            vec3 F = FresnelSchlick(VdotH, F0);
+
+            vec3 kS = F;
+            vec3 kD = vec3(1.0) - kS;
+            kD *= 1.0 - mat.metallic;
+            kD *= 1.0 - mat.transmission;
+
+            vec3 diffuse = kD * mat.baseCol;
+
+            bsdfPdf = BSDF_PDF(bounceDir, ray, rec);
+
+            return diffuse / diffuseChance;
+        }
+    }
+}
+
 // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Importance_Sampling#MultipleImportanceSampling
-float PowerHeuristic(int nf, float fPdf, float gPdf) {
+float PowerHeuristic(int nf, float fPdf, int ng, float gPdf) {
     float f = float(nf) * fPdf;
-    float g = float(nf) * gPdf;
+    float g = float(ng) * gPdf;
     return (f * f) / (f * f + g * g);
 }
 
@@ -590,26 +576,71 @@ vec3 EvaluateBRDF(vec3 L, Ray ray, HitRecord rec) {
     vec3 H = normalize(V + L);
 
     float a = mat.roughness * mat.roughness;
-    float k = ((mat.roughness + 1.0) * (mat.roughness + 1.0)) / 8.0;
+    float a2 = a * a;
 
-    // Cook-Torrance BRDF terms
-    float NDF = DistributionGGX(N, H, a);
-    float G = GeometrySmith(N, V, L, k);
     vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
+    float D = DistributionGGX(N, H, a);
+    float G = SmithGGXMaskingShadowing(L, V, N, a2);
 
     vec3 kS = F;
     vec3 kD = vec3(1.0) - kS;
     kD *= 1.0 - mat.metallic;
+    kD *= 1.0 - mat.transmission;
 
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
 
-    vec3 specular = (NDF * G * F) / max(4.0 * NdotV * NdotL, 0.0001);
+    vec3 specular = (D * G * F) / max(4.0 * NdotV * NdotL, 0.0001);
     vec3 diffuse = kD * mat.baseCol / PI;
 
     vec3 brdf = (diffuse + specular) * NdotL;
 
     return brdf;
+}
+
+// https://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf
+vec3 EvaluateBTDF(vec3 L, Ray ray, HitRecord rec) {
+    Material mat = rec.mat;
+    vec3 N = rec.normal;
+    vec3 V = -ray.dir;
+    float eta = rec.eta;
+
+    float a = mat.roughness * mat.roughness;
+    float a2 = a * a;
+
+    vec3 H = normalize(V + eta * L);
+    if (dot(N, H) < 0.0) H = -H;
+
+    float NdotV = abs(dot(N, V));
+    float NdotL = abs(dot(N, L));
+    float VdotH = dot(V, H);
+    float LdotH = dot(L, H);
+
+    vec3 F0 = vec3(0.04);
+    F0 = mix(F0, mat.baseCol, mat.metallic);
+    vec3 F = FresnelSchlick(abs(VdotH), F0);
+
+    float D = DistributionGGX(N, H, a);
+    float G = SmithGGXMaskingShadowing(L, V, N, a2);
+
+    float denom = VdotH + eta * LdotH;
+    denom = max(denom * denom, 0.0001);
+
+    float jacobian = abs(VdotH * LdotH) / max(NdotV * NdotL, 0.0001);
+
+    vec3 btdf = (vec3(1.0) - F) * D * G * jacobian / denom;
+
+    return btdf;
+}
+
+vec3 EvaluateBSDF(vec3 L, Ray ray, HitRecord rec) {
+    vec3 N = rec.normal;
+    float NdotL = dot(N, L);
+    if (NdotL > 0.0) {
+        return EvaluateBRDF(L, ray, rec);
+    } else {
+        return EvaluateBTDF(L, ray, rec);
+    }
 }
 
 // Möller-Trumbore ray-triangle intersection algorithm
@@ -916,10 +947,10 @@ vec3 SampleHDRILight(HitRecord rec, Ray ray, inout uvec3 v) {
         return vec3(0.0); // Occluded
     }
 
-    vec3 f = EvaluateBRDF(L, ray, rec);
+    vec3 f = EvaluateBSDF(L, ray, rec);
     // Multiple Importance Sample (MIS)
     float bsdfPdf = BSDF_PDF(L, ray, rec);
-    float misWeight = PowerHeuristic(1, lightPdf, bsdfPdf);
+    float misWeight = PowerHeuristic(1, lightPdf, 1, bsdfPdf);
 
     return (f * Li * hdriExposure) / lightPdf * misWeight;
 }
@@ -995,7 +1026,7 @@ vec3 SamplePunctualLight(HitRecord rec, Ray ray, Light light, inout uvec3 v) {
         return vec3(0.0); // Occluded
     }
 
-    vec3 f = EvaluateBRDF(L, ray, rec);
+    vec3 f = EvaluateBSDF(L, ray, rec);
     return f * Li;
 }
 
@@ -1063,10 +1094,10 @@ vec3 SampleAreaLight(HitRecord rec, Ray ray, inout uvec3 v) {
 
     Material lightMat = materials[tri.matId];
 
-    vec3 f = EvaluateBRDF(L, ray, rec);
+    vec3 f = EvaluateBSDF(L, ray, rec);
     // Multiple Importance Sample (MIS)
     float bsdfPdf = BSDF_PDF(L, ray, rec);
-    float misWeight = PowerHeuristic(1, lightPdf, bsdfPdf);
+    float misWeight = PowerHeuristic(1, lightPdf, 1, bsdfPdf);
 
     return (f * lightMat.emissive * lightMat.emissiveStrength) / lightPdf * misWeight;
 }
@@ -1100,7 +1131,7 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
                 radiance += throughput * envColor * hdriExposure;
             } else {
                 float lightPdf = HDRI_PDF(ray.dir);
-                float misWeight = PowerHeuristic(1, prevBsdfPdf, lightPdf);
+                float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, lightPdf);
                 radiance += throughput * envColor * hdriExposure * misWeight;
             }
             break;
@@ -1198,7 +1229,7 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
             } else {
                 // Multiple Importance Sample (MIS)
                 float lightPdf = LightPDF(rec, ray, prevPoint);
-                float misWeight = PowerHeuristic(1, prevBsdfPdf, lightPdf);
+                float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, lightPdf);
                 radiance += throughput * mat.emissive * mat.emissiveStrength * misWeight;
             }
         }
@@ -1220,6 +1251,9 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
                 continue;
             }
         }
+
+        // Prevent 0 roughness which results in NaN in many functions
+        mat.roughness = max(mat.roughness, 1e-3);
 
         rec.mat = mat;
 
