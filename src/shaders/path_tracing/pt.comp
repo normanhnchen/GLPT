@@ -221,15 +221,15 @@ vec3 CosineSampleHemisphere(inout uvec3 v, vec3 normal, HitRecord rec) {
 
 // https://learnopengl.com/PBR/Theory
 float DistributionGGX(vec3 N, vec3 H, float a) {
-    float a2     = a*a;
+    float a2     = a * a;
     float NdotH  = max(dot(N, H), 0.0);
-    float NdotH2 = NdotH*NdotH;
+    float NdotH2 = NdotH * NdotH;
 	
     float nom    = a2;
     float denom  = (NdotH2 * (a2 - 1.0) + 1.0);
     denom        = PI * denom * denom;
 	
-    return nom / denom;
+    return nom / max(denom, 1e-10);
 }
 
 // https://learnopengl.com/PBR/Theory
@@ -930,9 +930,9 @@ vec3 SampleHDRILight(HitRecord rec, Ray ray, inout uvec3 v) {
 
     vec3 N = rec.normal;
 
-    // Check if light is above the surface
     float NdotL = dot(N, L);
-    if (NdotL <= 0.0) {
+    
+    if (rec.mat.transmission == 0.0 && NdotL <= 0.0) {
         return vec3(0.0);
     }
 
@@ -1010,10 +1010,13 @@ vec3 SamplePunctualLight(HitRecord rec, Ray ray, Light light, inout uvec3 v) {
         Li = light.col * light.intensity * attenuation;
     }
 
-    // Check if light is above the surface
     vec3 N = rec.normal;
+    
     float NdotL = dot(N, L);
-    if (NdotL <= 0.0) return vec3(0.0);
+    
+    if (rec.mat.transmission == 0.0 && NdotL <= 0.0) {
+        return vec3(0.0);
+    }
 
     // Shadow ray
     Ray shadowRay;
@@ -1068,9 +1071,10 @@ vec3 SampleAreaLight(HitRecord rec, Ray ray, inout uvec3 v) {
     if (cosLight <= 0.0) {
         return vec3(0.0);
     }
-    // Check if light is above the surface
+    
     float NdotL = dot(N, L);
-    if (NdotL <= 0.0) {
+    
+    if (rec.mat.transmission == 0.0 && NdotL <= 0.0) {
         return vec3(0.0);
     }
 
@@ -1253,7 +1257,7 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
         }
 
         // Prevent 0 roughness which results in NaN in many functions
-        mat.roughness = max(mat.roughness, 1e-3);
+        mat.roughness = max(mat.roughness, 1e-2);
 
         rec.mat = mat;
 
