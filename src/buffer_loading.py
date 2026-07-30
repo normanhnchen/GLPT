@@ -168,8 +168,8 @@ class EmissiveTrianglesBuffer:
         
         emissive_triangles_data = np.zeros(num_emissive_triangles, dtype=emissive_triangles_dtype)
 
-        for i in range(scene.num_emissive_triangles):
-            emissive_triangles_data["triIdx"] = scene.emissive_triangle_indices[i]
+        if scene.num_emissive_triangles > 0:
+            emissive_triangles_data["triIdx"][:scene.num_emissive_triangles] = scene.emissive_triangle_indices
 
         self.emissive_triangles_data = emissive_triangles_data
 
