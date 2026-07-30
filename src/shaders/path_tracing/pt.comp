@@ -1348,7 +1348,7 @@ void main() {
 
     uvec3 state = InitRngState(pixelCoords);
     
-    float maxRadiance = 100.0;
+    float maxLuminance = 100.0;
 
     vec3 sampleCombined = vec3(0.0);
     vec3 sampleBaseColor = vec3(0.0);
@@ -1382,10 +1382,9 @@ void main() {
         vec3 baseColorOut;
         vec3 normalOut;
         float depthOut;
-        vec3 newColor = RayColor(ray, state, baseColorOut, normalOut, depthOut);
-
-        // Clamp to prevent fireflies
-        sampleCombined += min(newColor, vec3(maxRadiance));
+        vec3 combinedOut = RayColor(ray, state, baseColorOut, normalOut, depthOut);
+        
+        sampleCombined += combinedOut;
         sampleBaseColor += baseColorOut;
         sampleNormal += normalOut;
         sampleDepth += depthOut;
@@ -1400,6 +1399,12 @@ void main() {
     vec3 oldNormal = imageLoad(normalPass, pixelCoords).rgb;
     float oldDepth = imageLoad(depthPass, pixelCoords).r;
     float weight = float(samplesPerPixel) / (float(totalSamples + samplesPerPixel));
+
+    // Clamp to prevent fireflies
+    float lum = dot(oldCombined, vec3(0.2126, 0.7152, 0.0722));
+    if (lum > maxLuminance) {
+        oldCombined *= maxLuminance / max(lum, 1e-4);
+    }
     
     vec3 finalCombined;
     vec3 finalBaseCol;
