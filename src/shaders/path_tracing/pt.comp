@@ -721,7 +721,6 @@ bool ShadowRayTriangleIntersect(inout uvec3 v, inout Ray ray, Triangle tri, int 
                 return false;
             }
         }
-        float blendRand = PCG3d(v).x;
         if (mat.alphaMode == 2) {
             // BLEND
             if (PCG3d(v).x > mat.alpha) {
@@ -747,6 +746,16 @@ bool AABBIntersect(Ray ray, vec3 invRayDir, BVHNode node, float closestSoFar) {
     float tFar  = min(min(tMaxAxis.x, tMaxAxis.y), tMaxAxis.z);
     
     return tNear <= tFar && tFar > 0.0 && tNear < closestSoFar;
+}
+
+float AABBTNear(Ray ray, vec3 invRayDir, BVHNode node) {
+    vec3 t0 = (node.aabbMin - ray.orig) * invRayDir;
+    vec3 t1 = (node.aabbMax - ray.orig) * invRayDir;
+    
+    vec3 tMin = min(t0, t1);
+
+    float tNear = max(max(tMin.x, tMin.y), tMin.z);
+    return tNear;
 }
 
 // https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
@@ -794,10 +803,9 @@ bool Hit(Ray ray, inout HitRecord rec) {
     return hitAnything;
 }
 
-bool TestVisibility(inout uvec3 v, Ray ray, inout ShadowRecord rec) {
+bool TestVisibility(inout uvec3 v, Ray ray, float maxDist, inout ShadowRecord rec) {
     ShadowRecord tempRec = rec;
-    bool occluded = false;
-    float closestSoFar = INF;
+    float closestSoFar = maxDist;
 
     int nodeStack[64];
     int stackIdx = 0;
@@ -817,25 +825,41 @@ bool TestVisibility(inout uvec3 v, Ray ray, inout ShadowRecord rec) {
                     int triIndex = triIndices[currNode.firstTriIdx + i];
                     Triangle tri = triangles[triIndex];
                     if (ShadowRayTriangleIntersect(v, ray, tri, triIndex, closestSoFar, tempRec)) {
-                        occluded = true;
-                        closestSoFar = tempRec.t;
                         rec = tempRec;
+                        return true;
                     }
                 }
             } else {
+                int left = currNode.leftChildIdx;
+                int right = currNode.rightChildIdx;
+
                 // Push children onto the stack if there are children
-                
-                if (currNode.leftChildIdx != -1) {
-                    nodeStack[stackIdx++] = currNode.leftChildIdx;
-                }
-                if (currNode.rightChildIdx != -1) {
-                    nodeStack[stackIdx++] = currNode.rightChildIdx;
+
+                if (left != -1 && right != -1) {
+                    BVHNode leftNode = BVHNodes[left];
+                    BVHNode rightNode = BVHNodes[right];
+
+                    float leftT = AABBTNear(ray, invRayDir, leftNode);
+                    float rightT = AABBTNear(ray, invRayDir, rightNode);
+
+                    // Push farther child first so the nearer one pops first (LIFO)
+                    if (leftT < rightT) {
+                        nodeStack[stackIdx++] = right;
+                        nodeStack[stackIdx++] = left;
+                    } else {
+                        nodeStack[stackIdx++] = left;
+                        nodeStack[stackIdx++] = right;
+                    }
+                } else if (left != -1) {
+                    nodeStack[stackIdx++] = left;
+                } else if (right != -1) {
+                    nodeStack[stackIdx++] = right;
                 }
             }
         }
     }
 
-    return occluded;
+    return false;
 }
 
 // https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
@@ -942,7 +966,7 @@ vec3 SampleHDRILight(HitRecord rec, Ray ray, inout uvec3 v) {
     shadowRay.dir = L;
 
     ShadowRecord shadowRec;
-    bool occluded = TestVisibility(v, shadowRay, shadowRec);
+    bool occluded = TestVisibility(v, shadowRay, INF, shadowRec);
     if (occluded) {
         return vec3(0.0); // Occluded
     }
@@ -1024,7 +1048,7 @@ vec3 SamplePunctualLight(HitRecord rec, Ray ray, Light light, inout uvec3 v) {
     shadowRay.dir = L;
 
     ShadowRecord shadowRec;
-    bool occluded = TestVisibility(v, shadowRay, shadowRec);
+    bool occluded = TestVisibility(v, shadowRay, dist, shadowRec);
     if (occluded && shadowRec.t < dist) {
         return vec3(0.0); // Occluded
     }
@@ -1087,7 +1111,7 @@ vec3 SampleAreaLight(HitRecord rec, Ray ray, inout uvec3 v) {
     float offset = EPSILON * 10.0;
 
     ShadowRecord shadowRec;
-    bool occluded = TestVisibility(v, shadowRay, shadowRec);
+    bool occluded = TestVisibility(v, shadowRay, dist - offset, shadowRec);
     if (occluded && shadowRec.t < dist - offset) {
         return vec3(0.0); // Occluded
     }
@@ -1246,7 +1270,6 @@ vec3 RayColor(Ray ray, inout uvec3 v, out vec3 baseColorOut, out vec3 normalOut,
                 continue;
             }
         }
-        float blendRand = PCG3d(v).x;
         if (mat.alphaMode == 2) {
             // BLEND
             if (PCG3d(v).x > mat.alpha) {
