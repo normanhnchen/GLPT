@@ -36,8 +36,12 @@ class PTSettings:
         config = json_settings["path_tracing"]
 
         self.spp = config["samples_per_pixel"]
-        self.max_bounces = config["max_bounces"]
         self.max_samples = config["max_samples"]
+
+        self.total_bounces = config["total_bounces"]
+        self.diffuse_bounces = config["diffuse_bounces"]
+        self.specular_bounces = config["specular_bounces"]
+        self.transmission_bounces = config["transmission_bounces"]
 
 
 class PostProcessSettings:

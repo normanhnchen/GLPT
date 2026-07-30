@@ -315,7 +315,11 @@ def main():
                     pt_shaders.pt.prog["samplesPerPixel"].value = pt_settings.spp
                 
                 pt_shaders.pt.prog["totalSamples"].value = pt_state.total_samples
-                pt_shaders.pt.prog["maxBounces"].value = pt_settings.max_bounces
+                
+                pt_shaders.pt.prog["maxTotalBounces"].value = pt_settings.total_bounces
+                pt_shaders.pt.prog["maxDiffuseBounces"].value = pt_settings.diffuse_bounces
+                pt_shaders.pt.prog["maxSpecularBounces"].value = pt_settings.specular_bounces
+                pt_shaders.pt.prog["maxTransmissionBounces"].value = pt_settings.transmission_bounces
 
                 pt_shaders.pt.prog["blur"].value = post_process_settings.blur
 

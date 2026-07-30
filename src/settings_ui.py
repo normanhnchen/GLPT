@@ -178,15 +178,15 @@ class PathTracingUI:
 
         super().__init__(**kwargs)
     
-    def max_bounce_slider(self):
+    def total_bounces_slider(self):
         # Slider 
         # ------
         slider_speed = 0.5
-        hardcoded_min_bounces = 1
+        hardcoded_min_bounces = 0
         hardcoded_max_bounces = 1024
-        bounces = pt_settings.max_bounces
+        bounces = pt_settings.total_bounces
         changed, bounces = imgui.drag_int(
-            "##max_bounces",
+            "##total_bounces",
             bounces,
             slider_speed,
             hardcoded_min_bounces,
@@ -201,7 +201,7 @@ class PathTracingUI:
             else:
                 glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
             
-            pt_settings.max_bounces = bounces
+            pt_settings.total_bounces = bounces
             self.pt_state.restart_render()
         
         if imgui.is_item_deactivated():
@@ -210,23 +210,173 @@ class PathTracingUI:
         # Minus button
         # ------------
         imgui.same_line()
-        if imgui.button("-##bounces_minus"):
-            if pt_settings.max_bounces > hardcoded_min_bounces:
-                pt_settings.max_bounces -= 1
+        if imgui.button("-##total_bounces_minus"):
+            if pt_settings.total_bounces > hardcoded_min_bounces:
+                pt_settings.total_bounces -= 1
                 self.pt_state.restart_render()
         
         # Plus button
         # ------------
         imgui.same_line()
-        if imgui.button("+##bounces_plus"):
-            if pt_settings.max_bounces < hardcoded_max_bounces:
-                pt_settings.max_bounces += 1
+        if imgui.button("+##total_bounces_plus"):
+            if pt_settings.total_bounces < hardcoded_max_bounces:
+                pt_settings.total_bounces += 1
                 self.pt_state.restart_render()
         
         # Label
         # -----
         imgui.same_line()
-        imgui.text("Max Bounces")
+        imgui.text("Total Bounces")
+
+    def diffuse_bounces_slider(self):
+            # Slider 
+            # ------
+            slider_speed = 0.5
+            hardcoded_min_bounces = 0
+            hardcoded_max_bounces = 1024
+            bounces = pt_settings.diffuse_bounces
+            changed, bounces = imgui.drag_int(
+                "##diffuse_bounces",
+                bounces,
+                slider_speed,
+                hardcoded_min_bounces,
+                hardcoded_max_bounces
+            )
+    
+            # Dragging logic
+            # --------------
+            if imgui.is_item_active() and changed:
+                if imgui.is_mouse_dragging(0):
+                    glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+                else:
+                    glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+                
+                pt_settings.diffuse_bounces = bounces
+                self.pt_state.restart_render()
+            
+            if imgui.is_item_deactivated():
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            # Minus button
+            # ------------
+            imgui.same_line()
+            if imgui.button("-##diffuse_bounces_minus"):
+                if pt_settings.diffuse_bounces > hardcoded_min_bounces:
+                    pt_settings.diffuse_bounces -= 1
+                    self.pt_state.restart_render()
+            
+            # Plus button
+            # ------------
+            imgui.same_line()
+            if imgui.button("+##diffuse_bounces_plus"):
+                if pt_settings.diffuse_bounces < hardcoded_max_bounces:
+                    pt_settings.diffuse_bounces += 1
+                    self.pt_state.restart_render()
+            
+            # Label
+            # -----
+            imgui.same_line()
+            imgui.text("Diffuse Bounces")
+
+    def specular_bounces_slider(self):
+            # Slider 
+            # ------
+            slider_speed = 0.5
+            hardcoded_min_bounces = 0
+            hardcoded_max_bounces = 1024
+            bounces = pt_settings.specular_bounces
+            changed, bounces = imgui.drag_int(
+                "##specular_bounces",
+                bounces,
+                slider_speed,
+                hardcoded_min_bounces,
+                hardcoded_max_bounces
+            )
+    
+            # Dragging logic
+            # --------------
+            if imgui.is_item_active() and changed:
+                if imgui.is_mouse_dragging(0):
+                    glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+                else:
+                    glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+                
+                pt_settings.specular_bounces = bounces
+                self.pt_state.restart_render()
+            
+            if imgui.is_item_deactivated():
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            # Minus button
+            # ------------
+            imgui.same_line()
+            if imgui.button("-##specular_bounces_minus"):
+                if pt_settings.specular_bounces > hardcoded_min_bounces:
+                    pt_settings.specular_bounces -= 1
+                    self.pt_state.restart_render()
+            
+            # Plus button
+            # ------------
+            imgui.same_line()
+            if imgui.button("+##specular_bounces_plus"):
+                if pt_settings.specular_bounces < hardcoded_max_bounces:
+                    pt_settings.specular_bounces += 1
+                    self.pt_state.restart_render()
+            
+            # Label
+            # -----
+            imgui.same_line()
+            imgui.text("Specular Bounces")
+
+    def transmission_bounces_slider(self):
+            # Slider 
+            # ------
+            slider_speed = 0.5
+            hardcoded_min_bounces = 0
+            hardcoded_max_bounces = 1024
+            bounces = pt_settings.transmission_bounces
+            changed, bounces = imgui.drag_int(
+                "##transmission_bounces",
+                bounces,
+                slider_speed,
+                hardcoded_min_bounces,
+                hardcoded_max_bounces
+            )
+    
+            # Dragging logic
+            # --------------
+            if imgui.is_item_active() and changed:
+                if imgui.is_mouse_dragging(0):
+                    glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+                else:
+                    glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+                
+                pt_settings.transmission_bounces = bounces
+                self.pt_state.restart_render()
+            
+            if imgui.is_item_deactivated():
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            # Minus button
+            # ------------
+            imgui.same_line()
+            if imgui.button("-##transmission_bounces_minus"):
+                if pt_settings.transmission_bounces > hardcoded_min_bounces:
+                    pt_settings.transmission_bounces -= 1
+                    self.pt_state.restart_render()
+            
+            # Plus button
+            # ------------
+            imgui.same_line()
+            if imgui.button("+##transmission_bounces_plus"):
+                if pt_settings.transmission_bounces < hardcoded_max_bounces:
+                    pt_settings.transmission_bounces += 1
+                    self.pt_state.restart_render()
+            
+            # Label
+            # -----
+            imgui.same_line()
+            imgui.text("Transmission Bounces")
         
     def max_samples_slider(self):
         # Slider 
@@ -330,7 +480,10 @@ class PathTracingUI:
     
     def reset_pt_button(self):
         if imgui.button("Reset Path Tracing Settings"):
-            pt_settings.max_bounces = _pt_settings_default.max_bounces
+            pt_settings.total_bounces = _pt_settings_default.total_bounces
+            pt_settings.diffuse_bounces = _pt_settings_default.diffuse_bounces
+            pt_settings.specular_bounces = _pt_settings_default.specular_bounces
+            pt_settings.transmission_bounces = _pt_settings_default.transmission_bounces
             pt_settings.max_samples = _pt_settings_default.max_samples
             pt_settings.spp = _pt_settings_default.spp
             self.pt_state.restart_render()
@@ -1012,7 +1165,10 @@ class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI
         self.tiles_y_slider()
 
     def path_tracing_ui(self):
-        self.max_bounce_slider()
+        self.total_bounces_slider()
+        self.diffuse_bounces_slider()
+        self.specular_bounces_slider()
+        self.transmission_bounces_slider()
         self.max_samples_slider()
         self.spp_slider()
         self.reset_pt_button()
