@@ -523,7 +523,7 @@ vec3 SampleBSDF(inout uvec3 v, Ray ray, HitRecord rec, out vec3 bounceDir, out f
 
             bsdfPdf = BSDF_PDF(bounceDir, ray, rec);
 
-            return mat.baseCol / refractChance;
+            return vec3(1.0) / refractChance;
         } else {
             // Diffuse lobe
 
