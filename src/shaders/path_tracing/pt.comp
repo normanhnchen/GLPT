@@ -206,6 +206,8 @@ struct PathSample {
 #define INF 1e20
 #define PI 3.14159265359
 #define MAX_BVH_DEPTH 32
+#define MAX_DIRECT_LUMINANCE 10.0
+#define MAX_INDIRECT_LUMINANCE 10.0
 
 uniform int samplesPerPixel;
 uniform int totalSamples;
@@ -1182,6 +1184,14 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     return (f * lightMat.emissive * lightMat.emissiveStrength) / lightPdf * misWeight;
 }
 
+vec3 ClampLuminance(vec3 col, float maxLum) {
+    float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    if (lum > maxLum) {
+        col *= maxLum / max(lum, 1e-4);
+    }
+    return col;
+}
+
 PathSample PathTrace(Ray ray, inout uvec3 rng) {
     SurfaceInteraction si;
 
@@ -1322,7 +1332,9 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                 // Multiple Importance Sample (MIS)
                 float lightPdf = LightPdf(si, ray, prevPoint);
                 float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, lightPdf);
-                radiance += throughput * mat.emissive * mat.emissiveStrength * misWeight;
+                vec3 indirect = mat.emissive * mat.emissiveStrength * misWeight;
+                indirect = ClampLuminance(indirect, MAX_INDIRECT_LUMINANCE);
+                radiance += throughput * indirect;
             }
         }
 
@@ -1354,6 +1366,8 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         }
         direct += SampleAreaLight(si, ray, rng);
         direct += SampleHdriLight(si, ray, rng);
+
+        direct = ClampLuminance(direct, MAX_DIRECT_LUMINANCE);
 
         radiance += throughput * direct;
 
@@ -1483,12 +1497,6 @@ void main() {
     vec3 oldNormal = imageLoad(normalPass, pixelCoords).rgb;
     float oldDepth = imageLoad(depthPass, pixelCoords).r;
     float weight = float(samplesPerPixel) / (float(totalSamples + samplesPerPixel));
-
-    // Clamp to prevent fireflies
-    float lum = dot(sampleCombined, vec3(0.2126, 0.7152, 0.0722));
-    if (lum > maxLuminance) {
-        sampleCombined *= maxLuminance / max(lum, 1e-4);
-    }
     
     vec3 finalCombined;
     vec3 finalBaseCol;
