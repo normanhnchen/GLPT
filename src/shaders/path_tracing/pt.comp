@@ -1038,7 +1038,8 @@ vec3 SampleHdriLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
 
     // Shadow ray
     Ray shadowRay;
-    shadowRay.o = si.p + si.ng * EPSILON;
+    vec3 offsetDir = dot(si.ng, wi) < 0.0 ? -si.ng : si.ng;
+    shadowRay.o = OffsetRayOrigin(si.p, offsetDir);
     shadowRay.d = wi;
 
     VisibilityInteraction vi;
@@ -1306,6 +1307,22 @@ vec3 ClampLuminance(vec3 col, float maxLum) {
     return col;
 }
 
+vec3 EnsureValidReflection(vec3 ng, vec3 wo, vec3 ns) {
+    vec3 R = reflect(-wo, ns);
+
+    // Check if the reflection is above the surface
+    float horizon = dot(ng, R);
+    
+    if (horizon < 0.0) {
+        float blendFactor = clamp(abs(horizon) / dot(ng, wo) + 1e-4, 0.0, 1.0);
+
+        // Blend the shading normal toward the geometric normal
+        return normalize(mix(ns, ng, blendFactor));
+    } else {
+        return ns;
+    }
+}
+
 PathSample PathTrace(Ray ray, inout uvec3 rng) {
     SurfaceInteraction si;
 
@@ -1417,26 +1434,18 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             vec3 ns = texture(normalTextures, vec3(si.uv, mat.normalTexId)).rgb;
             ns = ns * 2.0 - 1.0;
             ns = normalize(localToWorld * ns);
-            si.ns = ns;
-
-            // Build an Orthonormal basis (ONB)
-            vec3 helper = abs(ns.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
-            vec3 dpdu = normalize(cross(helper, ns));
-            vec3 dpdv = cross(ns, dpdu);
-
-            si.localToWorld = mat3(dpdu, dpdv, ns);
-            si.worldToLocal = transpose(si.localToWorld);
-        } else {
-            vec3 ns = si.ns;
-
-            // Build an Orthonormal basis (ONB)
-            vec3 helper = abs(ns.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
-            vec3 dpdu = normalize(cross(helper, ns));
-            vec3 dpdv = cross(ns, dpdu);
-
-            si.localToWorld = mat3(dpdu, dpdv, ns);
-            si.worldToLocal = transpose(si.localToWorld);
         }
+        
+        ns = EnsureValidReflection(si.ng, -ray.d, ns);
+        si.ns = ns;
+
+        // Build an Orthonormal basis (ONB)
+        vec3 helper = abs(ns.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
+        dpdu = normalize(cross(helper, ns));
+        dpdv = cross(ns, dpdu);
+
+        si.localToWorld = mat3(dpdu, dpdv, ns);
+        si.worldToLocal = transpose(si.localToWorld);
         
         // Add light contribution
         if (mat.hasEmission == 1) {
