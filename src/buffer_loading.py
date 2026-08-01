@@ -110,17 +110,17 @@ class TriangleBuffer:
         triangle_data["v1"]["uv"] = scene.uvs[idx1]
         triangle_data["v2"]["uv"] = scene.uvs[idx2]
 
-        triangle_data["v0"]["normal"] = scene.normals[idx0]
-        triangle_data["v1"]["normal"] = scene.normals[idx1]
-        triangle_data["v2"]["normal"] = scene.normals[idx2]
+        triangle_data["v0"]["n"] = scene.normals[idx0]
+        triangle_data["v1"]["n"] = scene.normals[idx1]
+        triangle_data["v2"]["n"] = scene.normals[idx2]
 
-        triangle_data["v0"]["tangent"] = scene.tangents[idx0]
-        triangle_data["v1"]["tangent"] = scene.tangents[idx1]
-        triangle_data["v2"]["tangent"] = scene.tangents[idx2]
+        triangle_data["v0"]["dpdu"] = scene.tangents[idx0]
+        triangle_data["v1"]["dpdu"] = scene.tangents[idx1]
+        triangle_data["v2"]["dpdu"] = scene.tangents[idx2]
 
-        triangle_data["v0"]["bitangent"] = scene.bitangents[idx0]
-        triangle_data["v1"]["bitangent"] = scene.bitangents[idx1]
-        triangle_data["v2"]["bitangent"] = scene.bitangents[idx2]
+        triangle_data["v0"]["dpdv"] = scene.bitangents[idx0]
+        triangle_data["v1"]["dpdv"] = scene.bitangents[idx1]
+        triangle_data["v2"]["dpdv"] = scene.bitangents[idx2]
 
         triangle_data["matId"] = scene.material_ids
 
@@ -135,14 +135,14 @@ class TriangleBuffer:
 
 class BVHNodeBuffer:
     def __init__(self, scene):
-        bvh_node_data = np.zeros(scene.num_bvh_nodes, bvh_node_dtype)
+        bvh_node_data = np.zeros(scene.num_bvh_nodes, dtype=bvh_node_dtype)
 
         for i in range(scene.num_bvh_nodes):
             bvh_node_data[i]["aabbMin"] = scene.bvh.aabb_mins[i]
             bvh_node_data[i]["aabbMax"] = scene.bvh.aabb_maxs[i]
-            bvh_node_data[i]["leftChildIdx"] = scene.bvh.left_child_indices[i]
-            bvh_node_data[i]["rightChildIdx"] = scene.bvh.right_child_indices[i]
-            bvh_node_data[i]["firstTriIdx"] = scene.bvh.first_tri_indices[i]
+            bvh_node_data[i]["leftChildId"] = scene.bvh.left_child_indices[i]
+            bvh_node_data[i]["rightChildId"] = scene.bvh.right_child_indices[i]
+            bvh_node_data[i]["firstTriId"] = scene.bvh.first_tri_indices[i]
             bvh_node_data[i]["triCount"] = scene.bvh.tri_counts[i]
             bvh_node_data[i]["isLeaf"] = scene.bvh.is_leafs[i]
         
@@ -169,7 +169,7 @@ class EmissiveTrianglesBuffer:
         emissive_triangles_data = np.zeros(num_emissive_triangles, dtype=emissive_triangles_dtype)
 
         if scene.num_emissive_triangles > 0:
-            emissive_triangles_data["triIdx"][:scene.num_emissive_triangles] = scene.emissive_triangle_indices
+            emissive_triangles_data["triId"][:scene.num_emissive_triangles] = scene.emissive_triangle_indices
 
         self.emissive_triangles_data = emissive_triangles_data
 
