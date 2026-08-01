@@ -110,6 +110,9 @@ struct Light {
 
 struct EmissiveTriangle {
     int triId;
+    float q;
+    float p;
+    int alias;
 };
 
 layout(std430, binding = 1) buffer TriangleBuffer {
@@ -203,6 +206,7 @@ struct PathSample {
 };
 
 #define EPSILON 1e-4
+#define ONE_MINUS_EPSILON 1.0 - EPSILON
 #define INF 1e20
 #define PI 3.14159265359
 #define MAX_BVH_DEPTH 32
@@ -1111,6 +1115,29 @@ vec3 SamplePunctualLight(SurfaceInteraction si, Ray ray, Light light, inout uvec
     return f * Li;
 }
 
+// https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable::Sample
+Triangle PowerEmissiveTriangleSample(float Xi, int numEmissive, out float triPdf) {
+    // Sample from the precomputed alias table weighted by power
+    // ---------------------------------------------------------
+    int offset = min(int(Xi.x * numEmissive), numEmissive - 1);
+    float up = min(Xi.x * numEmissive - offset, ONE_MINUS_EPSILON);
+
+    EmissiveTriangle etOffset = emissiveTriangles[offset];
+
+    int emissiveTriId;
+    if (up < etOffset.q) {
+        emissiveTriId = offset;
+        triPdf = etOffset.p;
+    } else {
+        emissiveTriId = etOffset.alias;
+        triPdf = emissiveTriangles[emissiveTriId].p;
+    }
+
+    int triId = emissiveTriangles[emissiveTriId].triId;
+    return triangles[triId];
+}
+
+// https://pbr-book.org/4ed/Light_Sources/Light_Sampling#PowerLightSampler
 vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     int numEmissive = emissiveTriangles.length();
     if (numEmissive == 0) {
@@ -1119,10 +1146,8 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
 
     vec3 Xi = Pcg3d(rng);
 
-    // Uniformly sample random emissive triangle
-    int emissiveTriIdx = int(Xi.x * float(numEmissive));
-    int triId = emissiveTriangles[emissiveTriIdx].triId;
-    Triangle tri = triangles[triId];
+    float triPdf;
+    Triangle tri = PowerEmissiveTriangleSample(Xi.x, numEmissive, triPdf);
 
     // Uniformly sample random point on triangle
     // https://pbr-book.org/4ed/Shapes/Triangle_Meshes#Sampling
@@ -1162,17 +1187,16 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     shadowRay.d = wi;
 
     // Tested value which currently works to prevent self-intersection
-    float offset = EPSILON * 10.0;
+    float distOffset = EPSILON * 10.0;
 
     VisibilityInteraction vi;
-    bool isOccluded = TestVisibility(rng, shadowRay, dist - offset, vi);
-    if (isOccluded && vi.t < dist - offset) {
+    bool isOccluded = TestVisibility(rng, shadowRay, dist - distOffset, vi);
+    if (isOccluded && vi.t < dist - distOffset) {
         return vec3(0.0); // Occluded
     }
 
-    float pdfTri = 1.0 / float(numEmissive);
     float pdfPoint = (dist * dist) / (cosLight * tri.area);
-    float lightPdf = pdfTri * pdfPoint;
+    float lightPdf = triPdf * pdfPoint;
 
     Material lightMat = materials[tri.matId];
 

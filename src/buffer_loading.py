@@ -170,6 +170,9 @@ class EmissiveTrianglesBuffer:
 
         if scene.num_emissive_triangles > 0:
             emissive_triangles_data["triId"][:scene.num_emissive_triangles] = scene.emissive_triangle_indices
+            emissive_triangles_data["q"] = scene.light_q
+            emissive_triangles_data["p"] = scene.light_p
+            emissive_triangles_data["alias"] = scene.light_alias
 
         self.emissive_triangles_data = emissive_triangles_data
 

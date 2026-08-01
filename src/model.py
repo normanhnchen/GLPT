@@ -182,7 +182,6 @@ class HDRI:
     # https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
     def _build_hdri_distribution(self):
         img = self.img.astype(np.float64)
-        # Convert RGB to luminance values using standard weights
         luminance = img[:, :, 0] * 0.2126 + img[:, :, 1] * 0.7152 + img[:, :, 2] * 0.0722
 
         # Adjust for equirectangular map spherical distortion
@@ -397,6 +396,55 @@ class Scene:
         )
         self.triangle_areas = np.full(self.num_triangles, -1, dtype=f4)
         self.triangle_areas[self.emissive_triangle_indices] = emissive_triangle_areas
+
+        mat_emissive_rgb = np.array([mat.emissive_color * mat.emissive_strength for mat in self.materials])
+        luminance = mat_emissive_rgb @ np.array([0.2126, 0.7152, 0.0722])
+        power = luminance[self.material_ids[self.emissive_triangle_indices]] * emissive_triangle_areas
+
+        self.light_p, self.light_q, self.light_alias = self._build_alias_table(power)
+    
+    # https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable
+    def _build_alias_table(self, weights):
+        n = len(weights)
+        weights = np.asarray(weights, dtype=np.float64)
+        total = weights.sum()
+
+        p = np.zeros(n, dtype=np.float64)
+        q = np.zeros(n, dtype=np.float64)
+        alias = np.full(n, -1, dtype=np.int32)
+
+        p[:] = weights / total
+
+        under = []
+        over = []
+        for i in range(n):
+            p_hat = p[i] * n
+            if (p_hat < 1):
+                under.append((p_hat, i))
+            else:
+                over.append((p_hat, i))
+
+        while under and over:
+            un_p_hat, un_i = under.pop()
+            ov_p_hat, ov_i = over.pop()
+
+            q[un_i] = un_p_hat
+            alias[un_i] = ov_i
+
+            p_excess = un_p_hat + ov_p_hat - 1
+            if (p_excess < 1):
+                under.append((p_excess, ov_i))
+            else:
+                over.append((p_excess, ov_i))
+
+        for _, i in over:
+            q[i] = 1
+            alias[i] = -1
+        for _, i in under:
+            q[i]
+            alias[i] = -1
+
+        return p.astype(f4), q.astype(f4), alias
     
     def build_bvh(self):
         try:

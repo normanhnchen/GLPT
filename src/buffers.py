@@ -94,5 +94,8 @@ bvh_node_dtype = np.dtype([
 ])
 
 emissive_triangles_dtype = np.dtype([
-    ("triId", i4)
+    ("triId", i4),
+    ("q", f4),
+    ("p", f4),
+    ("alias", i4)
 ])
