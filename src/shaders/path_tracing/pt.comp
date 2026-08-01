@@ -236,6 +236,9 @@ uniform int maxDiffuseBounces;
 uniform int maxSpecularBounces;
 uniform int maxTransmissionBounces;
 
+uniform int numFiniteLights;
+uniform int numEmissiveTriangles;
+
 // PCG 3d hash randomization
 // http://www.jcgt.org/published/0009/03/02/
 vec3 Pcg3d(inout uvec3 rng) {
@@ -249,6 +252,28 @@ vec3 Pcg3d(inout uvec3 rng) {
 
 vec3 GetRayPoint(Ray ray, float t) {
     return ray.o + t * ray.d;
+}
+
+// Adapted from Ray Tracing Gems, Chapter 6:
+// "A Fast and Robust Method for Avoiding Self-Intersection" (Wächter and Binder)
+vec3 OffsetRayOrigin(vec3 p, vec3 n) {
+    const int intScale = 256;
+    const float floatScale = 1.0 / 65536.0;
+    const float origin = 1.0 / 32.0;
+
+    ivec3 of_i = ivec3(n * intScale);
+
+    vec3 p_i = vec3(
+        intBitsToFloat(floatBitsToInt(p.x) + ((p.x < 0.0) ? -of_i.x : of_i.x)),
+        intBitsToFloat(floatBitsToInt(p.y) + ((p.y < 0.0) ? -of_i.y : of_i.y)),
+        intBitsToFloat(floatBitsToInt(p.z) + ((p.z < 0.0) ? -of_i.z : of_i.z))
+    );
+
+    return vec3(
+        abs(p.x) < origin ? p.x + floatScale * n.x : p_i.x,
+        abs(p.y) < origin ? p.y + floatScale * n.y : p_i.y,
+        abs(p.z) < origin ? p.z + floatScale * n.z : p_i.z
+    );
 }
 
 // https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
@@ -1074,11 +1099,11 @@ float AreaLightPdf(SurfaceInteraction si, Ray ray, vec3 prevPoint) {
 }
 
 // https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable::Sample
-Light PowerFinitePunctualLightSample(float Xi, int numFinite, out float lightPdf) {
+Light PowerFinitePunctualLightSample(float Xi, out float lightPdf) {
     // Sample from the precomputed alias table weighted by power
     // ---------------------------------------------------------
-    int offset = min(int(Xi.x * numFinite), numFinite - 1);
-    float up = min(Xi.x * numFinite - offset, ONE_MINUS_EPSILON);
+    int offset = min(int(Xi.x * numFiniteLights), numFiniteLights - 1);
+    float up = min(Xi.x * numFiniteLights - offset, ONE_MINUS_EPSILON);
 
     FiniteLight flOffset = finiteLights[offset];
 
@@ -1098,15 +1123,14 @@ Light PowerFinitePunctualLightSample(float Xi, int numFinite, out float lightPdf
 // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md
 // https://www.pbr-book.org/4ed/Light_Sources/Point_Lights
 vec3 SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
-    int numFinite = finiteLights.length();
-    if (numFinite == 0) {
+    if (numFiniteLights == 0) {
         return vec3(0.0);
     }
 
     vec3 Xi = Pcg3d(rng);
 
     float lightPdf;
-    Light light = PowerFinitePunctualLightSample(Xi.x, numFinite, lightPdf);
+    Light light = PowerFinitePunctualLightSample(Xi.x, lightPdf);
 
     vec3 wi = normalize(light.pos - si.p);
     float dist = length(light.pos - si.p);
@@ -1138,7 +1162,8 @@ vec3 SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) 
 
     // Shadow ray
     Ray shadowRay;
-    shadowRay.o = si.p + si.ng * EPSILON;
+    vec3 offsetDir = dot(si.ng, wi) < 0.0 ? -si.ng : si.ng;
+    shadowRay.o = OffsetRayOrigin(si.p, offsetDir);
     shadowRay.d = wi;
 
     VisibilityInteraction vi;
@@ -1166,7 +1191,8 @@ vec3 SampleInfinitePunctualLight(SurfaceInteraction si, Ray ray, Light light, in
 
     // Shadow ray
     Ray shadowRay;
-    shadowRay.o = si.p + si.ng * EPSILON;
+    vec3 offsetDir = dot(si.ng, wi) < 0.0 ? -si.ng : si.ng;
+    shadowRay.o = OffsetRayOrigin(si.p, offsetDir);
     shadowRay.d = wi;
 
     VisibilityInteraction vi;
@@ -1180,11 +1206,11 @@ vec3 SampleInfinitePunctualLight(SurfaceInteraction si, Ray ray, Light light, in
 }
 
 // https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable::Sample
-Triangle PowerEmissiveTriangleSample(float Xi, int numEmissive, out float triPdf) {
+Triangle PowerEmissiveTriangleSample(float Xi, out float triPdf) {
     // Sample from the precomputed alias table weighted by power
     // ---------------------------------------------------------
-    int offset = min(int(Xi.x * numEmissive), numEmissive - 1);
-    float up = min(Xi.x * numEmissive - offset, ONE_MINUS_EPSILON);
+    int offset = min(int(Xi.x * numEmissiveTriangles), numEmissiveTriangles - 1);
+    float up = min(Xi.x * numEmissiveTriangles - offset, ONE_MINUS_EPSILON);
 
     EmissiveTriangle etOffset = emissiveTriangles[offset];
 
@@ -1203,15 +1229,14 @@ Triangle PowerEmissiveTriangleSample(float Xi, int numEmissive, out float triPdf
 
 // https://pbr-book.org/4ed/Light_Sources/Light_Sampling#PowerLightSampler
 vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
-    int numEmissive = emissiveTriangles.length();
-    if (numEmissive == 0) {
+    if (numEmissiveTriangles == 0) {
         return vec3(0.0);
     }
 
     vec3 Xi = Pcg3d(rng);
 
     float triPdf;
-    Triangle tri = PowerEmissiveTriangleSample(Xi.x, numEmissive, triPdf);
+    Triangle tri = PowerEmissiveTriangleSample(Xi.x, triPdf);
 
     // Uniformly sample random point on triangle
     // https://pbr-book.org/4ed/Shapes/Triangle_Meshes#Sampling
@@ -1247,11 +1272,12 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
 
     // Shadow ray
     Ray shadowRay;
-    shadowRay.o = si.p + si.ng * EPSILON;
+    vec3 offsetDir = dot(si.ng, wi) < 0.0 ? -si.ng : si.ng;
+    shadowRay.o = OffsetRayOrigin(si.p, offsetDir);
     shadowRay.d = wi;
 
-    // Tested value which currently works to prevent self-intersection
-    float distOffset = EPSILON * 10.0;
+    // Distance-scaled offset dynamic with how far away the light source is
+    float distOffset = max(dist * 1e-4, 1e-4);
 
     VisibilityInteraction vi;
     bool isOccluded = TestVisibility(rng, shadowRay, dist - distOffset, vi);
@@ -1490,7 +1516,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         ray.d = bsdfSample.wi;
 
         vec3 offsetDir = didRefract ? -si.ng : si.ng;
-        ray.o = si.p + offsetDir * EPSILON;
+        ray.o = OffsetRayOrigin(si.p, offsetDir);
 
         // Russian Roulette
         // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Russian_Roulette_and_Splitting

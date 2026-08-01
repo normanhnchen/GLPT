@@ -329,6 +329,9 @@ def main():
 
                 pt_shaders.pt.prog["depthFactor"].value = 1 / scene.extent
 
+                pt_shaders.pt.prog["numFiniteLights"].value = scene.num_finite_lights
+                pt_shaders.pt.prog["numEmissiveTriangles"].value = scene.num_emissive_triangles
+
                 # Apply ceiling function
                 # Allows the compute shader to reach the entire screen
                 groups_x = (pt_state.tile_width + 15) // 16

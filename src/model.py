@@ -471,7 +471,7 @@ class Scene:
             q[i] = 1
             alias[i] = -1
         for _, i in under:
-            q[i]
+            q[i] = 1
             alias[i] = -1
 
         return p.astype(f4), q.astype(f4), alias
