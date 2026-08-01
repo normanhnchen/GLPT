@@ -266,7 +266,7 @@ float DistributionGgx(vec3 n, vec3 wh, float alpha) {
     denom       = PI * denom * denom;
 	
     // Clamp to prevent denom from clamping to 0.0 when underflowing (when roughness ~ 0.0)
-    return nom / max(denom, 1e-10);
+    return nom / max(denom, 1e-4);
 }
 
 // https://learnopengl.com/PBR/Theory
@@ -360,8 +360,8 @@ void BeerLambert(inout bool insideMedium, inout vec3 entryPoint, SurfaceInteract
             entryPoint = si.p;
             insideMedium = true;
         } else if (isExiting && didRefract && insideMedium) {
-            float distTravelled = length(si.p - entryPoint);
-            vec3 absorption = -log(si.mat.baseCol);
+            float distTravelled = max(length(si.p - entryPoint), 1e-4);
+            vec3 absorption = -log(max(si.mat.baseCol, 1e-4));
             transmittance = exp(-absorption * distTravelled);
 
             insideMedium = false;
@@ -393,7 +393,7 @@ float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
     float D = DistributionGgx(n, wh, alpha);
     float G1 = SmithGgxMasking(wi, wo, n, alpha2);
 
-    return (D * G1) / (4.0 * nDotWo);
+    return (D * G1) / max((4.0 * nDotWo), 1e-4);
 }
 
 float CosineSamplePdf(vec3 n, vec3 wi) {
@@ -518,7 +518,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
         float G1 = SmithGgxMasking(wi, wo, ns, alpha2);
         float G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
 
-        vec3 specular = F * (G2 / G1);
+        vec3 specular = F * (G2 / max(G1, 1e-4));
 
         bsdfSample.pdf = BsdfPdf(wi, ray, si);
         bsdfSample.wi = wi;
@@ -556,7 +556,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 float G1 = SmithGgxMasking(wi, wo, ns, alpha2);
                 float G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
 
-                vec3 specular = F * (G2 / G1);
+                vec3 specular = F * (G2 / max(G1, 1e-4));
 
                 bsdfSample.f = specular / lobeProbs.transmission;
                 bsdfSample.wi = wi;
@@ -1394,6 +1394,8 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         throughput *= transmittance;
         throughput *= bsdfSample.f;
 
+        throughput = ClampLuminance(throughput, MAX_INDIRECT_LUMINANCE);
+
         ray.d = bsdfSample.wi;
 
         vec3 offsetDir = didRefract ? -si.ng : si.ng;
@@ -1481,6 +1483,10 @@ void main() {
         ray.d = normalize(focusPoint - ray.o);
 
         PathSample pathSample = PathTrace(ray, state);
+        
+        if (any(isnan(pathSample.combined)) || any(isinf(pathSample.combined))) {
+            pathSample.combined = vec3(0.0);
+        }
         
         sampleCombined += pathSample.combined;
         sampleBaseColor += pathSample.baseCol;
