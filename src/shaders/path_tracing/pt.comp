@@ -205,6 +205,7 @@ struct PathSample {
 #define EPSILON 1e-4
 #define INF 1e20
 #define PI 3.14159265359
+#define MAX_BVH_DEPTH 32
 
 uniform int samplesPerPixel;
 uniform int totalSamples;
@@ -216,7 +217,6 @@ uniform int maxTotalBounces;
 uniform int maxDiffuseBounces;
 uniform int maxSpecularBounces;
 uniform int maxTransmissionBounces;
-
 
 // PCG 3d hash randomization
 // http://www.jcgt.org/published/0009/03/02/
@@ -813,7 +813,7 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
     bool didIntersect = false;
     float closestT = INF;
 
-    int nodeStack[64];
+    int nodeStack[MAX_BVH_DEPTH];
     int stackIdx = 0;
     // Push root node index onto the stack
     nodeStack[stackIdx++] = 0;
@@ -837,13 +837,15 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
                     }
                 }
             } else {
-                // Push children onto the stack if there are children
-                
-                if (currNode.leftChildId != -1) {
-                    nodeStack[stackIdx++] = currNode.leftChildId;
-                }
-                if (currNode.rightChildId != -1) {
-                    nodeStack[stackIdx++] = currNode.rightChildId;
+                if (stackIdx < MAX_BVH_DEPTH) {
+                    // Push children onto the stack if there are children
+
+                    if (currNode.leftChildId != -1) {
+                        nodeStack[stackIdx++] = currNode.leftChildId;
+                    }
+                    if (currNode.rightChildId != -1) {
+                        nodeStack[stackIdx++] = currNode.rightChildId;
+                    }
                 }
             }
         }
@@ -856,7 +858,7 @@ bool TestVisibility(inout uvec3 rng, Ray ray, float maxDist, inout VisibilityInt
     VisibilityInteraction tempVi;
     float closestT = maxDist;
 
-    int nodeStack[64];
+    int nodeStack[MAX_BVH_DEPTH];
     int stackIdx = 0;
     // Push root node index onto the stack
     nodeStack[stackIdx++] = 0;
@@ -882,27 +884,28 @@ bool TestVisibility(inout uvec3 rng, Ray ray, float maxDist, inout VisibilityInt
                 int left = currNode.leftChildId;
                 int right = currNode.rightChildId;
 
-                // Push children onto the stack if there are children
+                if (stackIdx < MAX_BVH_DEPTH) {
+                    // Push children onto the stack if there are children
+                    if (left != -1 && right != -1) {
+                        BvhNode leftNode = BvhNodes[left];
+                        BvhNode rightNode = BvhNodes[right];
 
-                if (left != -1 && right != -1) {
-                    BvhNode leftNode = BvhNodes[left];
-                    BvhNode rightNode = BvhNodes[right];
+                        float leftT = AabbTNear(ray, invRayDir, leftNode);
+                        float rightT = AabbTNear(ray, invRayDir, rightNode);
 
-                    float leftT = AabbTNear(ray, invRayDir, leftNode);
-                    float rightT = AabbTNear(ray, invRayDir, rightNode);
-
-                    // Push farther child first so the nearer one pops first (LIFO)
-                    if (leftT < rightT) {
-                        nodeStack[stackIdx++] = right;
+                        // Push farther child first so the nearer one pops first (LIFO)
+                        if (leftT < rightT) {
+                            nodeStack[stackIdx++] = right;
+                            nodeStack[stackIdx++] = left;
+                        } else {
+                            nodeStack[stackIdx++] = left;
+                            nodeStack[stackIdx++] = right;
+                        }
+                    } else if (left != -1) {
                         nodeStack[stackIdx++] = left;
-                    } else {
-                        nodeStack[stackIdx++] = left;
+                    } else if (right != -1) {
                         nodeStack[stackIdx++] = right;
                     }
-                } else if (left != -1) {
-                    nodeStack[stackIdx++] = left;
-                } else if (right != -1) {
-                    nodeStack[stackIdx++] = right;
                 }
             }
         }

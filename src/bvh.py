@@ -125,7 +125,7 @@ class BVH:
 
 @njit(nogil=True, fastmath=True, parallel=True, cache=True)
 def find_best_split(centroids, vertices):
-    BINS = 8
+    BINS = 16
 
     costs_per_axis = np.zeros(3, dtype=np.float32)
     pos_per_axis = np.zeros(3, dtype=np.float32)
