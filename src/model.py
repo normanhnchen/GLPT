@@ -364,6 +364,7 @@ class Scene:
         self.num_lights = len(self.lights)
 
         self._find_emissive_triangles()
+        self._find_finite_lights()
 
         scene_min = np.min(self.vertices, axis=0)
         scene_max = np.max(self.vertices, axis=0)
@@ -401,7 +402,36 @@ class Scene:
         luminance = mat_emissive_rgb @ np.array([0.2126, 0.7152, 0.0722])
         power = luminance[self.material_ids[self.emissive_triangle_indices]] * emissive_triangle_areas
 
-        self.light_p, self.light_q, self.light_alias = self._build_alias_table(power)
+        self.area_light_p, self.area_light_q, self.area_light_alias = self._build_alias_table(power)
+
+    def _find_finite_lights(self):
+        light_is_finite = self.lights["type"] != 1
+        finite_indices = np.where(light_is_finite)[0]
+
+        self.num_finite_lights = len(finite_indices)
+
+        if self.num_finite_lights == 0:
+            self.finite_light_indices = np.zeros(0, dtype=i4)
+            self.finite_light_p = np.zeros(0, dtype=f4)
+            self.finite_light_q = np.zeros(0, dtype=f4)
+            self.finite_light_alias = np.zeros(0, dtype=i4)
+            return
+
+        col = self.lights["col"][finite_indices]
+        intensity = self.lights["intensity"][finite_indices] * LUMENS_TO_WATTS
+        luminance = (col[:, 0] * 0.2126 + col[:, 1] * 0.7152 + col[:, 2] * 0.0722) * intensity
+
+        # https://www.pbr-book.org/3ed-2018/Light_Sources/Point_Lights#
+        # Power emitted by the light source
+        # Found by integrating over the sphere of directions
+        power = 4 * np.pi * luminance
+
+        p, q, alias = self._build_alias_table(power)
+
+        self.finite_light_indices = finite_indices.astype(i4)
+        self.finite_light_p = p
+        self.finite_light_q = q
+        self.finite_light_alias = alias
     
     # https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable
     def _build_alias_table(self, weights):
@@ -481,6 +511,13 @@ class Scene:
             if name and exts:
                 material_extensions[name] = exts
         
+        lights = self._build_lights(gltf)
+        
+        lights = np.array(lights, dtype=light_dtype)
+        
+        return material_extensions, lights
+
+    def _build_lights(self, gltf):
         extensions = gltf.extensions or {}
         lights_ext = extensions.get("KHR_lights_punctual", {})
         raw_lights = lights_ext.get("lights", [])
@@ -506,10 +543,6 @@ class Scene:
             type_id = {"point": 0, "directional": 1, "spot": 2}[light_type_str]
             spot = light_def.get("spot", {})
 
-            # glTF KHR_lights_punctual defines intensity in photometric units
-            # Convert to radiometric units matching Blender's export constant
-            LUMENS_TO_WATTS = 1.0 / 683.0
-
             intensity = light_def.get("intensity", 1) * LUMENS_TO_WATTS
 
             lights.append((
@@ -524,10 +557,8 @@ class Scene:
                 spot.get("outerConeAngle", 0),
                 0
             ))
-        
-        lights = np.array(lights, dtype=light_dtype)
-        
-        return material_extensions, lights
+
+        return lights
         
     def _get_texture_id(self, tex, tex_list):
         if tex.is_empty:
@@ -679,7 +710,14 @@ def save_scene_data(scene, cache_path):
         normal_textures=scene.normal_textures,
         occlusion_textures=scene.occlusion_textures,
         emissive_triangle_indices=scene.emissive_triangle_indices,
-        triangle_areas=scene.triangle_areas
+        area_light_q=scene.area_light_q,
+        area_light_p=scene.area_light_p,
+        area_light_alias=scene.area_light_alias,
+        triangle_areas=scene.triangle_areas,
+        finite_light_indices=scene.finite_light_indices,
+        finite_light_q=scene.finite_light_q,
+        finite_light_p=scene.finite_light_p,
+        finite_light_alias=scene.finite_light_alias
     )
 
 
@@ -707,7 +745,15 @@ def load_scene_data(scene, cache_path):
     scene.normal_textures = data["normal_textures"]
     scene.occlusion_textures = data["occlusion_textures"]
     scene.emissive_triangle_indices = data["emissive_triangle_indices"]
+    scene.area_light_q = data["area_light_q"]
+    scene.area_light_p = data["area_light_p"]
+    scene.area_light_alias = data["area_light_alias"]
     scene.triangle_areas = data["triangle_areas"]
+    scene.finite_light_indices = data["finite_light_indices"]
+    scene.finite_light_q = data["finite_light_q"]
+    scene.finite_light_p = data["finite_light_p"]
+    scene.finite_light_alias = data["finite_light_alias"]
+    scene.num_finite_lights = len(scene.finite_light_indices)
     scene.num_emissive_triangles = len(scene.emissive_triangle_indices)
     scene.num_triangles = len(scene.triangles)
     scene.bvh = None

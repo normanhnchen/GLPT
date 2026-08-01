@@ -109,6 +109,10 @@ with open("src/settings.json") as f:
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
+# glTF KHR_lights_punctual defines intensity in photometric units
+# Convert to radiometric units matching Blender's export constant
+LUMENS_TO_WATTS = 1.0 / 683.0
+
 screen = Screen(json_settings)
 camera_settings = CameraSettings(json_settings)
 pt_settings = PTSettings(json_settings)

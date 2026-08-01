@@ -86,6 +86,7 @@ class LightBuffer:
 
         light_data = np.zeros(buffer_size, dtype=light_dtype)
         light_data[:scene.num_lights] = scene.lights
+        light_data[scene.finite_light_indices]["lightPmf"] = scene.finite_light_p
         
         self.light_data = light_data
     
@@ -125,6 +126,8 @@ class TriangleBuffer:
         triangle_data["matId"] = scene.material_ids
 
         triangle_data["area"] = scene.triangle_areas
+
+        triangle_data[scene.emissive_triangle_indices]["lightPmf"] = scene.area_light_p
 
         self.triangle_data = triangle_data
 
@@ -170,12 +173,31 @@ class EmissiveTrianglesBuffer:
 
         if scene.num_emissive_triangles > 0:
             emissive_triangles_data["triId"][:scene.num_emissive_triangles] = scene.emissive_triangle_indices
-            emissive_triangles_data["q"] = scene.light_q
-            emissive_triangles_data["p"] = scene.light_p
-            emissive_triangles_data["alias"] = scene.light_alias
+            emissive_triangles_data["q"] = scene.area_light_q
+            emissive_triangles_data["p"] = scene.area_light_p
+            emissive_triangles_data["alias"] = scene.area_light_alias
 
         self.emissive_triangles_data = emissive_triangles_data
 
     def bind(self, ctx, loc):
         self.emissive_triangles_buffer = ctx.buffer(self.emissive_triangles_data.tobytes())
         self.emissive_triangles_buffer.bind_to_storage_buffer(loc)
+
+class FiniteLightsbuffer:
+    def __init__(self, scene):
+        # Ensure there is atleast a buffer size
+        num_finite_lights = max(scene.num_finite_lights, 1)
+
+        finite_lights_data = np.zeros(num_finite_lights, dtype=finite_light_dtype)
+
+        if scene.num_finite_lights > 0:
+            finite_lights_data["lightId"][:scene.num_finite_lights] = scene.finite_light_indices
+            finite_lights_data["q"] = scene.finite_light_q
+            finite_lights_data["p"] = scene.finite_light_p
+            finite_lights_data["alias"] = scene.finite_light_alias
+
+        self.finite_lights_data = finite_lights_data
+
+    def bind(self, ctx, loc):
+        self.finite_lights_buffer = ctx.buffer(self.finite_lights_data.tobytes())
+        self.finite_lights_buffer.bind_to_storage_buffer(loc)

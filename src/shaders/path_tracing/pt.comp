@@ -81,7 +81,8 @@ struct Triangle {
     Vertex v0, v1, v2;
     int matId;
     float area; // -1 if not emissive
-    float pad1, pad2;
+    float lightPmf;
+    float pad1;
 };
 
 struct BvhNode {
@@ -105,7 +106,14 @@ struct Light {
     int isSpot;
     float innerConeAngle;
     float outerConeAngle;
-    float pad1;
+    float lightPmf;
+};
+
+struct FiniteLight {
+    int lightId;
+    float q;
+    float p;
+    int alias;
 };
 
 struct EmissiveTriangle {
@@ -137,6 +145,10 @@ layout(std430, binding = 5) buffer TriIndicesBuffer {
 
 layout(std430, binding = 6) buffer EmissiveTrianglesBuffer {
     EmissiveTriangle emissiveTriangles[];
+};
+
+layout(std430, binding = 7) buffer FiniteLightsBuffer {
+    FiniteLight finiteLights[];
 };
 
 layout(binding = 0) uniform sampler2DArray baseColorTextures;
@@ -448,25 +460,6 @@ float BsdfPdf(vec3 wi, Ray ray, SurfaceInteraction si) {
     } else {
         return BtdfPdf(ns, wo, wi, alpha, si.eta) * lobeProbs.transmission;
     }
-}
-
-float LightPdf(SurfaceInteraction si, Ray ray, vec3 prevPoint) {
-    int numEmissive = emissiveTriangles.length();
-
-    Triangle tri = triangles[si.triId];
-    vec3 wi = normalize(si.p - prevPoint);
-    float dist = length(si.p - prevPoint);
-
-    // Check if ray hit light's backface
-    float cosLight = dot(si.ns, -wi);
-    if (cosLight <= 0.0) {
-        return 0.0;
-    }
-
-    float pdfTri = 1.0 / float(numEmissive);
-    float pdfPoint = (dist * dist) / (cosLight * si.area);
-    float pdf = pdfTri * pdfPoint;
-    return pdf;
 }
 
 // https://learnopengl.com/PBR/Theory
@@ -1063,21 +1056,64 @@ float HdriPdf(vec3 d) {
     return sinTheta > 0.0 ?  mapPdf / (2.0 * PI * PI * sinTheta) : 0.0;
 }
 
+float AreaLightPdf(SurfaceInteraction si, Ray ray, vec3 prevPoint) {
+    Triangle tri = triangles[si.triId];
+    vec3 wi = normalize(si.p - prevPoint);
+    float dist = length(si.p - prevPoint);
+
+    // Check if ray hit light's backface
+    float cosLight = dot(si.ns, -wi);
+    if (cosLight <= 0.0) {
+        return 0.0;
+    }
+
+    float pdfTri = tri.lightPmf;
+    float pdfPoint = (dist * dist) / (cosLight * si.area);
+    float pdf = pdfTri * pdfPoint;
+    return pdf;
+}
+
+// https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable::Sample
+Light PowerFinitePunctualLightSample(float Xi, int numFinite, out float lightPdf) {
+    // Sample from the precomputed alias table weighted by power
+    // ---------------------------------------------------------
+    int offset = min(int(Xi.x * numFinite), numFinite - 1);
+    float up = min(Xi.x * numFinite - offset, ONE_MINUS_EPSILON);
+
+    FiniteLight flOffset = finiteLights[offset];
+
+    int finiteLightId;
+    if (up < flOffset.q) {
+        finiteLightId = offset;
+        lightPdf = flOffset.p;
+    } else {
+        finiteLightId = flOffset.alias;
+        lightPdf = finiteLights[finiteLightId].p;
+    }
+
+    int lightId = finiteLights[finiteLightId].lightId;
+    return lights[lightId];
+}
+
 // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md
 // https://www.pbr-book.org/4ed/Light_Sources/Point_Lights
-vec3 SamplePunctualLight(SurfaceInteraction si, Ray ray, Light light, inout uvec3 rng) {
+vec3 SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
+    int numFinite = finiteLights.length();
+    if (numFinite == 0) {
+        return vec3(0.0);
+    }
+
+    vec3 Xi = Pcg3d(rng);
+
+    float lightPdf;
+    Light light = PowerFinitePunctualLightSample(Xi.x, numFinite, lightPdf);
+
     vec3 wi = normalize(light.pos - si.p);
     float dist = length(light.pos - si.p);
     vec3 Li;
     // Point
     if (light.type == 0) {
         Li = light.col * light.intensity / max(dist * dist, 0.0001);
-    }
-    // Directional
-    else if (light.type == 1) {
-        wi = normalize(-light.d);
-        dist = INF;
-        Li = light.col * light.intensity;
     }
     // Spot
     else if (light.type == 2) {
@@ -1091,6 +1127,34 @@ vec3 SamplePunctualLight(SurfaceInteraction si, Ray ray, Light light, inout uvec
 
         Li = light.col * light.intensity * attenuation;
     }
+
+    vec3 ns = si.ns;
+    
+    float nsDotWi = dot(ns, wi);
+    
+    if (si.mat.transmission == 0.0 && nsDotWi <= 0.0) {
+        return vec3(0.0);
+    }
+
+    // Shadow ray
+    Ray shadowRay;
+    shadowRay.o = si.p + si.ng * EPSILON;
+    shadowRay.d = wi;
+
+    VisibilityInteraction vi;
+    bool isOccluded = TestVisibility(rng, shadowRay, dist, vi);
+    if (isOccluded && vi.t < dist) {
+        return vec3(0.0); // Occluded
+    }
+
+    vec3 f = EvaluateBsdf(wi, ray, si);
+    return f * Li / lightPdf;
+}
+
+vec3 SampleInfinitePunctualLight(SurfaceInteraction si, Ray ray, Light light, inout uvec3 rng) {
+    vec3 wi = normalize(-light.d);
+    float dist = INF;
+    vec3 Li = light.col * light.intensity;
 
     vec3 ns = si.ns;
     
@@ -1354,8 +1418,8 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                 radiance += throughput * mat.emissive * mat.emissiveStrength;
             } else {
                 // Multiple Importance Sample (MIS)
-                float lightPdf = LightPdf(si, ray, prevPoint);
-                float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, lightPdf);
+                float areaLightPdf = AreaLightPdf(si, ray, prevPoint);
+                float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, areaLightPdf);
                 vec3 indirect = mat.emissive * mat.emissiveStrength * misWeight;
                 indirect = ClampLuminance(indirect, MAX_INDIRECT_LUMINANCE);
                 radiance += throughput * indirect;
@@ -1385,9 +1449,12 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         si.mat = mat;
 
         vec3 direct = vec3(0.0);
-        for (int li = 0; li < lights.length(); li++) {
-            direct += SamplePunctualLight(si, ray, lights[li], rng);
+        for (int i = 0; i < lights.length(); i++) {
+            if (lights[i].type == 1) {
+                direct += SampleInfinitePunctualLight(si, ray, lights[i], rng);
+            }
         }
+        direct += SampleFinitePunctualLight(si, ray, rng);
         direct += SampleAreaLight(si, ray, rng);
         direct += SampleHdriLight(si, ray, rng);
 

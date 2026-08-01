@@ -59,7 +59,14 @@ light_dtype = np.dtype([
     ("isSpot", i4),
     ("innerConeAngle", f4), # Radians
     ("outerConeAngle", f4), # Radians
-    ("pad1", f4)
+    ("lightPmf", f4)
+])
+
+finite_light_dtype = np.dtype([
+    ("lightId", i4),
+    ("q", f4),
+    ("p", f4),
+    ("alias", i4)
 ])
 
 vertex_dtype = np.dtype([
@@ -79,7 +86,8 @@ triangle_dtype = np.dtype([
     ("v0", vertex_dtype), ("v1", vertex_dtype), ("v2", vertex_dtype),
     ("matId", i4),
     ("area", f4), # -1 if not emissive
-    ("pad1", f4), ("pad2", f4)
+    ("lightPmf", f4),
+    ("pad1", f4)
 ])
 
 bvh_node_dtype = np.dtype([
