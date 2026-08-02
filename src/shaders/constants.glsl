@@ -1,12 +1,12 @@
 #ifndef CONSTANTS_GLSL
 #define CONSTANTS_GLSL
 
-#define EPSILON 1e-4
-#define ONE_MINUS_EPSILON 1.0 - EPSILON
-#define INF 1e20
-#define PI 3.14159265359
-#define MAX_BVH_DEPTH 32
-#define MAX_DIRECT_LUMINANCE 10.0
-#define MAX_INDIRECT_LUMINANCE 10.0
+const float EPSILON = 1e-4;
+const float ONE_MINUS_EPSILON = 1.0 - EPSILON;
+const float INF = 1e20;
+const float PI = 3.14159265359;
+const int MAX_BVH_DEPTH = 32;
+const float MAX_DIRECT_LUMINANCE = 10.0;
+const float MAX_INDIRECT_LUMINANCE = 10.0;
 
 #endif
