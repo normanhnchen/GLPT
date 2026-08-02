@@ -106,7 +106,7 @@ class Material:
             self.has_emission = set_i4(1)
         else:
             # Set to no emission 
-            self.emissive_color = np.array([-1, -1, -1], dtype=f4)
+            self.emissive_color = np.array([0, 0, 0], dtype=f4)
             self.has_emission = set_i4(0)
 
         if roughness is not None:
@@ -176,8 +176,34 @@ class HDRI:
         self.img_bytes = self.img.tobytes()
 
         self.hdri_tex = None
+
+        self._build_hdri_distribution()
+
+    # https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
+    def _build_hdri_distribution(self):
+        img = self.img.astype(np.float64)
+        luminance = img[:, :, 0] * 0.2126 + img[:, :, 1] * 0.7152 + img[:, :, 2] * 0.0722
+
+        # Adjust for equirectangular map spherical distortion
+        theta = (np.arange(self.height) + 0.5) / self.height * np.pi
+        sin_theta = np.sin(theta)[:, None]
+        weighted = luminance * sin_theta
+
+        # Build the CDFs
+        # --------------
+        # Marginal distribution over rows
+        row_sums = weighted.sum(axis=1)
+        row_cdf = np.cumsum(row_sums)
+        row_cdf /= row_cdf[-1]
+
+        # Conditional distribution over column given a row
+        col_cdf = np.cumsum(weighted, axis=1)
+        col_cdf /= col_cdf[:, -1:]
+
+        self.row_cdf = row_cdf.astype(f4)
+        self.col_cdf = col_cdf.astype(f4)
     
-    def bind(self, ctx, loc):
+    def bind_img(self, ctx, loc):
         self.hdri_tex = ctx.texture(
             (self.width, self.height),
             self.channels,
@@ -185,6 +211,26 @@ class HDRI:
             dtype=f4
             )
         self.hdri_tex.use(location=loc)
+
+    def bind_cdfs(self, ctx, row_loc, col_loc):
+        row_height = self.row_cdf.shape[0]
+        col_height, col_width = self.col_cdf.shape
+
+        self.row_cdf_tex = ctx.texture(
+            (1, row_height),
+            1,
+            self.row_cdf.tobytes(),
+            dtype=f4
+        )
+        self.col_cdf_tex = ctx.texture(
+            (col_width, col_height),
+            1,
+            self.col_cdf.tobytes(),
+            dtype=f4
+        )
+
+        self.row_cdf_tex.use(location=row_loc)
+        self.col_cdf_tex.use(location=col_loc)
     
     def release(self):
         if self.hdri_tex is not None:
@@ -317,13 +363,118 @@ class Scene:
 
         self.num_lights = len(self.lights)
 
+        self._find_emissive_triangles()
+        self._find_finite_lights()
+
         scene_min = np.min(self.vertices, axis=0)
         scene_max = np.max(self.vertices, axis=0)
-
         self.extent = np.linalg.norm(scene_max - scene_min)
-    
+
         self.bvh = None
         self.num_bvh_nodes = None
+
+    def _calculate_triangle_areas(self, vertices, indices):
+        v0 = vertices[indices][:, 0]
+        v1 = vertices[indices][:, 1]
+        v2 = vertices[indices][:, 2]
+
+        e1 = v1 - v0
+        e2 = v2 - v0
+
+        cross = np.cross(e1, e2)
+
+        areas = 0.5 * np.linalg.norm(cross, axis=1)
+        return areas
+
+    def _find_emissive_triangles(self):
+        mat_has_emission = np.array([bool(mat.has_emission) for mat in self.materials])
+        triangle_has_emission = mat_has_emission[self.material_ids]
+        self.emissive_triangle_indices = np.where(triangle_has_emission)[0]
+        self.num_emissive_triangles = len(self.emissive_triangle_indices)
+        emissive_triangle_areas = self._calculate_triangle_areas(
+            self.vertices,
+            self.triangles[self.emissive_triangle_indices]
+        )
+        self.triangle_areas = np.full(self.num_triangles, -1, dtype=f4)
+        self.triangle_areas[self.emissive_triangle_indices] = emissive_triangle_areas
+
+        mat_emissive_rgb = np.array([mat.emissive_color * mat.emissive_strength for mat in self.materials])
+        luminance = mat_emissive_rgb @ np.array([0.2126, 0.7152, 0.0722])
+        power = luminance[self.material_ids[self.emissive_triangle_indices]] * emissive_triangle_areas
+
+        self.area_light_p, self.area_light_q, self.area_light_alias = self._build_alias_table(power)
+
+    def _find_finite_lights(self):
+        light_is_finite = self.lights["type"] != 1
+        finite_indices = np.where(light_is_finite)[0]
+
+        self.num_finite_lights = len(finite_indices)
+
+        if self.num_finite_lights == 0:
+            self.finite_light_indices = np.zeros(0, dtype=i4)
+            self.finite_light_p = np.zeros(0, dtype=f4)
+            self.finite_light_q = np.zeros(0, dtype=f4)
+            self.finite_light_alias = np.zeros(0, dtype=i4)
+            return
+
+        col = self.lights["col"][finite_indices]
+        intensity = self.lights["intensity"][finite_indices] * LUMENS_TO_WATTS
+        luminance = (col[:, 0] * 0.2126 + col[:, 1] * 0.7152 + col[:, 2] * 0.0722) * intensity
+
+        # https://www.pbr-book.org/3ed-2018/Light_Sources/Point_Lights#
+        # Power emitted by the light source
+        # Found by integrating over the sphere of directions
+        power = 4 * np.pi * luminance
+
+        p, q, alias = self._build_alias_table(power)
+
+        self.finite_light_indices = finite_indices.astype(i4)
+        self.finite_light_p = p
+        self.finite_light_q = q
+        self.finite_light_alias = alias
+    
+    # https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable
+    def _build_alias_table(self, weights):
+        n = len(weights)
+        weights = np.asarray(weights, dtype=np.float64)
+        total = weights.sum()
+
+        p = np.zeros(n, dtype=np.float64)
+        q = np.zeros(n, dtype=np.float64)
+        alias = np.full(n, -1, dtype=np.int32)
+
+        p[:] = weights / total
+
+        under = []
+        over = []
+        for i in range(n):
+            p_hat = p[i] * n
+            if (p_hat < 1):
+                under.append((p_hat, i))
+            else:
+                over.append((p_hat, i))
+
+        while under and over:
+            un_p_hat, un_i = under.pop()
+            ov_p_hat, ov_i = over.pop()
+
+            q[un_i] = un_p_hat
+            alias[un_i] = ov_i
+
+            p_excess = un_p_hat + ov_p_hat - 1
+            if (p_excess < 1):
+                under.append((p_excess, ov_i))
+            else:
+                over.append((p_excess, ov_i))
+
+        for _, i in over:
+            q[i] = 1
+            alias[i] = -1
+        for _, i in under:
+            q[i] = 1
+            alias[i] = -1
+
+        return p.astype(f4), q.astype(f4), alias
     
     def build_bvh(self):
         try:
@@ -360,6 +511,13 @@ class Scene:
             if name and exts:
                 material_extensions[name] = exts
         
+        lights = self._build_lights(gltf)
+        
+        lights = np.array(lights, dtype=light_dtype)
+        
+        return material_extensions, lights
+
+    def _build_lights(self, gltf):
         extensions = gltf.extensions or {}
         lights_ext = extensions.get("KHR_lights_punctual", {})
         raw_lights = lights_ext.get("lights", [])
@@ -382,14 +540,16 @@ class Scene:
             ))
 
             light_type_str = light_def.get("type", "point")
-            type_id = {"point": 0, "direction": 1, "spot": 2}[light_type_str]
+            type_id = {"point": 0, "directional": 1, "spot": 2}[light_type_str]
             spot = light_def.get("spot", {})
+
+            intensity = light_def.get("intensity", 1) * LUMENS_TO_WATTS
 
             lights.append((
                 light_def.get("color", [1, 1, 1]),
                 type_id,
                 list(position),
-                light_def.get("intensity", 1),
+                intensity,
                 list(direction),
                 light_def.get("range", 0),
                 1 if spot else 0,
@@ -397,10 +557,8 @@ class Scene:
                 spot.get("outerConeAngle", 0),
                 0
             ))
-        
-        lights = np.array(lights, dtype=light_dtype)
-        
-        return material_extensions, lights
+
+        return lights
         
     def _get_texture_id(self, tex, tex_list):
         if tex.is_empty:
@@ -551,6 +709,15 @@ def save_scene_data(scene, cache_path):
         metallic_textures=scene.metallic_textures,
         normal_textures=scene.normal_textures,
         occlusion_textures=scene.occlusion_textures,
+        emissive_triangle_indices=scene.emissive_triangle_indices,
+        area_light_q=scene.area_light_q,
+        area_light_p=scene.area_light_p,
+        area_light_alias=scene.area_light_alias,
+        triangle_areas=scene.triangle_areas,
+        finite_light_indices=scene.finite_light_indices,
+        finite_light_q=scene.finite_light_q,
+        finite_light_p=scene.finite_light_p,
+        finite_light_alias=scene.finite_light_alias
     )
 
 
@@ -577,6 +744,17 @@ def load_scene_data(scene, cache_path):
     scene.metallic_textures = data["metallic_textures"]
     scene.normal_textures = data["normal_textures"]
     scene.occlusion_textures = data["occlusion_textures"]
+    scene.emissive_triangle_indices = data["emissive_triangle_indices"]
+    scene.area_light_q = data["area_light_q"]
+    scene.area_light_p = data["area_light_p"]
+    scene.area_light_alias = data["area_light_alias"]
+    scene.triangle_areas = data["triangle_areas"]
+    scene.finite_light_indices = data["finite_light_indices"]
+    scene.finite_light_q = data["finite_light_q"]
+    scene.finite_light_p = data["finite_light_p"]
+    scene.finite_light_alias = data["finite_light_alias"]
+    scene.num_finite_lights = len(scene.finite_light_indices)
+    scene.num_emissive_triangles = len(scene.emissive_triangle_indices)
     scene.num_triangles = len(scene.triangles)
     scene.bvh = None
     scene.num_bvh_nodes = None

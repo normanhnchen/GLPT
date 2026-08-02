@@ -47,6 +47,11 @@ class PTState:
         self.total_samples = 0
         # "off", "albedo", "normal", "depth"
         self.debug_mode = "off"
+
+        self.specular_mode = pt_settings.specular_mode
+        self.geometry_mode = pt_settings.geometry_mode
+        self.transmission_mode = pt_settings.transmission_mode
+        self.mis_mode = pt_settings.mis_mode
     
     def resize(self):
         self.combined_pass.release()

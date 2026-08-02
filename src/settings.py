@@ -36,8 +36,17 @@ class PTSettings:
         config = json_settings["path_tracing"]
 
         self.spp = config["samples_per_pixel"]
-        self.max_bounces = config["max_bounces"]
         self.max_samples = config["max_samples"]
+
+        self.total_bounces = config["total_bounces"]
+        self.diffuse_bounces = config["diffuse_bounces"]
+        self.specular_bounces = config["specular_bounces"]
+        self.transmission_bounces = config["transmission_bounces"]
+
+        self.specular_mode = config["specular_mode"]
+        self.geometry_mode = config["geometry_mode"]
+        self.transmission_mode = config["transmission_mode"]
+        self.mis_mode = config["mis_mode"]
 
 
 class PostProcessSettings:
@@ -104,6 +113,10 @@ with open("src/settings.json") as f:
     json_settings = json.load(f)
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+
+# glTF KHR_lights_punctual defines intensity in photometric units
+# Convert to radiometric units matching Blender's export constant
+LUMENS_TO_WATTS = 1.0 / 683.0
 
 screen = Screen(json_settings)
 camera_settings = CameraSettings(json_settings)

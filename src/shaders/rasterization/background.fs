@@ -4,11 +4,9 @@ in vec3 localPos;
 
 out vec4 fragColor;
 
-layout(binding = 6) uniform sampler2D hdri;
 
-uniform float hdriExposure;
+#include "src/shaders/common.glsl"
 
-#define PI 3.14159265359
 
 vec3 SampleHDRI(vec3 dir) {
     // Convert to spherical coordinates

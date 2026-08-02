@@ -1,3 +1,5 @@
+import numpy as np
+
 from src.dtypes import *
 from src.settings import *
 
@@ -52,12 +54,19 @@ light_dtype = np.dtype([
     ("type", i4), # Point: 0, directional: 1, spot: 2
     ("pos", *vec3),
     ("intensity", f4),
-    ("dir", *vec3),
+    ("d", *vec3),
     ("range", f4),
     ("isSpot", i4),
     ("innerConeAngle", f4), # Radians
     ("outerConeAngle", f4), # Radians
-    ("pad1", f4)
+    ("lightPmf", f4)
+])
+
+finite_light_dtype = np.dtype([
+    ("lightId", i4),
+    ("q", f4),
+    ("p", f4),
+    ("alias", i4)
 ])
 
 vertex_dtype = np.dtype([
@@ -65,27 +74,36 @@ vertex_dtype = np.dtype([
     ("pad1", f4),
     ("uv", *vec2),
     ("pad2", *vec2),
-    ("normal", *vec3),
+    ("n", *vec3),
     ("pad3", f4),
-    ("tangent", *vec3),
+    ("dpdu", *vec3),
     ("pad4", f4),
-    ("bitangent", *vec3),
-    ("pad5", f4),
+    ("dpdv", *vec3),
+    ("pad5", f4)
 ])
 
 triangle_dtype = np.dtype([
     ("v0", vertex_dtype), ("v1", vertex_dtype), ("v2", vertex_dtype),
     ("matId", i4),
-    ("pad1", f4), ("pad2", f4), ("pad3", f4)
+    ("area", f4), # -1 if not emissive
+    ("lightPmf", f4),
+    ("pad1", f4)
 ])
 
 bvh_node_dtype = np.dtype([
     ("aabbMin", *vec3),
-    ("leftChildIdx", i4),
+    ("leftChildId", i4),
     ("aabbMax", *vec3),
-    ("rightChildIdx", i4),
-    ("firstTriIdx", i4),
+    ("rightChildId", i4),
+    ("firstTriId", i4),
     ("triCount", i4),
     ("isLeaf", i4),
     ("pad1", f4)
+])
+
+emissive_triangles_dtype = np.dtype([
+    ("triId", i4),
+    ("q", f4),
+    ("p", f4),
+    ("alias", i4)
 ])
