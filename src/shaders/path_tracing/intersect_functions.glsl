@@ -144,14 +144,30 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
                     }
                 }
             } else {
+                int left = currNode.leftChildId;
+                int right = currNode.rightChildId;
+
                 if (stackIdx < MAX_BVH_DEPTH) {
                     // Push children onto the stack if there are children
+                    if (left != -1 && right != -1) {
+                        BvhNode leftNode = BvhNodes[left];
+                        BvhNode rightNode = BvhNodes[right];
 
-                    if (currNode.leftChildId != -1) {
-                        nodeStack[stackIdx++] = currNode.leftChildId;
-                    }
-                    if (currNode.rightChildId != -1) {
-                        nodeStack[stackIdx++] = currNode.rightChildId;
+                        float leftT = AabbTNear(ray, invRayD, leftNode);
+                        float rightT = AabbTNear(ray, invRayD, rightNode);
+
+                        // Push farther child first so the nearer one pops first (LIFO)
+                        if (leftT < rightT) {
+                            nodeStack[stackIdx++] = right;
+                            nodeStack[stackIdx++] = left;
+                        } else {
+                            nodeStack[stackIdx++] = left;
+                            nodeStack[stackIdx++] = right;
+                        }
+                    } else if (left != -1) {
+                        nodeStack[stackIdx++] = left;
+                    } else if (right != -1) {
+                        nodeStack[stackIdx++] = right;
                     }
                 }
             }
@@ -170,14 +186,14 @@ bool TestVisibility(inout uvec3 rng, Ray ray, float maxDist, inout VisibilityInt
     // Push root node index onto the stack
     nodeStack[stackIdx++] = 0;
 
-    vec3 invRayDir = 1.0 / ray.d;
+    vec3 invRayD = 1.0 / ray.d;
 
     while (stackIdx > 0) {
         // Pop the latest node index off
         int currIdx = nodeStack[--stackIdx];
         BvhNode currNode = BvhNodes[currIdx];
 
-        if (AabbIntersect(ray, invRayDir, currNode, closestT)) {
+        if (AabbIntersect(ray, invRayD, currNode, closestT)) {
             if (currNode.isLeaf == 1) {
                 for (int i = 0; i < currNode.triCount; i++) {
                     int triIndex = triIndices[currNode.firstTriId + i];
@@ -197,8 +213,8 @@ bool TestVisibility(inout uvec3 rng, Ray ray, float maxDist, inout VisibilityInt
                         BvhNode leftNode = BvhNodes[left];
                         BvhNode rightNode = BvhNodes[right];
 
-                        float leftT = AabbTNear(ray, invRayDir, leftNode);
-                        float rightT = AabbTNear(ray, invRayDir, rightNode);
+                        float leftT = AabbTNear(ray, invRayD, leftNode);
+                        float rightT = AabbTNear(ray, invRayD, rightNode);
 
                         // Push farther child first so the nearer one pops first (LIFO)
                         if (leftT < rightT) {
