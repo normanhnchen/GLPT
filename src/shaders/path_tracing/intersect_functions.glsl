@@ -13,9 +13,6 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triId, float closestT, inou
     vec3 pvec = cross(ray.d, e2);
     float det = dot(e1, pvec);
 
-    Material mat = materials[tri.matId];
-    if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
-
     // If det is close to 0, ray is parallel to the triangle
     if (abs(det) < 1e-7) return false;
 
@@ -33,9 +30,13 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triId, float closestT, inou
     // Check if the hit distance is positive and closer than current closest triangle
     if (t < EPSILON || t >= closestT) return false;
 
+    Material mat = materials[tri.matId];
+    if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
+
     si.bary = vec2(u, v);
     si.t = t;
     si.triId = triId;
+    si.ng = normalize(cross(e1, e2));
     return true;
 }
 
@@ -47,9 +48,6 @@ bool ShadowRayTriangleIntersect(inout uvec3 rng, inout Ray ray, Triangle tri, in
     vec3 pvec = cross(ray.d, e2);
     float det = dot(e1, pvec);
 
-    Material mat = materials[tri.matId];
-    if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
-
     // If det is close to 0, ray is parallel to the triangle
     if (abs(det) < 1e-7) return false;
 
@@ -66,6 +64,9 @@ bool ShadowRayTriangleIntersect(inout uvec3 rng, inout Ray ray, Triangle tri, in
     float t = dot(e2, qvec) * invDet;
     // Check if the hit distance is positive and closer than current closest triangle
     if (t < EPSILON || t >= closestT) return false;
+
+    Material mat = materials[tri.matId];
+    if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
 
     float w = 1.0 - u - v;
     vec2 texCoords = w * tri.v0.uv + u * tri.v1.uv + v * tri.v2.uv;
