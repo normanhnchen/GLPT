@@ -220,38 +220,6 @@ float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta) {
     return D * G1 * abs(woDotWh) / max(nDotWo, 0.0001) * dwh_dwi;
 }
 
-float BsdfPdf(vec3 wi, Ray ray, SurfaceInteraction si) {
-    Material mat = si.mat;
-    vec3 ns = si.ns;
-    vec3 wo = -ray.d;
-
-    float nsDotWo = abs(dot(ns, wo));
-
-    vec3 F0 = vec3(0.04);
-    F0 = mix(F0, mat.baseCol, mat.metallic);
-    
-    LobeProbs lobeProbs = ComputeLobeProbs(mat, nsDotWo, F0);
-
-    float nsDotWi = dot(ns, wi);
-
-    float alpha = mat.roughness * mat.roughness;
-
-    if (nsDotWi > 0.0) {
-        float specularPdf;
-        if (specularMode == 0) {
-            specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * lobeProbs.specular;
-        } else if (specularMode == 1) {
-            specularPdf = CosineSamplePdf(ns, wi) * lobeProbs.specular;
-        }
-
-        float diffusePdf = CosineSamplePdf(ns, wi) * lobeProbs.diffuse;
-
-        return specularPdf + diffusePdf;
-    } else {
-        return BtdfPdf(ns, wo, wi, alpha, si.eta) * lobeProbs.transmission;
-    }
-}
-
 // https://learnopengl.com/PBR/Theory
 // https://schuttejoe.github.io/post/ggximportancesamplingpart1/
 BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout BounceDepth bounceDepth) {
@@ -335,11 +303,21 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             float D = DistributionGgx(ns, wh, alpha);
             float nDotWo = max(dot(ns, wo), 1e-4);
             float nDotWi = max(dot(ns, wi), 1e-4);
-            specular = vec3(D) * F * G2 * PI / (4.0 * nDotWo * nDotWi);
+            specular = D * F * G2 * PI / (4.0 * nDotWo * nDotWi);
         }
         
+        // Calculate the PDF for this lobe
+        // -------------------------------
+        float specularPdf;
+        if (specularMode == 0) {
+            specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * lobeProbs.specular;
+        } else if (specularMode == 1) {
+            specularPdf = CosineSamplePdf(ns, wi) * lobeProbs.specular;
+        }
+        float diffusePdf = CosineSamplePdf(ns, wi) * lobeProbs.diffuse;
+        float bsdfPdf = specularPdf + diffusePdf;
 
-        bsdfSample.pdf = BsdfPdf(wi, ray, si);
+        bsdfSample.pdf = bsdfPdf;
         bsdfSample.wi = wi;
         bsdfSample.f = specular / lobeProbs.specular;
 
@@ -400,16 +378,31 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                     specular = vec3(D) * F * G2 * PI / max((4.0 * nDotWo * nDotWi), 1e-4);
                 }
 
+                // Calculate the PDF for this lobe
+                // -------------------------------
+                float specularPdf;
+                if (specularMode == 0) {
+                    specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * lobeProbs.specular;
+                } else if (specularMode == 1) {
+                    specularPdf = CosineSamplePdf(ns, wi) * lobeProbs.specular;
+                }
+                float diffusePdf = CosineSamplePdf(ns, wi) * lobeProbs.diffuse;
+                float bsdfPdf = specularPdf + diffusePdf;
+
+                bsdfSample.pdf = bsdfPdf;
                 bsdfSample.f = specular / lobeProbs.transmission;
                 bsdfSample.wi = wi;
-                bsdfSample.pdf = BsdfPdf(wi, ray, si);
 
                 return bsdfSample;
             }
 
+            // Calculate the PDF for this lobe
+            // -------------------------------
+            float bsdfPdf = BtdfPdf(ns, wo, wi, alpha, si.eta) * lobeProbs.transmission;
+
+            bsdfSample.pdf = bsdfPdf;
             bsdfSample.f = vec3(1.0) / lobeProbs.transmission;
             bsdfSample.wi = wi;
-            bsdfSample.pdf = BsdfPdf(wi, ray, si);
 
             return bsdfSample;
         } else {
@@ -442,9 +435,22 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
             vec3 diffuse = kD * mat.baseCol;
 
+            float alpha = mat.roughness * mat.roughness;
+
+            // Calculate the PDF for this lobe
+            // -------------------------------
+            float specularPdf;
+            if (specularMode == 0) {
+                specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * lobeProbs.specular;
+            } else if (specularMode == 1) {
+                specularPdf = CosineSamplePdf(ns, wi) * lobeProbs.specular;
+            }
+            float diffusePdf = CosineSamplePdf(ns, wi) * lobeProbs.diffuse;
+            float bsdfPdf = specularPdf + diffusePdf;
+
+            bsdfSample.pdf = bsdfPdf;
             bsdfSample.f = diffuse / lobeProbs.diffuse;
             bsdfSample.wi = wi;
-            bsdfSample.pdf = BsdfPdf(wi, ray, si);
 
             return bsdfSample;
         }

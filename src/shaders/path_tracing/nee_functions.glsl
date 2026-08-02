@@ -119,9 +119,10 @@ vec3 SampleHdriLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
         return vec3(0.0); // Occluded
     }
 
-    vec3 f = EvaluateBsdf(wi, ray, si);
     // Multiple Importance Sample (MIS)
-    float bsdfPdf = BsdfPdf(wi, ray, si);
+    // --------------------------------
+    float bsdfPdf;
+    vec3 f = EvaluateBsdfAndPdf(wi, ray, si, bsdfPdf);
     float misWeight = PowerHeuristic(1, lightPdf, 1, bsdfPdf);
 
     return (f * Li * hdriExposure) / lightPdf * misWeight;
@@ -319,9 +320,10 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
 
     Material lightMat = materials[tri.matId];
 
-    vec3 f = EvaluateBsdf(wi, ray, si);
     // Multiple Importance Sample (MIS)
-    float bsdfPdf = BsdfPdf(wi, ray, si);
+    // --------------------------------
+    float bsdfPdf;
+    vec3 f = EvaluateBsdfAndPdf(wi, ray, si, bsdfPdf);
     float misWeight = PowerHeuristic(1, lightPdf, 1, bsdfPdf);
 
     return (f * lightMat.emissive * lightMat.emissiveStrength) / lightPdf * misWeight;

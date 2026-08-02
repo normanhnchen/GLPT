@@ -54,6 +54,8 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                 if (isFirstHit) {
                     radiance += throughput * envColor * hdriExposure;
                 } else {
+                    // Multiple Importance Sample (MIS)
+                    // --------------------------------
                     float lightPdf = HdriPdf(ray.d);
                     float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, lightPdf);
                     radiance += throughput * envColor * hdriExposure * misWeight;
