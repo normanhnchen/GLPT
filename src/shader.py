@@ -1,22 +1,38 @@
-import glm
-import moderngl
-
+from pathlib import Path
+from src.settings import *
 from src.dtypes import *
 
 
-def _load_shader(path):
+def _load_shader_source(path, is_root=True):
         try:
-            with open(path, 'r') as f:
-                return f.read()
+            version = ""
+            shader_source = ""
+            with open(path, "r") as f:
+                for line in f:
+                    stripped = line.strip()
+                    if stripped.startswith("#include"):
+                        include_path = stripped.split('"')[1]
+                        file_path = ROOT_DIR / include_path
+                        shader_source += _load_shader_source(file_path, is_root=False)
+
+                    elif stripped.startswith("#version"):
+                        if is_root and not version:
+                            version = line
+
+                    else:
+                        shader_source += line
+
+            return version + shader_source
+
         except FileNotFoundError:
             raise FileNotFoundError(f"Could not find shader file at: {path}")
-        
 
+        
 class Shader:
     def __init__(self, ctx, vert_path, frag_path):
         try:
-            vert_src = _load_shader(vert_path)
-            frag_src = _load_shader(frag_path)
+            vert_src = _load_shader_source(vert_path)
+            frag_src = _load_shader_source(frag_path)
 
             self.prog = ctx.program(
                 vertex_shader=vert_src,
@@ -24,6 +40,7 @@ class Shader:
             )
         except Exception as e:
             print(f"Shader files not successfully read: {e}")
+            raise
     
     def _reset_tonemaps(self):
         self.prog["None"].value = set_i4(0)
@@ -74,8 +91,9 @@ class Shader:
 class ComputeShader:
     def __init__(self, ctx, comp_path):
         try:
-            src = _load_shader(comp_path)
+            src = _load_shader_source(comp_path)
 
             self.prog = ctx.compute_shader(src)
         except Exception as e:
             print(f"Compute shader file was not succesfully read: {e}")
+            raise

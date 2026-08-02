@@ -1,7 +1,7 @@
 {   
     "file_paths": {
         "ai_training_scenes": "src/assets/models/ai_training/",
-        "scene": "src/assets/models/glass_test.glb",
+        "scene": "src/assets/models/ai_training/scene_6.glb",
         "ai_training_hdris": "src/assets/hdris/ai_training/",
         "hdri": "src/assets/hdris/day_sky_hdri.exr",
         "ai_training_renders": "src/assets/renders/ai_training",
@@ -13,7 +13,7 @@
         "path_tracing": {
             "vert": "src/shaders/path_tracing/final.vs",
             "frag": "src/shaders/path_tracing/final.fs",
-            "comp": "src/shaders/path_tracing/pt.comp"
+            "comp": "src/shaders/path_tracing/path_trace.comp"
         },
         "rasterization": {
             "pbr": {
@@ -35,8 +35,8 @@
         }
     },
     "screen": {
-        "width": 1024,
-        "height": 1024,
+        "width": 1920,
+        "height": 1080,
         "vsync": false,
         "fps_cap": -1
     },
