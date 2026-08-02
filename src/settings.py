@@ -43,6 +43,11 @@ class PTSettings:
         self.specular_bounces = config["specular_bounces"]
         self.transmission_bounces = config["transmission_bounces"]
 
+        self.specular_mode = config["specular_mode"]
+        self.geometry_mode = config["geometry_mode"]
+        self.transmission_mode = config["transmission_mode"]
+        self.mis_mode = config["mis_mode"]
+
 
 class PostProcessSettings:
     def __init__(self, json_settings):

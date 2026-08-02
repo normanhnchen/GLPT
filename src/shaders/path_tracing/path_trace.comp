@@ -12,11 +12,6 @@ layout(local_size_x=16, local_size_y=16) in;
 #include "src/shaders/path_tracing/nee_functions.glsl"
 
 
-// 0: MIS (and NEE)
-// 1: No MIS (nor NEE)
-int misMode = 0;
-
-
 PathSample PathTrace(Ray ray, inout uvec3 rng) {
     SurfaceInteraction si;
 

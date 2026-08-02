@@ -5,19 +5,6 @@
 #include "src/shaders/common.glsl"
 
 
-// Method toggling (switch out for uniforms and UI later)
-
-// 0: GGX VNDF Importance Sample
-// 1: Cosine Hemisphere Sampling
-int specularMode = 0;
-// 0: Height-Correlated Smith Method
-// 1: Schlick-GGX Approximation Method
-int geometryMode = 0;
-// 0: Beer-Lambert
-// 1: No Beer-Lambert
-int transmissionMode = 1;
-
-
 // https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
 vec3 CosineSampleHemisphere(inout uvec3 rng, SurfaceInteraction si) {
     vec3 Xi = Pcg3d(rng);

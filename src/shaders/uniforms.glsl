@@ -29,6 +29,12 @@ uniform int maxTransmissionBounces;
 uniform int numFiniteLights;
 uniform int numEmissiveTriangles;
 
+uniform int specularMode = 0;
+uniform int geometryMode = 0;
+uniform int transmissionMode = 0;
+uniform int misMode = 0;
+
+
 // --- final.fs ---
 
 uniform sampler2D tex;

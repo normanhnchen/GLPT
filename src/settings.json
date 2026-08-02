@@ -57,7 +57,11 @@
         "total_bounces": 8,
         "diffuse_bounces": 4,
         "specular_bounces": 4,
-        "transmission_bounces": 8
+        "transmission_bounces": 8,
+        "specular_mode": 0,
+        "geometry_mode": 0,
+        "transmission_mode": 0,
+        "mis_mode": 0
     },
     "post_processing": {
         "blur": 1.0,

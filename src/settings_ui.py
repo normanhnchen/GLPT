@@ -477,6 +477,42 @@ class PathTracingUI:
         # -----
         imgui.same_line()
         imgui.text("Samples Per Pixel")
+
+    def specular_mode_combo(self):
+        specular_modes = ["GGX VNDF", "Cosine Hemisphere"]
+
+        current_mode_name = specular_modes[self.pt_state.specular_mode]
+
+        if imgui.button(f"Specular Mode: {current_mode_name}"):
+            self.pt_state.specular_mode = (self.pt_state.specular_mode + 1) % len(specular_modes)
+            self.pt_state.restart_render()
+
+    def geometry_mode_combo(self):
+        geometry_modes = ["Height-Correlated Smith Method", "Schlick-GGX Approximation Method"]
+
+        current_mode_name = geometry_modes[self.pt_state.geometry_mode]
+        
+        if imgui.button(f"Geometry Mode: {current_mode_name}"):
+            self.pt_state.geometry_mode = (self.pt_state.geometry_mode + 1) % len(geometry_modes)
+            self.pt_state.restart_render()
+    
+    def transmission_mode_combo(self):
+        transmissions_modes = ["Beer-Lambert", "None"]
+
+        current_mode_name = transmissions_modes[self.pt_state.transmission_mode]
+        
+        if imgui.button(f"Transmission Mode: {current_mode_name}"):
+            self.pt_state.transmission_mode = (self.pt_state.transmission_mode + 1) % len(transmissions_modes)
+            self.pt_state.restart_render()
+
+    def mis_mode_combo(self):
+        mis_modes = ["On", "Off"]
+
+        current_mode_name = mis_modes[self.pt_state.mis_mode]
+        
+        if imgui.button(f"MIS Mode: {current_mode_name}"):
+            self.pt_state.mis_mode = (self.pt_state.mis_mode + 1) % len(mis_modes)
+            self.pt_state.restart_render()
     
     def reset_pt_button(self):
         if imgui.button("Reset Path Tracing Settings"):
@@ -486,6 +522,10 @@ class PathTracingUI:
             pt_settings.transmission_bounces = _pt_settings_default.transmission_bounces
             pt_settings.max_samples = _pt_settings_default.max_samples
             pt_settings.spp = _pt_settings_default.spp
+            self.pt_state.specular_mode = _pt_settings_default.specular_mode
+            self.pt_state.geometry_mode = _pt_settings_default.geometry_mode
+            self.pt_state.transmission_mode = _pt_settings_default.transmission_mode
+            self.pt_state.mis_mode = _pt_settings_default.mis_mode
             self.pt_state.restart_render()
 
 
@@ -1171,6 +1211,13 @@ class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI
         self.transmission_bounces_slider()
         self.max_samples_slider()
         self.spp_slider()
+        if imgui.tree_node("BSDF Sampling"):
+            self.specular_mode_combo()
+            self.geometry_mode_combo()
+            self.transmission_mode_combo()
+            self.mis_mode_combo()
+
+            imgui.tree_pop()
         self.reset_pt_button()
     
     def camera_ui(self):

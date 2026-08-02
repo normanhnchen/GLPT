@@ -332,6 +332,11 @@ def main():
                 pt_shaders.pt.prog["numFiniteLights"].value = scene.num_finite_lights
                 pt_shaders.pt.prog["numEmissiveTriangles"].value = scene.num_emissive_triangles
 
+                pt_shaders.pt.prog["specularMode"].value = pt_state.specular_mode
+                pt_shaders.pt.prog["geometryMode"].value = pt_state.geometry_mode
+                pt_shaders.pt.prog["transmissionMode"].value = pt_state.transmission_mode
+                pt_shaders.pt.prog["misMode"].value = pt_state.mis_mode
+
                 # Apply ceiling function
                 # Allows the compute shader to reach the entire screen
                 groups_x = (pt_state.tile_width + 15) // 16
