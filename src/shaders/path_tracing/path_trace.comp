@@ -224,7 +224,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
         vec3 transmittance;
         BeerLambert(isInsideMedium, entryPoint, si, transmittance, didRefract);
-        
+
         throughput *= transmittance;
         throughput *= bsdfSample.f;
 

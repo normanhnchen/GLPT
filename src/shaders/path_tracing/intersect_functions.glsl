@@ -13,6 +13,9 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triId, float closestT, inou
     vec3 pvec = cross(ray.d, e2);
     float det = dot(e1, pvec);
 
+    Material mat = materials[tri.matId];
+    if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
+
     // If det is close to 0, ray is parallel to the triangle
     if (abs(det) < 1e-7) return false;
 
@@ -44,6 +47,9 @@ bool ShadowRayTriangleIntersect(inout uvec3 rng, inout Ray ray, Triangle tri, in
     vec3 pvec = cross(ray.d, e2);
     float det = dot(e1, pvec);
 
+    Material mat = materials[tri.matId];
+    if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
+
     // If det is close to 0, ray is parallel to the triangle
     if (abs(det) < 1e-7) return false;
 
@@ -64,8 +70,6 @@ bool ShadowRayTriangleIntersect(inout uvec3 rng, inout Ray ray, Triangle tri, in
     float w = 1.0 - u - v;
     vec2 texCoords = w * tri.v0.uv + u * tri.v1.uv + v * tri.v2.uv;
 
-    Material mat = materials[tri.matId];
-
     if (mat.alphaMode != 0) {
         if (mat.hasBaseColTex == 1) {
             vec4 baseCol = texture(baseColorTextures, vec3(vec2(u, v), mat.baseTexId));
@@ -76,19 +80,10 @@ bool ShadowRayTriangleIntersect(inout uvec3 rng, inout Ray ray, Triangle tri, in
 
         if (mat.alphaMode == 1) {
             // MASK
-            if (mat.alpha < mat.alphaCutoff) {
-                // Advance the ray and ignore the hit
-                ray.o = p + ray.d * EPSILON;
-                return false;
-            }
-        }
-        if (mat.alphaMode == 2) {
+            if (mat.alpha < mat.alphaCutoff) return false;
+        } else if (mat.alphaMode == 2) {
             // BLEND
-            if (Pcg3d(rng).x > mat.alpha) {
-                // Advance the ray and ignore the hit
-                ray.o = p + ray.d * EPSILON;
-                return false;
-            }
+            if (Pcg3d(rng).x > mat.alpha) return false;
         }
     }
 
