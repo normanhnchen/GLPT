@@ -157,5 +157,10 @@ struct PathSample {
     float depth;
 };
 
+struct AabbHit {
+    bool hit;
+    float tNear;
+};
+
 
 #endif

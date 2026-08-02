@@ -91,7 +91,7 @@ bool ShadowRayTriangleIntersect(inout uvec3 rng, inout Ray ray, Triangle tri, in
     return true;
 }
 
-bool AabbIntersect(Ray ray, vec3 invRayD, BvhNode node, float closestT) {
+AabbHit AabbTest(Ray ray, vec3 invRayD, BvhNode node, float closestT) {
     vec3 t0 = (node.aabbMin - ray.o) * invRayD;
     vec3 t1 = (node.aabbMax - ray.o) * invRayD;
     
@@ -101,17 +101,11 @@ bool AabbIntersect(Ray ray, vec3 invRayD, BvhNode node, float closestT) {
     float tNear = max(max(tMin.x, tMin.y), tMin.z);
     float tFar  = min(min(tMax.x, tMax.y), tMax.z);
     
-    return tNear <= tFar && tFar > 0.0 && tNear < closestT;
-}
+    AabbHit h;
+    h.hit = tNear <= tFar && tFar > 0.0 && tNear < closestT;
+    h.tNear = tNear;
 
-float AabbTNear(Ray ray, vec3 invRayD, BvhNode node) {
-    vec3 t0 = (node.aabbMin - ray.o) * invRayD;
-    vec3 t1 = (node.aabbMax - ray.o) * invRayD;
-    
-    vec3 tMin = min(t0, t1);
-
-    float tNear = max(max(tMin.x, tMin.y), tMin.z);
-    return tNear;
+    return h;
 }
 
 // https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
@@ -132,7 +126,7 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
         int currIdx = nodeStack[--stackIdx];
         BvhNode currNode = BvhNodes[currIdx];
 
-        if (AabbIntersect(ray, invRayD, currNode, closestT)) {
+        if (AabbTest(ray, invRayD, currNode, closestT).hit) {
             if (currNode.isLeaf == 1) {
                 for (int i = 0; i < currNode.triCount; i++) {
                     int triIndex = triIndices[currNode.firstTriId + i];
@@ -153,16 +147,16 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
                         BvhNode leftNode = BvhNodes[left];
                         BvhNode rightNode = BvhNodes[right];
 
-                        float leftT = AabbTNear(ray, invRayD, leftNode);
-                        float rightT = AabbTNear(ray, invRayD, rightNode);
+                        AabbHit lh = AabbTest(ray, invRayD, leftNode, closestT);
+                        AabbHit rh = AabbTest(ray, invRayD, rightNode, closestT);
 
                         // Push farther child first so the nearer one pops first (LIFO)
-                        if (leftT < rightT) {
-                            nodeStack[stackIdx++] = right;
-                            nodeStack[stackIdx++] = left;
+                        if (lh.tNear < rh.tNear) {
+                            if (rh.hit) nodeStack[stackIdx++] = right;
+                            if (lh.hit) nodeStack[stackIdx++] = left;
                         } else {
-                            nodeStack[stackIdx++] = left;
-                            nodeStack[stackIdx++] = right;
+                            if (lh.hit) nodeStack[stackIdx++] = left;
+                            if (rh.hit) nodeStack[stackIdx++] = right;
                         }
                     } else if (left != -1) {
                         nodeStack[stackIdx++] = left;
@@ -193,7 +187,7 @@ bool TestVisibility(inout uvec3 rng, Ray ray, float maxDist, inout VisibilityInt
         int currIdx = nodeStack[--stackIdx];
         BvhNode currNode = BvhNodes[currIdx];
 
-        if (AabbIntersect(ray, invRayD, currNode, closestT)) {
+        if (AabbTest(ray, invRayD, currNode, closestT).hit) {
             if (currNode.isLeaf == 1) {
                 for (int i = 0; i < currNode.triCount; i++) {
                     int triIndex = triIndices[currNode.firstTriId + i];
@@ -213,16 +207,16 @@ bool TestVisibility(inout uvec3 rng, Ray ray, float maxDist, inout VisibilityInt
                         BvhNode leftNode = BvhNodes[left];
                         BvhNode rightNode = BvhNodes[right];
 
-                        float leftT = AabbTNear(ray, invRayD, leftNode);
-                        float rightT = AabbTNear(ray, invRayD, rightNode);
+                        AabbHit lh = AabbTest(ray, invRayD, leftNode, closestT);
+                        AabbHit rh = AabbTest(ray, invRayD, rightNode, closestT);
 
                         // Push farther child first so the nearer one pops first (LIFO)
-                        if (leftT < rightT) {
-                            nodeStack[stackIdx++] = right;
-                            nodeStack[stackIdx++] = left;
+                        if (lh.tNear < rh.tNear) {
+                            if (rh.hit) nodeStack[stackIdx++] = right;
+                            if (lh.hit) nodeStack[stackIdx++] = left;
                         } else {
-                            nodeStack[stackIdx++] = left;
-                            nodeStack[stackIdx++] = right;
+                            if (lh.hit) nodeStack[stackIdx++] = left;
+                            if (rh.hit) nodeStack[stackIdx++] = right;
                         }
                     } else if (left != -1) {
                         nodeStack[stackIdx++] = left;
