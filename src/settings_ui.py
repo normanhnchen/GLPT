@@ -110,6 +110,22 @@ class FloatSlider:
         imgui.text(self.label)
 
 
+class Button:
+    def __init__(self, label):
+        self.label = label
+
+    def button(self, on_change, enabled=True):
+        if enabled:
+            if imgui.button(self.label):
+                on_change()
+        else:
+            imgui.begin_disabled()
+
+            imgui.button(self.label)
+
+            imgui.end_disabled()
+
+
 class Dropdown:
     def __init__(self, label):
         self.label = label
@@ -140,57 +156,85 @@ class RenderingUI:
 
         super().__init__()
 
+        self.stop_button = Button("Stop")
+        self.continue_button = Button("Continue")
+        self.restart_button = Button("Restart")
+        self.cancel_button = Button("Cancel")
+        self.viewport_button = Button("Back to Viewport")
+        self.start_button = Button("Start Render")
+        self.start_new_button = Button("Start New Render")
+        self.denoise_button = Button("Denoise")
+        self.view_saved_button = Button("View Saved Render")
+
         self.tiles_x_slider = IntSlider(1, 1024, "Tiles X", render_settings.tiles_x)
         self.tiles_y_slider = IntSlider(1, 1024, "Tiles Y", render_settings.tiles_y)
     
-    def stop_button(self):
-            if imgui.button("Stop"):
-                self.pt_state.view_saved = False
-                self.pt_state.should_render = False
+    def draw_stop_button(self):
+        def on_change():
+            self.pt_state.view_saved = False
+            self.pt_state.should_render = False
+        
+        self.stop_button.button(on_change)
     
-    def continue_button(self):
-        if imgui.button("Continue"):
+    def draw_continue_button(self):
+        def on_change():
             self.pt_state.view_saved = False
             self.pt_state.should_render = True
+
+        self.continue_button.button(on_change)
         
-    def restart_button(self):
-        if imgui.button("Restart"):
+    def draw_restart_button(self):
+        def on_change():
             self.pt_state.restart_render()
+
+        self.restart_button.button(on_change)
     
-    def cancel_button(self):
-        if imgui.button("Cancel"):
+    def draw_cancel_button(self):
+        def on_change():
             render_settings.render_mode = "rasterization"
             self.pt_state.view_saved = False
             self.pt_state.should_denoise = False
+
+        self.cancel_button.button(on_change)
     
-    def viewport_button(self):
-        if imgui.button("Back to Viewport"):
+    def draw_viewport_button(self):
+        def on_change():
             render_settings.render_mode = "rasterization"
             self.pt_state.view_saved = False
             self.pt_state.should_denoise = False
+
+        self.viewport_button.button(on_change)
     
-    def start_button(self):
-        if imgui.button("Start Render"):
+    def draw_start_button(self):
+        def on_change():
             self.pt_state.start_render(self.camera_buffer)
             self.pt_state.view_saved = False
             self.pt_state.should_render = True
             self.pt_state.should_denoise = False
+
+        self.start_button.button(on_change)
     
-    def start_new_button(self):
-        if imgui.button("Start New Render"):
+    def draw_start_new_button(self):
+        def on_change():
             self.pt_state.start_render(self.camera_buffer)
             self.pt_state.view_saved = False
             self.pt_state.should_render = True
             self.pt_state.should_denoise = False
+
+        self.start_new_button.button(on_change)
         
-    def denoise_button(self):
-        if imgui.button("Start Denoising"):
+    def draw_denoise_button(self):
+        def on_change():
             self.pt_state.should_denoise = True
+
+        self.denoise_button.button(on_change)
     
-    def view_saved_button(self):
-        if imgui.button("View Saved Render"):
+    def draw_view_saved_button(self):
+        def on_change():
             render_settings.render_mode = "path_tracing"
             self.pt_state.view_saved = True
+
+        self.view_saved_button.button(on_change)
     
     def draw_tiles_x_slider(self):
         def on_change(new_val):
@@ -216,7 +260,7 @@ class RenderingUI:
         self.tiles_y_slider.plus_button(on_change)
         self.tiles_y_slider.draw_label()
     
-    def export_render_button(self):
+    def draw_export_render_button(self):
         if imgui.button("Export Render"):
             self.pt_state.export_render()
 
@@ -301,7 +345,7 @@ class PathTracingUI:
         self.spp_slider.plus_button(on_change)
         self.spp_slider.draw_label()
 
-    def specular_mode_combo(self):
+    def draw_specular_mode_combo(self):
         specular_modes = ["GGX VNDF", "Cosine Hemisphere"]
 
         current_mode_name = specular_modes[self.pt_state.specular_mode]
@@ -310,7 +354,7 @@ class PathTracingUI:
             self.pt_state.specular_mode = (self.pt_state.specular_mode + 1) % len(specular_modes)
             self.pt_state.restart_render()
 
-    def geometry_mode_combo(self):
+    def draw_geometry_mode_combo(self):
         geometry_modes = ["Height-Correlated Smith Method", "Schlick-GGX Approximation Method"]
 
         current_mode_name = geometry_modes[self.pt_state.geometry_mode]
@@ -319,7 +363,7 @@ class PathTracingUI:
             self.pt_state.geometry_mode = (self.pt_state.geometry_mode + 1) % len(geometry_modes)
             self.pt_state.restart_render()
     
-    def transmission_mode_combo(self):
+    def draw_transmission_mode_combo(self):
         transmissions_modes = ["Beer-Lambert", "None"]
 
         current_mode_name = transmissions_modes[self.pt_state.transmission_mode]
@@ -328,7 +372,7 @@ class PathTracingUI:
             self.pt_state.transmission_mode = (self.pt_state.transmission_mode + 1) % len(transmissions_modes)
             self.pt_state.restart_render()
 
-    def mis_mode_combo(self):
+    def draw_mis_mode_combo(self):
         mis_modes = ["On", "Off"]
 
         current_mode_name = mis_modes[self.pt_state.mis_mode]
@@ -337,7 +381,7 @@ class PathTracingUI:
             self.pt_state.mis_mode = (self.pt_state.mis_mode + 1) % len(mis_modes)
             self.pt_state.restart_render()
     
-    def reset_pt_button(self):
+    def draw_reset_pt_button(self):
         if imgui.button("Reset Path Tracing Settings"):
             pt_settings.total_bounces = _pt_settings_default.total_bounces
             pt_settings.diffuse_bounces = _pt_settings_default.diffuse_bounces
@@ -459,7 +503,7 @@ class PostProcessingUI:
         self.blur_slider.plus_button(on_change)
         self.blur_slider.draw_label()
     
-    def dof_checkbox(self):
+    def draw_dof_checkbox(self):
         enabled = self.post_process_state.dof_enabled
         changed, enabled = imgui.checkbox("Enable Depth of Field", enabled)
         if changed:
@@ -515,7 +559,7 @@ class ScreenUI:
 
         self.fps_slider = IntSlider(30, 361, "FPS", slider_speed=1)
     
-    def vsync_checkbox(self):
+    def draw_vsync_checkbox(self):
         enabled = screen.vsync
         changed, enabled = imgui.checkbox("VSync", enabled)
 
@@ -547,18 +591,31 @@ class DebugUI:
         self.pt_state = kwargs.get("pt_state")
 
         super().__init__(**kwargs)
+
+        self.debug_off_button = Button("Off")
+        self.debug_albedo_button = Button("View Albedo")
+        self.debug_normal_button = Button("View Normal")
+        self.debug_depth_button = Button("View Depth")
     
-    def debug_mode_button(self):
+    def draw_debug_mode_button(self):
         if self.pt_state.saved_combined is not None:
-            if imgui.button("Off"):
+            def set_off():
                 self.pt_state.debug_mode = "off"
-            else:
-                if imgui.button("View Albedo"):
-                    self.pt_state.debug_mode = "albedo"
-                if imgui.button("View Normal"):
-                    self.pt_state.debug_mode = "normal"
-                if imgui.button("View Depth"):
-                    self.pt_state.debug_mode = "depth"
+
+            def set_albedo():
+                self.pt_state.debug_mode = "albedo"
+
+            def set_normal():
+                self.pt_state.debug_mode = "normal"
+
+            def set_depth():
+                self.pt_state.debug_mode = "depth"
+
+            self.debug_off_button.button(set_off)
+            self.debug_albedo_button.button(set_albedo)
+            self.debug_normal_button.button(set_normal)
+            self.debug_depth_button.button(set_depth)
+        
         else:
             imgui.text_disabled("No saved renders")
 
@@ -568,24 +625,25 @@ class SceneUI:
         self.scene_state = kwargs.get("scene_state")
 
         super().__init__(**kwargs)
+
+        self.next_scene_button = Button("Next Scene")
+        self.previous_scene_button = Button("Previous Scene")
     
-    def next_scene_button(self):
+    def draw_next_scene_button(self):
         enabled = self.scene_state.curr_scene_idx < self.scene_state.num_scenes - 1
-        imgui.begin_disabled(not enabled)
 
-        if imgui.button("Next Scene"):
+        def on_change():
             self.scene_state.next_scene()
-        
-        imgui.end_disabled()
-    
-    def previous_scene_button(self):
-        enabled = self.scene_state.curr_scene_idx > 0
-        imgui.begin_disabled(not enabled)
 
-        if imgui.button("Previous Scene"):
+        self.next_scene_button.button(on_change, enabled)
+    
+    def draw_previous_scene_button(self):
+        enabled = self.scene_state.curr_scene_idx > 0
+
+        def on_change():
             self.scene_state.previous_scene()
         
-        imgui.end_disabled()
+        self.previous_scene_button.button(on_change, enabled)
 
 
 class CameraCapturingUI:
@@ -594,23 +652,27 @@ class CameraCapturingUI:
         self.camera_capture_state = kwargs.get("camera_capture_state")
 
         super().__init__(**kwargs)
+
+        self.save_state_button = Button("Save Current Camera State")
+        self.remove_state_button = Button("Remove Last Camera State From This Scene")
     
-    def save_state_button(self):
-        if imgui.button("Save Current Camera State"):
+    def draw_save_state_button(self):
+        def on_change():
             self.camera_capture_state.save_state()
+
+        self.save_state_button.button(on_change)
     
-    def remove_state_button(self):
+    def draw_remove_state_button(self):
         scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]
         scene_captures = self.camera_capture_state.states[str(scene_file)]
         scene_capture_count = len(scene_captures)
 
         enabled = scene_capture_count > 0
-        imgui.begin_disabled(not enabled)
 
-        if imgui.button("Remove Last Camera State From This Scene"):
+        def on_change():
             self.camera_capture_state.remove_state()
-        
-        imgui.end_disabled()
+
+        self.remove_state_button.button(on_change, enabled)
 
 
 class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
@@ -635,29 +697,29 @@ class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI
         if render_settings.render_mode == "path_tracing":
             if not self.pt_state.view_saved:
                 if self.pt_state.should_render:
-                    self.stop_button()
+                    self.draw_stop_button()
                 
                 else:
-                    self.continue_button()
+                    self.draw_continue_button()
                 
-                self.cancel_button()
+                self.draw_cancel_button()
             
             else:
-                self.viewport_button()
-                self.denoise_button()
+                self.draw_viewport_button()
+                self.draw_denoise_button()
                 # Disable for now!
                 # Fix render exporting by adding an FBO to include tonemapping / gamma correction
                 # self.export_render_button()
             
-            self.restart_button()
+            self.draw_restart_button()
         
         else:
             if self.pt_state.saved_combined is None:
-                self.start_button()
+                self.draw_start_button()
             
             else:
-                self.start_new_button()
-                self.view_saved_button()
+                self.draw_start_new_button()
+                self.draw_view_saved_button()
             
         self.draw_tiles_x_slider()
         self.draw_tiles_y_slider()
@@ -670,13 +732,13 @@ class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI
         self.draw_max_samples_slider()
         self.draw_spp_slider()
         if imgui.tree_node("BSDF Sampling"):
-            self.specular_mode_combo()
-            self.geometry_mode_combo()
-            self.transmission_mode_combo()
-            self.mis_mode_combo()
+            self.draw_specular_mode_combo()
+            self.draw_geometry_mode_combo()
+            self.draw_transmission_mode_combo()
+            self.draw_mis_mode_combo()
 
             imgui.tree_pop()
-        self.reset_pt_button()
+        self.draw_reset_pt_button()
     
     def camera_ui(self):
         self.draw_movement_speed_slider()
@@ -688,21 +750,21 @@ class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI
         self.draw_hdri_exposure_slider()
         self.draw_tonemap_dropdown()
         self.draw_blur_slider()
-        self.dof_checkbox()
+        self.draw_dof_checkbox()
         self.draw_aperture_slider()
         self.draw_focus_dist_slider()
     
     def screen_ui(self):
-        self.vsync_checkbox()
+        self.draw_vsync_checkbox()
         self.draw_fps_slider()
     
     def debug_ui(self):
-        self.debug_mode_button()
+        self.draw_debug_mode_button()
     
     def scene_ui(self):
-        self.next_scene_button()
-        self.previous_scene_button()
+        self.draw_next_scene_button()
+        self.draw_previous_scene_button()
     
     def camera_capturing_ui(self):
-        self.save_state_button()
-        self.remove_state_button()
+        self.draw_save_state_button()
+        self.draw_remove_state_button()
