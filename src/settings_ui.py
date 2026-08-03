@@ -39,7 +39,7 @@ class IntSlider:
     def minus_button(self, on_change):
         imgui.same_line()
         if imgui.button(f"-##{self.unique_code}_minus"):
-            if self.min_val + self.slider_speed <= self.val <= self.max_val - self.slider_speed:
+            if self.min_val + self.slider_speed <= self.val <= self.max_val:
                 self.val -= self.slider_speed
 
                 on_change(self.val)
@@ -47,7 +47,7 @@ class IntSlider:
     def plus_button(self, on_change):
         imgui.same_line()
         if imgui.button(f"+##{self.unique_code}_plus"):
-            if self.min_val + self.slider_speed <= self.val <= self.max_val - self.slider_speed:
+            if self.min_val <= self.val <= self.max_val - self.slider_speed:
                 self.val += self.slider_speed
 
                 on_change(self.val)
@@ -108,6 +108,28 @@ class FloatSlider:
     def draw_label(self):
         imgui.same_line()
         imgui.text(self.label)
+
+
+class Dropdown:
+    def __init__(self, label):
+        self.label = label
+
+    def dropdown(self, options, curr_selection, on_change):
+        if imgui.begin_combo(self.label, curr_selection):
+            for option in options:
+                is_selected = curr_selection == option
+
+                clicked, _ = imgui.selectable(option, is_selected)
+
+                if clicked:
+                    curr_selection = option
+
+                    on_change(curr_selection)
+
+                if is_selected:
+                    imgui.set_item_default_focus()
+            
+            imgui.end_combo()
 
 
 class RenderingUI:
@@ -390,27 +412,19 @@ class PostProcessingUI:
         self.blur_slider = FloatSlider(0, 100, "Blur")
         self.aperture_slider = FloatSlider(0.1, 10, "Aperture", slider_speed=0.1)
         self.focus_dist_slider = FloatSlider(0.1, 1000, "Focus Distance", slider_speed=0.1)
+        
+        self.tonemap_dropdown = Dropdown("Render Mode")
 
-    def tonemap_dropdown(self):
+    def draw_tonemap_dropdown(self):
         options = ["None", "ACESFilm", "AgX", "AgXGolden", "AgXPunchy", "Filmic", "Lottes",
                    "Neutral", "Reinhard", "Reinhard2", "Uchimura", "Uncharted2", "Unreal"]
 
-        if imgui.begin_combo("Render Mode", self.post_process_state.tonemap):
-            for tonemap in options:
-                is_selected = (self.post_process_state.tonemap == tonemap)
+        def on_change(new_val):
+            self.post_process_state.tonemap = new_val
+            post_process_settings.tonemap = self.post_process_state.tonemap
+            self.pt_state.restart_render()
 
-                clicked, state = imgui.selectable(tonemap, is_selected)
-
-                if clicked:
-                    self.post_process_state.tonemap = tonemap
-
-                    post_process_settings.tonemap = self.post_process_state.tonemap
-                    self.pt_state.restart_render()
-
-                if is_selected:
-                    imgui.set_item_default_focus()
-            
-            imgui.end_combo()
+        self.tonemap_dropdown.dropdown(options, self.post_process_state.tonemap, on_change)
         
     def draw_exposure_slider(self):
         def on_change(new_val):
@@ -499,7 +513,7 @@ class ScreenUI:
 
         super().__init__(**kwargs)
 
-        self.fps_slider = IntSlider(30, 360, "FPS", slider_speed=1)
+        self.fps_slider = IntSlider(30, 361, "FPS", slider_speed=1)
     
     def vsync_checkbox(self):
         enabled = screen.vsync
@@ -515,7 +529,7 @@ class ScreenUI:
     
     def draw_fps_slider(self):
         is_unlimited = screen.fps_cap == -1
-        display_fps = 360 if is_unlimited else screen.fps_cap
+        display_fps = 361 if is_unlimited else screen.fps_cap
         fps_format = "None" if is_unlimited else "%d"
         
         def on_change(new_val):
@@ -672,7 +686,7 @@ class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI
     def post_processing_ui(self):
         self.draw_exposure_slider()
         self.draw_hdri_exposure_slider()
-        self.tonemap_dropdown()
+        self.draw_tonemap_dropdown()
         self.draw_blur_slider()
         self.dof_checkbox()
         self.draw_aperture_slider()
