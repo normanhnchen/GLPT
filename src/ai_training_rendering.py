@@ -97,6 +97,8 @@ def main():
         material_buffer = MaterialBuffer(scene)
         triangle_buffer = TriangleBuffer(scene)
         light_buffer = LightBuffer(scene)
+        emissive_triangles_buffer = EmissiveTrianglesBuffer(scene)
+        finite_lights_buffer = FiniteLightsbuffer(scene)
 
         if not ai_training_settings.camera_setup_mode:
             scene.build_bvh()
@@ -109,11 +111,14 @@ def main():
         triangle_buffer.bind(ctx, 1)
         material_buffer.bind(ctx, 2)
         light_buffer.bind(ctx, 3)
+        emissive_triangles_buffer.bind(ctx, 6)
+        finite_lights_buffer.bind(ctx, 7)
 
         scene.create_texture_arrays(ctx)
         scene.bind_texture_arrays()
 
-        scene.hdri.bind(ctx, 6)
+        scene.hdri.bind_img(ctx, 6)
+        scene.hdri.bind_cdfs(ctx, 7, 8)
         
         last_frame_start = 0
         stats_start_time = time.perf_counter()
@@ -279,20 +284,32 @@ def main():
 
                     # Prevent the samples from going over the max samples limit
                     samples_left = pt_settings.max_samples - pt_state.total_samples
-
+    
                     if samples_left < pt_settings.spp:
                         pt_shaders.pt.prog["samplesPerPixel"].value = samples_left
                     else:
                         pt_shaders.pt.prog["samplesPerPixel"].value = pt_settings.spp
                     
                     pt_shaders.pt.prog["totalSamples"].value = pt_state.total_samples
-                    pt_shaders.pt.prog["maxBounces"].value = pt_settings.max_bounces
-
+                    
+                    pt_shaders.pt.prog["maxTotalBounces"].value = pt_settings.total_bounces
+                    pt_shaders.pt.prog["maxDiffuseBounces"].value = pt_settings.diffuse_bounces
+                    pt_shaders.pt.prog["maxSpecularBounces"].value = pt_settings.specular_bounces
+                    pt_shaders.pt.prog["maxTransmissionBounces"].value = pt_settings.transmission_bounces
+    
                     pt_shaders.pt.prog["blur"].value = post_process_settings.blur
-
+    
                     pt_shaders.pt.prog["hdriExposure"].value = post_process_settings.hdri_exposure
-
+    
                     pt_shaders.pt.prog["depthFactor"].value = 1 / scene.extent
+    
+                    pt_shaders.pt.prog["numFiniteLights"].value = scene.num_finite_lights
+                    pt_shaders.pt.prog["numEmissiveTriangles"].value = scene.num_emissive_triangles
+    
+                    pt_shaders.pt.prog["specularMode"].value = pt_state.specular_mode
+                    pt_shaders.pt.prog["geometryMode"].value = pt_state.geometry_mode
+                    pt_shaders.pt.prog["transmissionMode"].value = pt_state.transmission_mode
+                    pt_shaders.pt.prog["misMode"].value = pt_state.mis_mode
 
                     # Apply ceiling function
                     # Allows the compute shader to reach the entire screen
