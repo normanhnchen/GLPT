@@ -4,12 +4,76 @@ from src.settings import *
 from src.settings import _pt_settings_default
 
 
+class IntSlider:
+    def __init__(
+            self,
+            window,
+            min_val,
+            max_val,
+            label,
+            slider_speed=0.5
+        ):
+        self.window = window
+        self.slider_speed = slider_speed
+        self.min_val = min_val
+        self.max_val = max_val
+        self.label = label
+        self.unique_code = label.lower().replace(" ", "_")
+
+    def slider(self, curr_val, val_format=None):
+        fmt = val_format if val_format is not None else "%d"
+        self.changed, self.val = imgui.drag_int(
+            f"##{self.unique_code}",
+            curr_val,
+            self.slider_speed,
+            self.min_val,
+            self.max_val,
+            format=fmt
+        )
+
+    def dragging_logic(self, on_change):
+        if imgui.is_item_active() and self.changed:
+            if imgui.is_mouse_dragging(0):
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+            else:
+                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+            
+            on_change(self.val)
+        
+        if imgui.is_item_deactivated():
+            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+
+    def minus_button(self, on_change):
+        imgui.same_line()
+        if imgui.button(f"-##{self.unique_code}_minus"):
+            if self.min_val < self.val < self.max_val:
+                self.val -= 1
+
+                on_change(self.val)
+
+    def plus_button(self, on_change):
+        imgui.same_line()
+        if imgui.button(f"+##{self.unique_code}_plus"):
+            if self.min_val < self.val < self.max_val:
+                self.val += 1
+
+                on_change(self.val)
+
+    def draw_label(self):
+        imgui.same_line()
+        imgui.text(self.label)
+
+
 class RenderingUI:
     def __init__(self, **kwargs):
         self.pt_state = kwargs.get("pt_state")
         self.camera_buffer = kwargs.get("camera_buffer")
+        self.window = glfwGetCurrentContext()
 
         super().__init__()
+
+        self.tiles_x_slider = IntSlider(self.window, 1, 1024, "Tiles X", render_settings.tiles_x)
+        self.tiles_y_slider = IntSlider(self.window, 1, 1024, "Tiles Y", render_settings.tiles_y)
     
     def stop_button(self):
             if imgui.button("Stop"):
@@ -60,111 +124,29 @@ class RenderingUI:
             render_settings.render_mode = "path_tracing"
             self.pt_state.view_saved = True
     
-    def tiles_x_slider(self):
-        # Slider 
-        # ------
-        slider_speed = 0.5
-        hardcoded_min_tiles_x = 1
-        hardcoded_max_tiles_x = 1024
-        tiles_x = render_settings.tiles_x
-        changed, tiles_x = imgui.drag_int(
-            "##tiles_x",
-            tiles_x,
-            slider_speed,
-            hardcoded_min_tiles_x,
-            hardcoded_max_tiles_x
-        )
-
-        # Dragging logic
-        # --------------
-        if imgui.is_item_active() and changed:
-            if imgui.is_mouse_dragging(0):
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-            else:
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-            
-            render_settings.tiles_x = tiles_x
+    def draw_tiles_x_slider(self):
+        def on_change(new_val):
+            render_settings.tiles_x = new_val
             self.pt_state.restart_render()
             self.pt_state.total_samples = 0
-        
-        if imgui.is_item_deactivated():
-            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-        
-        # Minus button
-        # ------------
-        imgui.same_line()
-        if imgui.button("-##tiles_x_minus"):
-            if render_settings.tiles_x > hardcoded_min_tiles_x:
-                render_settings.tiles_x -= 1
-                self.pt_state.restart_render()
-                self.pt_state.total_samples = 0
-        
-        # Plus button
-        # ------------
-        imgui.same_line()
-        if imgui.button("+##tiles_x_plus"):
-            if render_settings.tiles_x < hardcoded_max_tiles_x:
-                render_settings.tiles_x += 1
-                self.pt_state.restart_render()
-                self.pt_state.total_samples = 0
             
-        # Label
-        # -----
-        imgui.same_line()
-        imgui.text("Tiles X")
+        self.tiles_x_slider.slider(render_settings.tiles_x)
+        self.tiles_x_slider.dragging_logic(on_change)
+        self.tiles_x_slider.minus_button(on_change)
+        self.tiles_x_slider.plus_button(on_change)
+        self.tiles_x_slider.draw_label()
     
-    def tiles_y_slider(self):
-        # Slider 
-        # ------
-        slider_speed = 0.5
-        hardcoded_min_tiles_y = 1
-        hardcoded_max_tiles_y = 1024
-        tiles_y = render_settings.tiles_y
-        changed, tiles_y = imgui.drag_int(
-            "##tiles_y",
-            tiles_y,
-            slider_speed,
-            hardcoded_min_tiles_y,
-            hardcoded_max_tiles_y
-        )
-
-        # Dragging logic
-        # --------------
-        if imgui.is_item_active() and changed:
-            if imgui.is_mouse_dragging(0):
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-            else:
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-            
-            render_settings.tiles_y = tiles_y
+    def draw_tiles_y_slider(self):
+        def on_change(new_val):
+            render_settings.tiles_y = new_val
             self.pt_state.restart_render()
             self.pt_state.total_samples = 0
-        
-        if imgui.is_item_deactivated():
-            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-        
-        # Minus button
-        # ------------
-        imgui.same_line()
-        if imgui.button("-##tiles_y_minus"):
-            if render_settings.tiles_y > hardcoded_min_tiles_y:
-                render_settings.tiles_y -= 1
-                self.pt_state.restart_render()
-                self.pt_state.total_samples = 0
-        
-        # Plus button
-        # ------------
-        imgui.same_line()
-        if imgui.button("+##tiles_y_plus"):
-            if render_settings.tiles_y < hardcoded_max_tiles_y:
-                render_settings.tiles_y += 1
-                self.pt_state.restart_render()
-                self.pt_state.total_samples = 0
-        
-        # Label
-        # -----
-        imgui.same_line()
-        imgui.text("Tiles Y")
+            
+        self.tiles_y_slider.slider(render_settings.tiles_y)
+        self.tiles_y_slider.dragging_logic(on_change)
+        self.tiles_y_slider.minus_button(on_change)
+        self.tiles_y_slider.plus_button(on_change)
+        self.tiles_y_slider.draw_label()
     
     def export_render_button(self):
         if imgui.button("Export Render"):
@@ -177,306 +159,79 @@ class PathTracingUI:
         self.window = glfwGetCurrentContext()
 
         super().__init__(**kwargs)
-    
-    def total_bounces_slider(self):
-        # Slider 
-        # ------
-        slider_speed = 0.5
-        hardcoded_min_bounces = 0
-        hardcoded_max_bounces = 1024
-        bounces = pt_settings.total_bounces
-        changed, bounces = imgui.drag_int(
-            "##total_bounces",
-            bounces,
-            slider_speed,
-            hardcoded_min_bounces,
-            hardcoded_max_bounces
-        )
 
-        # Dragging logic
-        # --------------
-        if imgui.is_item_active() and changed:
-            if imgui.is_mouse_dragging(0):
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-            else:
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-            
-            pt_settings.total_bounces = bounces
+        self.total_bounces_slider = IntSlider(self.window, 0, 1024, "Total Bounces", pt_settings.total_bounces)
+        self.diffuse_bounces_slider = IntSlider(self.window, 0, 1024, "Diffuse Bounces", pt_settings.diffuse_bounces)
+        self.specular_bounces_slider = IntSlider(self.window, 0, 1024, "Specular Bounces", pt_settings.specular_bounces)
+        self.transmission_bounces_slider = IntSlider(self.window, 0, 1024, "Transmission Bounces", pt_settings.transmission_bounces)
+        self.max_samples_slider = IntSlider(self.window, 1, 16384, "Max Samples", pt_settings.max_samples)
+        self.spp_slider = IntSlider(self.window, 1, 128, "Samples Per Pixel", pt_settings.spp)
+    
+    def draw_total_bounces_slider(self):
+        def on_change(new_val):
+            pt_settings.total_bounces = new_val
             self.pt_state.restart_render()
         
-        if imgui.is_item_deactivated():
-            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-        
-        # Minus button
-        # ------------
-        imgui.same_line()
-        if imgui.button("-##total_bounces_minus"):
-            if pt_settings.total_bounces > hardcoded_min_bounces:
-                pt_settings.total_bounces -= 1
-                self.pt_state.restart_render()
-        
-        # Plus button
-        # ------------
-        imgui.same_line()
-        if imgui.button("+##total_bounces_plus"):
-            if pt_settings.total_bounces < hardcoded_max_bounces:
-                pt_settings.total_bounces += 1
-                self.pt_state.restart_render()
-        
-        # Label
-        # -----
-        imgui.same_line()
-        imgui.text("Total Bounces")
+        self.total_bounces_slider.slider(pt_settings.total_bounces)
+        self.total_bounces_slider.dragging_logic(on_change)
+        self.total_bounces_slider.minus_button(on_change)
+        self.total_bounces_slider.plus_button(on_change)
+        self.total_bounces_slider.draw_label()
 
-    def diffuse_bounces_slider(self):
-            # Slider 
-            # ------
-            slider_speed = 0.5
-            hardcoded_min_bounces = 0
-            hardcoded_max_bounces = 1024
-            bounces = pt_settings.diffuse_bounces
-            changed, bounces = imgui.drag_int(
-                "##diffuse_bounces",
-                bounces,
-                slider_speed,
-                hardcoded_min_bounces,
-                hardcoded_max_bounces
-            )
-    
-            # Dragging logic
-            # --------------
-            if imgui.is_item_active() and changed:
-                if imgui.is_mouse_dragging(0):
-                    glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-                else:
-                    glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-                
-                pt_settings.diffuse_bounces = bounces
-                self.pt_state.restart_render()
-            
-            if imgui.is_item_deactivated():
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-            
-            # Minus button
-            # ------------
-            imgui.same_line()
-            if imgui.button("-##diffuse_bounces_minus"):
-                if pt_settings.diffuse_bounces > hardcoded_min_bounces:
-                    pt_settings.diffuse_bounces -= 1
-                    self.pt_state.restart_render()
-            
-            # Plus button
-            # ------------
-            imgui.same_line()
-            if imgui.button("+##diffuse_bounces_plus"):
-                if pt_settings.diffuse_bounces < hardcoded_max_bounces:
-                    pt_settings.diffuse_bounces += 1
-                    self.pt_state.restart_render()
-            
-            # Label
-            # -----
-            imgui.same_line()
-            imgui.text("Diffuse Bounces")
-
-    def specular_bounces_slider(self):
-            # Slider 
-            # ------
-            slider_speed = 0.5
-            hardcoded_min_bounces = 0
-            hardcoded_max_bounces = 1024
-            bounces = pt_settings.specular_bounces
-            changed, bounces = imgui.drag_int(
-                "##specular_bounces",
-                bounces,
-                slider_speed,
-                hardcoded_min_bounces,
-                hardcoded_max_bounces
-            )
-    
-            # Dragging logic
-            # --------------
-            if imgui.is_item_active() and changed:
-                if imgui.is_mouse_dragging(0):
-                    glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-                else:
-                    glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-                
-                pt_settings.specular_bounces = bounces
-                self.pt_state.restart_render()
-            
-            if imgui.is_item_deactivated():
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-            
-            # Minus button
-            # ------------
-            imgui.same_line()
-            if imgui.button("-##specular_bounces_minus"):
-                if pt_settings.specular_bounces > hardcoded_min_bounces:
-                    pt_settings.specular_bounces -= 1
-                    self.pt_state.restart_render()
-            
-            # Plus button
-            # ------------
-            imgui.same_line()
-            if imgui.button("+##specular_bounces_plus"):
-                if pt_settings.specular_bounces < hardcoded_max_bounces:
-                    pt_settings.specular_bounces += 1
-                    self.pt_state.restart_render()
-            
-            # Label
-            # -----
-            imgui.same_line()
-            imgui.text("Specular Bounces")
-
-    def transmission_bounces_slider(self):
-            # Slider 
-            # ------
-            slider_speed = 0.5
-            hardcoded_min_bounces = 0
-            hardcoded_max_bounces = 1024
-            bounces = pt_settings.transmission_bounces
-            changed, bounces = imgui.drag_int(
-                "##transmission_bounces",
-                bounces,
-                slider_speed,
-                hardcoded_min_bounces,
-                hardcoded_max_bounces
-            )
-    
-            # Dragging logic
-            # --------------
-            if imgui.is_item_active() and changed:
-                if imgui.is_mouse_dragging(0):
-                    glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-                else:
-                    glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-                
-                pt_settings.transmission_bounces = bounces
-                self.pt_state.restart_render()
-            
-            if imgui.is_item_deactivated():
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-            
-            # Minus button
-            # ------------
-            imgui.same_line()
-            if imgui.button("-##transmission_bounces_minus"):
-                if pt_settings.transmission_bounces > hardcoded_min_bounces:
-                    pt_settings.transmission_bounces -= 1
-                    self.pt_state.restart_render()
-            
-            # Plus button
-            # ------------
-            imgui.same_line()
-            if imgui.button("+##transmission_bounces_plus"):
-                if pt_settings.transmission_bounces < hardcoded_max_bounces:
-                    pt_settings.transmission_bounces += 1
-                    self.pt_state.restart_render()
-            
-            # Label
-            # -----
-            imgui.same_line()
-            imgui.text("Transmission Bounces")
-        
-    def max_samples_slider(self):
-        # Slider 
-        # ------
-        slider_speed = 0.5
-        hardcoded_min_samples = 1
-        hardcoded_max_samples = 16384
-        samples = pt_settings.max_samples
-        changed, samples = imgui.drag_int(
-            "##max_samples",
-            samples,
-            slider_speed,
-            hardcoded_min_samples,
-            hardcoded_max_samples
-        )
-
-        # Dragging logic
-        # --------------
-        if imgui.is_item_active() and changed:
-            if imgui.is_mouse_dragging(0):
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-            else:
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-            
-            pt_settings.max_samples = samples
+    def draw_diffuse_bounces_slider(self):
+        def on_change(new_val):
+            pt_settings.diffuse_bounces = new_val
             self.pt_state.restart_render()
         
-        if imgui.is_item_deactivated():
-            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        self.diffuse_bounces_slider.slider(pt_settings.diffuse_bounces)
+        self.diffuse_bounces_slider.dragging_logic(on_change)
+        self.diffuse_bounces_slider.minus_button(on_change)
+        self.diffuse_bounces_slider.plus_button(on_change)
+        self.diffuse_bounces_slider.draw_label()
 
-        # Minus button
-        # ------------
-        imgui.same_line()
-        if imgui.button("-##samples_minus"):
-            if pt_settings.max_samples > hardcoded_min_samples:
-                pt_settings.max_samples -= 1
-                self.pt_state.restart_render()
-        
-        # Plus button
-        # ------------
-        imgui.same_line()
-        if imgui.button("+##samples_plus"):
-            if pt_settings.max_samples < hardcoded_max_samples:
-                pt_settings.max_samples += 1
-                self.pt_state.restart_render()
-        
-        # Label
-        # -----
-        imgui.same_line()
-        imgui.text("Max Samples")
-    
-    def spp_slider(self):
-        # Slider 
-        # ------
-        slider_speed = 0.5
-        hardcoded_min_spp = 1
-        hardcoded_max_spp = 128
-        spp = pt_settings.spp
-        changed, spp = imgui.drag_int(
-            "##spp",
-            spp,
-            slider_speed,
-            hardcoded_min_spp,
-            hardcoded_max_spp
-        )
-
-        # Dragging logic
-        # --------------
-        if imgui.is_item_active() and changed:
-            if imgui.is_mouse_dragging(0):
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-            else:
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-            
-            pt_settings.spp = spp
+    def draw_specular_bounces_slider(self):
+        def on_change(new_val):
+            pt_settings.specular_bounces = new_val
             self.pt_state.restart_render()
         
-        if imgui.is_item_deactivated():
-            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        self.specular_bounces_slider.slider(pt_settings.specular_bounces)
+        self.specular_bounces_slider.dragging_logic(on_change)
+        self.specular_bounces_slider.minus_button(on_change)
+        self.specular_bounces_slider.plus_button(on_change)
+        self.specular_bounces_slider.draw_label()
+
+    def draw_transmission_bounces_slider(self):
+        def on_change(new_val):
+            pt_settings.transmission_bounces = new_val
+            self.pt_state.restart_render()
         
-        # Minus button
-        # ------------
-        imgui.same_line()
-        if imgui.button("-##spp_minus"):
-            if pt_settings.spp > hardcoded_min_spp:
-                pt_settings.spp -= 1
-                self.pt_state.restart_render()
+        self.transmission_bounces_slider.slider(pt_settings.transmission_bounces)
+        self.transmission_bounces_slider.dragging_logic(on_change)
+        self.transmission_bounces_slider.minus_button(on_change)
+        self.transmission_bounces_slider.plus_button(on_change)
+        self.transmission_bounces_slider.draw_label()
         
-        # Plus button
-        # ------------
-        imgui.same_line()
-        if imgui.button("+##spp_plus"):
-            if pt_settings.spp < hardcoded_max_spp:
-                pt_settings.spp += 1
-                self.pt_state.restart_render()
+    def draw_max_samples_slider(self):
+        def on_change(new_val):
+            pt_settings.max_samples = new_val
+            self.pt_state.restart_render()
         
-        # Label
-        # -----
-        imgui.same_line()
-        imgui.text("Samples Per Pixel")
+        self.max_samples_slider.slider(pt_settings.max_samples)
+        self.max_samples_slider.dragging_logic(on_change)
+        self.max_samples_slider.minus_button(on_change)
+        self.max_samples_slider.plus_button(on_change)
+        self.max_samples_slider.draw_label()
+    
+    def draw_spp_slider(self):
+        def on_change(new_val):
+            pt_settings.spp = new_val
+            self.pt_state.restart_render()
+        
+        self.spp_slider.slider(pt_settings.spp)
+        self.spp_slider.dragging_logic(on_change)
+        self.spp_slider.minus_button(on_change)
+        self.spp_slider.plus_button(on_change)
+        self.spp_slider.draw_label()
 
     def specular_mode_combo(self):
         specular_modes = ["GGX VNDF", "Cosine Hemisphere"]
@@ -536,7 +291,7 @@ class CameraUI:
 
         super().__init__(**kwargs)
 
-    def movement_speed_slider(self):
+    def draw_movement_speed_slider(self):
         # Slider 
         # ------
         slider_speed = 0.5
@@ -585,7 +340,7 @@ class CameraUI:
         imgui.same_line()
         imgui.text("Movement Speed")
     
-    def fov_slider(self):
+    def draw_fov_slider(self):
         # Slider 
         # ------
         slider_speed = 1
@@ -634,7 +389,7 @@ class CameraUI:
         imgui.same_line()
         imgui.text("FOV")
     
-    def mouse_sensitivity_slider(self):
+    def draw_mouse_sensitivity_slider(self):
         # Slider 
         # ------
         slider_speed = 0.1
@@ -715,7 +470,7 @@ class PostProcessingUI:
             
             imgui.end_combo()
         
-    def exposure_slider(self):
+    def draw_exposure_slider(self):
         # Slider 
         # ------
         slider_speed = 0.1
@@ -767,7 +522,7 @@ class PostProcessingUI:
         imgui.same_line()
         imgui.text("Exposure")
     
-    def hdri_exposure_slider(self):
+    def draw_hdri_exposure_slider(self):
         # Slider 
         # ------
         slider_speed = 0.1
@@ -819,7 +574,7 @@ class PostProcessingUI:
         imgui.same_line()
         imgui.text("HDRI Exposure")
     
-    def blur_slider(self):
+    def draw_blur_slider(self):
         # Slider 
         # ------
         slider_speed = 0.5
@@ -885,7 +640,7 @@ class PostProcessingUI:
                 self.camera_buffer.update_data()
                 self.pt_state.restart_render()
         
-    def aperture_slider(self):
+    def draw_aperture_slider(self):
         if not self.post_process_state.dof_enabled:
             return
         
@@ -946,7 +701,7 @@ class PostProcessingUI:
         imgui.same_line()
         imgui.text("Aperture")
     
-    def focus_dist_slider(self):
+    def draw_focus_dist_slider(self):
         if not self.post_process_state.dof_enabled:
             return
         
@@ -1014,6 +769,8 @@ class ScreenUI:
         self.window = glfwGetCurrentContext()
 
         super().__init__(**kwargs)
+
+        self.fps_slider = IntSlider(self.window, 30, 360, "Samples Per Pixel", slider_speed=1)
     
     def vsync_checkbox(self):
         enabled = screen.vsync
@@ -1027,61 +784,19 @@ class ScreenUI:
             else:
                 glfwSwapInterval(0)
     
-    def fps_slider(self):
-        # Slider 
-        # ------
-        slider_speed = 1
-        hardcoded_min_fps = 30
-        hardcoded_max_fps = 360
-        fps = screen.fps_cap
+    def draw_fps_slider(self):
         is_unlimited = screen.fps_cap == -1
-        display_fps = hardcoded_max_fps if is_unlimited else screen.fps_cap
+        display_fps = 360 if is_unlimited else screen.fps_cap
         fps_format = "None" if is_unlimited else "%d"
-        changed, fps = imgui.drag_int(
-            "##fps",
-            display_fps,
-            slider_speed,
-            hardcoded_min_fps,
-            hardcoded_max_fps,
-            format=fps_format
-        )
+        
+        def on_change(new_val):
+            screen.fps_cap = -1 if new_val > 360 else new_val
 
-        if fps >= hardcoded_max_fps:
-            fps = -1
-
-        # Dragging logic
-        # --------------
-        if imgui.is_item_active() and changed:
-            if imgui.is_mouse_dragging(0):
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-            else:
-                glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-            
-            screen.fps_cap = fps
-        
-        if imgui.is_item_deactivated():
-            glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-        
-        # Minus button
-        # ------------
-        imgui.same_line()
-        if imgui.button("-##fps_minus"):
-            if screen.fps_cap > hardcoded_min_fps:
-                screen.fps_cap -= 1
-        
-        # Plus button
-        # ------------
-        imgui.same_line()
-        if imgui.button("+##fps_plus"):
-            if 0 < screen.fps_cap < hardcoded_max_fps:
-                screen.fps_cap += 1
-            elif screen.fps_cap == hardcoded_max_fps:
-                screen.fps_cap = -1
-        
-        # Label
-        # -----
-        imgui.same_line()
-        imgui.text("FPS Cap")
+        self.fps_slider.slider(display_fps, val_format=fps_format)
+        self.fps_slider.dragging_logic(on_change)
+        self.fps_slider.minus_button(on_change)
+        self.fps_slider.plus_button(on_change)
+        self.fps_slider.draw_label()
     
 
 class DebugUI:
@@ -1201,8 +916,8 @@ class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI
                 self.start_new_button()
                 self.view_saved_button()
             
-        self.tiles_x_slider()
-        self.tiles_y_slider()
+        self.draw_tiles_x_slider()
+        self.draw_tiles_y_slider()
 
     def path_tracing_ui(self):
         self.total_bounces_slider()
@@ -1221,18 +936,18 @@ class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI
         self.reset_pt_button()
     
     def camera_ui(self):
-        self.movement_speed_slider()
-        self.fov_slider()
-        self.mouse_sensitivity_slider()
+        self.draw_movement_speed_slider()
+        self.draw_fov_slider()
+        self.draw_mouse_sensitivity_slider()
     
     def post_processing_ui(self):
-        self.exposure_slider()
-        self.hdri_exposure_slider()
+        self.draw_exposure_slider()
+        self.draw_hdri_exposure_slider()
         self.tonemap_dropdown()
-        self.blur_slider()
+        self.draw_blur_slider()
         self.dof_checkbox()
-        self.aperture_slider()
-        self.focus_dist_slider()
+        self.draw_aperture_slider()
+        self.draw_focus_dist_slider()
     
     def screen_ui(self):
         self.vsync_checkbox()
