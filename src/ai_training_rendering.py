@@ -195,66 +195,7 @@ def main():
             
             imgui.new_frame()
 
-            if settings_window:
-                imgui.set_next_window_size((600, 600))
-                is_expand, settings_window = imgui.begin("Settings", settings_window)
-
-                if ai_training_settings.camera_setup_mode:
-                    if is_expand:
-                        if imgui.tree_node("Camera UI"):
-                            settings_ui.camera_ui()
-
-                            imgui.tree_pop()
-                        
-                        if imgui.tree_node("Post Processing"):
-                            settings_ui.post_processing_ui()
-
-                            imgui.tree_pop()
-                        
-                        if imgui.tree_node("Screen"):
-                            settings_ui.screen_ui()
-
-                            imgui.tree_pop()
-                            
-                        if imgui.tree_node("AI Training"):
-                            settings_ui.scene_ui()
-                            settings_ui.camera_capturing_ui()
-
-                            imgui.tree_pop()
-                
-                else:
-                    if is_expand:
-                        if imgui.tree_node("Rendering"):
-                            settings_ui.rendering_ui()
-
-                            imgui.tree_pop()
-                        
-                        if imgui.tree_node("Path Tracing"):
-                            settings_ui.path_tracing_ui()
-                                
-                            imgui.tree_pop()
-                        
-                        if imgui.tree_node("Camera UI"):
-                            settings_ui.camera_ui()
-
-                            imgui.tree_pop()
-                        
-                        if imgui.tree_node("Post Processing"):
-                            settings_ui.post_processing_ui()
-
-                            imgui.tree_pop()
-                        
-                        if imgui.tree_node("Screen"):
-                            settings_ui.screen_ui()
-
-                            imgui.tree_pop()
-                        
-                        if imgui.tree_node("Debug"):
-                            settings_ui.debug_ui()
-
-                            imgui.tree_pop()
-                
-                imgui.end()
+            settings_ui.draw(settings_window)
             
             if not ai_training_settings.camera_setup_mode:
                 if is_first_render:

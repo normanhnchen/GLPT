@@ -197,45 +197,7 @@ def main():
         if pt_state.total_samples == pt_settings.max_samples and not pt_state.render_complete:
             pt_state.save_render()
 
-        if settings_window:
-            imgui.set_next_window_size((600, 600))
-            is_expand, settings_window = imgui.begin("Settings", settings_window)
-
-            if is_expand:
-                if not bvh_ready:
-                    imgui.text_disabled("Preparing path tracer (building BVH)...")
-                else:
-                    if imgui.tree_node("Rendering"):
-                        settings_ui.rendering_ui()
-
-                        imgui.tree_pop()
-                
-                if imgui.tree_node("Path Tracing"):
-                    settings_ui.path_tracing_ui()
-                        
-                    imgui.tree_pop()
-                
-                if imgui.tree_node("Camera UI"):
-                    settings_ui.camera_ui()
-
-                    imgui.tree_pop()
-                
-                if imgui.tree_node("Post Processing"):
-                    settings_ui.post_processing_ui()
-
-                    imgui.tree_pop()
-                
-                if imgui.tree_node("Screen"):
-                    settings_ui.screen_ui()
-
-                    imgui.tree_pop()
-                
-                if imgui.tree_node("Debug"):
-                    settings_ui.debug_ui()
-
-                    imgui.tree_pop()
-                
-            imgui.end()
+        settings_ui.draw(settings_window)
         
         if pt_state.should_denoise:
             pt_state.denoise(ai_denoiser)

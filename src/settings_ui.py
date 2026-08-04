@@ -5,9 +5,10 @@ from src.settings import _pt_settings_default
 
 
 class IntSlider:
-    def __init__(self, min_val, max_val, label, slider_speed=0.5):
+    def __init__(self, min_val, max_val, label, slider_speed=0.5, increment=1):
         self.window = glfwGetCurrentContext()
         self.slider_speed = slider_speed
+        self.increment = increment
         self.min_val = min_val
         self.max_val = max_val
         self.label = label
@@ -39,16 +40,16 @@ class IntSlider:
     def minus_button(self, on_change):
         imgui.same_line()
         if imgui.button(f"-##{self.unique_code}_minus"):
-            if self.min_val + self.slider_speed <= self.val <= self.max_val:
-                self.val -= self.slider_speed
+            if self.min_val + self.increment <= self.val <= self.max_val:
+                self.val -= self.increment
 
                 on_change(self.val)
 
     def plus_button(self, on_change):
         imgui.same_line()
         if imgui.button(f"+##{self.unique_code}_plus"):
-            if self.min_val <= self.val <= self.max_val - self.slider_speed:
-                self.val += self.slider_speed
+            if self.min_val <= self.val <= self.max_val - self.increment:
+                self.val += self.increment
 
                 on_change(self.val)
 
@@ -58,9 +59,10 @@ class IntSlider:
 
 
 class FloatSlider:
-    def __init__(self, min_val, max_val, label, slider_speed=0.5):
+    def __init__(self, min_val, max_val, label, slider_speed=0.5, increment=0.5):
         self.window = glfwGetCurrentContext()
         self.slider_speed = slider_speed
+        self.increment = increment
         self.min_val = min_val
         self.max_val = max_val
         self.label = label
@@ -92,16 +94,16 @@ class FloatSlider:
     def minus_button(self, on_change):
         imgui.same_line()
         if imgui.button(f"-##{self.unique_code}_minus"):
-            if self.min_val + self.slider_speed <= self.val <= self.max_val:
-                self.val -= self.slider_speed
+            if self.min_val + self.increment <= self.val <= self.max_val:
+                self.val -= self.increment
 
                 on_change(self.val)
 
     def plus_button(self, on_change):
         imgui.same_line()
         if imgui.button(f"+##{self.unique_code}_plus"):
-            if self.min_val <= self.val <= self.max_val - self.slider_speed:
-                self.val += self.slider_speed
+            if self.min_val <= self.val <= self.max_val - self.increment:
+                self.val += self.increment
 
                 on_change(self.val)
 
@@ -174,12 +176,9 @@ class Checkbox:
 
 
 class RenderingUI:
-    def __init__(self, **kwargs):
-        self.pt_state = kwargs.get("pt_state")
-        self.camera_buffer = kwargs.get("camera_buffer")
-        self.window = glfwGetCurrentContext()
-
-        super().__init__()
+    def __init__(self, pt_state, camera_buffer):
+        self.pt_state = pt_state
+        self.camera_buffer = camera_buffer
 
         self.stop_button = Button("Stop")
         self.continue_button = Button("Continue")
@@ -291,11 +290,8 @@ class RenderingUI:
 
 
 class PathTracingUI:
-    def __init__(self, **kwargs):
-        self.pt_state = kwargs.get("pt_state")
-        self.window = glfwGetCurrentContext()
-
-        super().__init__(**kwargs)
+    def __init__(self, pt_state):
+        self.pt_state = pt_state
 
         self.total_bounces_slider = IntSlider(0, 1024, "Total Bounces")
         self.diffuse_bounces_slider = IntSlider(0, 1024, "Diffuse Bounces")
@@ -427,16 +423,13 @@ class PathTracingUI:
 
 
 class CameraUI:
-    def __init__(self, **kwargs):
-        self.pt_state = kwargs.get("pt_state")
-        self.camera = kwargs.get("camera")
-        self.window = glfwGetCurrentContext()
+    def __init__(self, pt_state, camera):
+        self.pt_state = pt_state
+        self.camera = camera
 
-        super().__init__(**kwargs)
-
-        self.movement_speed_slider = FloatSlider(0, 10000, "Movement Speed")
+        self.movement_speed_slider = FloatSlider(0, 10000, "Movement Speed", increment=1)
         self.fov_slider = FloatSlider(1, 135, "Field Of View", slider_speed=1)
-        self.mouse_sensitivity_slider = FloatSlider(0.1, 10, "Mouse Sensitivity", slider_speed=0.1)
+        self.mouse_sensitivity_slider = FloatSlider(0.1, 10, "Mouse Sensitivity", slider_speed=0.1, increment=0.1)
 
     def draw_movement_speed_slider(self):
         def on_change(new_val):
@@ -473,19 +466,17 @@ class CameraUI:
 
 
 class PostProcessingUI:
-    def __init__(self, **kwargs):
-        self.pt_state = kwargs.get("pt_state")
-        self.post_process_state = kwargs.get("post_process_state")
-        self.camera_buffer = kwargs.get("camera_buffer")
+    def __init__(self, pt_state, post_process_state, camera_buffer):
+        self.pt_state = pt_state
+        self.post_process_state = post_process_state
+        self.camera_buffer = camera_buffer
         self.window = glfwGetCurrentContext()
 
-        super().__init__(**kwargs)
-
-        self.exposure_slider = FloatSlider(0, 10, "Exposure", slider_speed=0.1)
-        self.hdri_exposure_slider = FloatSlider(0, 10, "HDRI Exposure", slider_speed=0.1)
-        self.blur_slider = FloatSlider(0, 100, "Blur")
-        self.aperture_slider = FloatSlider(0, 1, "Aperture", slider_speed=0.01)
-        self.focus_dist_slider = FloatSlider(0.1, 1000, "Focus Distance", slider_speed=0.1)
+        self.exposure_slider = FloatSlider(0, 10, "Exposure", slider_speed=0.1, increment=0.1)
+        self.hdri_exposure_slider = FloatSlider(0, 10, "HDRI Exposure", slider_speed=0.1, increment=0.1)
+        self.blur_slider = FloatSlider(0, 100, "Blur", increment=1)
+        self.aperture_slider = FloatSlider(0, 1, "Aperture", slider_speed=0.01, increment=0.01)
+        self.focus_dist_slider = FloatSlider(0.1, 1000, "Focus Distance", slider_speed=0.1, increment=0.1)
         
         self.tonemap_dropdown = Dropdown("Render Mode")
 
@@ -585,11 +576,8 @@ class PostProcessingUI:
 
 
 class ScreenUI:
-    def __init__(self, **kwargs):
-        self.pt_state = kwargs.get("pt_state")
-        self.window = glfwGetCurrentContext()
-
-        super().__init__(**kwargs)
+    def __init__(self, pt_state):
+        self.pt_state = pt_state
 
         self.fps_slider = IntSlider(30, 361, "FPS", slider_speed=1)
 
@@ -607,8 +595,7 @@ class ScreenUI:
         
         enabled = screen.vsync
 
-        self.vsync_checkbox.checkbox(enabled,  on_change, on_enable, on_disable)
-
+        self.vsync_checkbox.checkbox(enabled, on_change, on_enable, on_disable)
     
     def draw_fps_slider(self):
         is_unlimited = screen.fps_cap == -1
@@ -626,10 +613,8 @@ class ScreenUI:
     
 
 class DebugUI:
-    def __init__(self, **kwargs):
-        self.pt_state = kwargs.get("pt_state")
-
-        super().__init__(**kwargs)
+    def __init__(self, pt_state):
+        self.pt_state = pt_state
 
         self.debug_off_button = Button("Off")
         self.debug_albedo_button = Button("View Albedo")
@@ -660,10 +645,8 @@ class DebugUI:
 
 
 class SceneUI:
-    def __init__(self, **kwargs):
-        self.scene_state = kwargs.get("scene_state")
-
-        super().__init__(**kwargs)
+    def __init__(self, scene_state):
+        self.scene_state = scene_state
 
         self.next_scene_button = Button("Next Scene")
         self.previous_scene_button = Button("Previous Scene")
@@ -686,11 +669,9 @@ class SceneUI:
 
 
 class CameraCapturingUI:
-    def __init__(self, **kwargs):
-        self.scene_state = kwargs.get("scene_state")
-        self.camera_capture_state = kwargs.get("camera_capture_state")
-
-        super().__init__(**kwargs)
+    def __init__(self, scene_state, camera_capture_state):
+        self.scene_state = scene_state
+        self.camera_capture_state = camera_capture_state
 
         self.save_state_button = Button("Save Current Camera State")
         self.remove_state_button = Button("Remove Last Camera State From This Scene")
@@ -714,7 +695,7 @@ class CameraCapturingUI:
         self.remove_state_button.button(on_change, enabled)
 
 
-class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI, CameraUI, PathTracingUI, RenderingUI):
+class SettingsUI:
     def __init__(self,
             pt_state,
             post_process_state,
@@ -723,87 +704,159 @@ class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI
             camera_buffer,
             camera
         ):
-        super().__init__(
-            pt_state=pt_state,
-            post_process_state=post_process_state,
-            scene_state=scene_state,
-            camera_capture_state=camera_capture_state,
-            camera_buffer=camera_buffer,
-            camera=camera
-        )
 
-    def rendering_ui(self):
+        self.pt_state = pt_state
+        self.post_process_state = post_process_state
+        self.scene_state = scene_state
+        self.camera_capture_state = camera_capture_state
+        self.camera_buffer = camera_buffer
+        self.camera = camera
+
+        self.rendering_ui = RenderingUI(pt_state, camera_buffer)
+        self.path_tracing_ui = PathTracingUI(pt_state)
+        self.camera_ui = CameraUI(pt_state, camera)
+        self.post_processing_ui = PostProcessingUI(pt_state, post_process_state, camera_buffer)
+        self.screen_ui = ScreenUI(pt_state)
+        self.debug_ui = DebugUI(pt_state)
+        self.scene_ui = SceneUI(scene_state)
+        self.camera_capturing_ui = CameraCapturingUI(scene_state, camera_capture_state)
+
+    def draw_rendering_ui(self):
         if render_settings.render_mode == "path_tracing":
             if not self.pt_state.view_saved:
                 if self.pt_state.should_render:
-                    self.draw_stop_button()
+                    self.rendering_ui.draw_stop_button()
                 
                 else:
-                    self.draw_continue_button()
+                    self.rendering_ui.draw_continue_button()
                 
-                self.draw_cancel_button()
+                self.rendering_ui.draw_cancel_button()
             
             else:
-                self.draw_viewport_button()
-                self.draw_denoise_button()
+                self.rendering_ui.draw_viewport_button()
+                self.rendering_ui.draw_denoise_button()
                 # Disable for now!
                 # Fix render exporting by adding an FBO to include tonemapping / gamma correction
                 # self.export_render_button()
             
-            self.draw_restart_button()
+            self.rendering_ui.draw_restart_button()
         
         else:
             if self.pt_state.saved_combined is None:
-                self.draw_start_button()
+                self.rendering_ui.draw_start_button()
             
             else:
-                self.draw_start_new_button()
-                self.draw_view_saved_button()
+                self.rendering_ui.draw_start_new_button()
+                self.rendering_ui.draw_view_saved_button()
             
-        self.draw_tiles_x_slider()
-        self.draw_tiles_y_slider()
+        self.rendering_ui.draw_tiles_x_slider()
+        self.rendering_ui.draw_tiles_y_slider()
 
-    def path_tracing_ui(self):
-        self.draw_total_bounces_slider()
-        self.draw_diffuse_bounces_slider()
-        self.draw_specular_bounces_slider()
-        self.draw_transmission_bounces_slider()
-        self.draw_max_samples_slider()
-        self.draw_spp_slider()
+    def draw_path_tracing_ui(self):
+        self.path_tracing_ui.draw_total_bounces_slider()
+        self.path_tracing_ui.draw_diffuse_bounces_slider()
+        self.path_tracing_ui.draw_specular_bounces_slider()
+        self.path_tracing_ui.draw_transmission_bounces_slider()
+        self.path_tracing_ui.draw_max_samples_slider()
+        self.path_tracing_ui.draw_spp_slider()
+
         if imgui.tree_node("BSDF Sampling"):
-            self.draw_specular_cycle_button()
-            self.draw_geometry_cycle_button()
-            self.draw_transmission_cycle_button()
-            self.draw_mis_cycle_button()
+            self.path_tracing_ui.draw_specular_cycle_button()
+            self.path_tracing_ui.draw_geometry_cycle_button()
+            self.path_tracing_ui.draw_transmission_cycle_button()
+            self.path_tracing_ui.draw_mis_cycle_button()
 
             imgui.tree_pop()
-        self.draw_reset_pt_button()
+        
+        self.path_tracing_ui.draw_reset_pt_button()
     
-    def camera_ui(self):
-        self.draw_movement_speed_slider()
-        self.draw_fov_slider()
-        self.draw_mouse_sensitivity_slider()
+    def draw_camera_ui(self):
+        self.camera_ui.draw_movement_speed_slider()
+        self.camera_ui.draw_fov_slider()
+        self.camera_ui.draw_mouse_sensitivity_slider()
     
-    def post_processing_ui(self):
-        self.draw_exposure_slider()
-        self.draw_hdri_exposure_slider()
-        self.draw_tonemap_dropdown()
-        self.draw_blur_slider()
-        self.draw_dof_checkbox()
-        self.draw_aperture_slider()
-        self.draw_focus_dist_slider()
+    def draw_post_processing_ui(self):
+        self.post_processing_ui.draw_exposure_slider()
+        self.post_processing_ui.draw_hdri_exposure_slider()
+        self.post_processing_ui.draw_tonemap_dropdown()
+        self.post_processing_ui.draw_blur_slider()
+        self.post_processing_ui.draw_dof_checkbox()
+        self.post_processing_ui.draw_aperture_slider()
+        self.post_processing_ui.draw_focus_dist_slider()
     
-    def screen_ui(self):
-        self.draw_vsync_checkbox()
-        self.draw_fps_slider()
+    def draw_screen_ui(self):
+        self.screen_ui.draw_vsync_checkbox()
+        self.screen_ui.draw_fps_slider()
     
-    def debug_ui(self):
-        self.draw_debug_mode_button()
+    def draw_debug_ui(self):
+        self.debug_ui.draw_debug_mode_button()
     
-    def scene_ui(self):
-        self.draw_next_scene_button()
-        self.draw_previous_scene_button()
+    def draw_scene_ui(self):
+        self.scene_ui.draw_next_scene_button()
+        self.scene_ui.draw_previous_scene_button()
     
-    def camera_capturing_ui(self):
-        self.draw_save_state_button()
-        self.draw_remove_state_button()
+    def draw_camera_capturing_ui(self):
+        self.camera_capturing_ui.draw_save_state_button()
+        self.camera_capturing_ui.draw_remove_state_button()
+
+    def draw(self, settings_window):
+        if settings_window:
+            imgui.set_next_window_size((600, 600))
+            is_expand, settings_window = imgui.begin("Settings", settings_window)
+
+            if ai_training_settings.camera_setup_mode:
+                if is_expand:
+                    if imgui.tree_node("Camera UI"):
+                        self.draw_camera_ui()
+
+                        imgui.tree_pop()
+                    
+                    if imgui.tree_node("Post Processing"):
+                        self.draw_post_processing_ui()
+
+                        imgui.tree_pop()
+                    
+                    if imgui.tree_node("Screen"):
+                        self.draw_screen_ui()
+
+                        imgui.tree_pop()
+                        
+                    if imgui.tree_node("AI Training"):
+                        self.draw_scene_ui()
+                        self.draw_camera_capturing_ui()
+
+                        imgui.tree_pop()
+            
+            else:
+                if is_expand:
+                    if imgui.tree_node("Rendering"):
+                        self.draw_rendering_ui()
+
+                        imgui.tree_pop()
+                    
+                    if imgui.tree_node("Path Tracing"):
+                        self.draw_path_tracing_ui()
+                            
+                        imgui.tree_pop()
+                    
+                    if imgui.tree_node("Camera UI"):
+                        self.draw_camera_ui()
+
+                        imgui.tree_pop()
+                    
+                    if imgui.tree_node("Post Processing"):
+                        self.draw_post_processing_ui()
+
+                        imgui.tree_pop()
+                    
+                    if imgui.tree_node("Screen"):
+                        self.draw_screen_ui()
+
+                        imgui.tree_pop()
+                    
+                    if imgui.tree_node("Debug"):
+                        self.draw_debug_ui()
+
+                        imgui.tree_pop()
+            
+            imgui.end()
