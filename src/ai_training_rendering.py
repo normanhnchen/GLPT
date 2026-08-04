@@ -344,17 +344,6 @@ def main():
                 # ---------------
                 raster_shaders.final.prog["exposure"].value = post_process_settings.exposure
                 
-                # Options:
-                #   - None
-                #   - ACESFilm
-                #   - AgX, AgXGolden, AgXPunchy
-                #   - Filmic
-                #   - Lottes
-                #   - Neutral
-                #   - Reinhard, Reinhard2
-                #   - Uchimura
-                #   - Uncharted2
-                #   - Unreal
                 raster_shaders.final.set_tonemap(post_process_settings.tonemap)
 
                 raster_quad.draw()

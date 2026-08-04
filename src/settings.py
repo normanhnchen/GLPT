@@ -7,19 +7,28 @@ import torch
 
 class Screen:
     def __init__(self, json_settings):
-        config = json_settings["screen"]
+        self._default_config = json_settings["screen"]
 
+        self._load(self._default_config)
+
+    def _load(self, config):
         self.width = config["width"]
         self.height = config["height"]
         self.resolution = np.array([self.width, self.height])
         self.vsync = config["vsync"]
         self.fps_cap = config["fps_cap"]
 
+    def reset(self):
+        self._load(self._default_config)
+
 
 class CameraSettings:
     def __init__(self, json_settings):
-        config = json_settings["camera"]
+        self._default_config = json_settings["camera"]
 
+        self._load(self._default_config)
+
+    def _load(self, config):
         self._yaw = config["_yaw"]
         self._pitch = config["_pitch"]
         self.movement_speed = config["movement_speed"]
@@ -30,11 +39,17 @@ class CameraSettings:
         self._up = glm.vec3(config["_up"])
         self._world_up = glm.vec3(config["_world_up"])
 
+    def reset(self):
+        self._load(self._default_config)
+
 
 class PTSettings:
     def __init__(self, json_settings):
-        config = json_settings["path_tracing"]
+        self._default_config = json_settings["path_tracing"]
 
+        self._load(self._default_config)
+
+    def _load(self, config):
         self.spp = config["samples_per_pixel"]
         self.max_samples = config["max_samples"]
 
@@ -48,11 +63,17 @@ class PTSettings:
         self.transmission_mode = config["transmission_mode"]
         self.mis_mode = config["mis_mode"]
 
+    def reset(self):
+        self._load(self._default_config)
+
 
 class PostProcessSettings:
     def __init__(self, json_settings):
-        config = json_settings["post_processing"]
+        self._default_config = json_settings["post_processing"]
 
+        self._load(self._default_config)
+
+    def _load(self, config):
         self.blur = config["blur"]
         self.aperture = config["aperture"]
         self.focus_dist = config["focus_dist"]
@@ -61,17 +82,23 @@ class PostProcessSettings:
         self.tonemap = config["tonemap"]
         self.hdri_exposure = config["hdri_exposure"]
 
+    def reset(self):
+        self._load(self._default_config)
+
 
 class ShaderGroup:
     def __init__(self, config):
-        for key, value in config.items():
-            value = ROOT_DIR / value
-            setattr(self, key, value)
+        for attr, rel_dir in config.items():
+            root_dir = ROOT_DIR / rel_dir
+            setattr(self, attr, root_dir)
 
 class FilePaths:
     def __init__(self, json_settings):
-        config = json_settings["file_paths"]
+        self._default_config = json_settings["file_paths"]
 
+        self._load(self._default_config)
+
+    def _load(self, config):
         self.ai_training_scenes = ROOT_DIR / config["ai_training_scenes"]
         self.scene = ROOT_DIR / config["scene"]
         self.ai_training_hdris = ROOT_DIR / config["ai_training_hdris"]
@@ -90,23 +117,38 @@ class FilePaths:
         self.scene_cache = ROOT_DIR / config["cache"]["scene"]
         self.bvh_cache = ROOT_DIR / config["cache"]["bvh"]
 
+    def reset(self):
+        self._load(self._default_config)
+
 
 class RenderSettings:
     def __init__(self, json_settings):
-        config = json_settings["render"]
+        self._default_config = json_settings["render"]
 
+        self._load(self._default_config)
+
+    def _load(self, config):
         self.render_mode = config["render_mode"]
         self.texture_size = config["texture_size"]
         self.tiles_x = config["tiles_x"]
         self.tiles_y = config["tiles_y"]
 
+    def reset(self):
+        self._load(self._default_config)
+
 
 class AITrainingSettings:
     def __init__(self, json_settings):
-        config = json_settings["ai_training"]
+        self._default_config = json_settings["ai_training"]
 
+        self._load(self._default_config)
+
+    def _load(self, config):
         self.ai_training_mode = config["ai_training_mode"]
         self.camera_setup_mode = config["camera_setup_mode"]
+
+    def reset(self):
+        self._load(self._default_config)
 
 
 with open("src/settings.json") as f:
@@ -125,14 +167,6 @@ post_process_settings = PostProcessSettings(json_settings)
 file_paths = FilePaths(json_settings)
 render_settings = RenderSettings(json_settings)
 ai_training_settings = AITrainingSettings(json_settings)
-
-_screen_default = Screen(json_settings)
-_camera_settings_default = CameraSettings(json_settings)
-_pt_settings_default = PTSettings(json_settings)
-_post_process_settings_default = PostProcessSettings(json_settings)
-_file_paths_default = FilePaths(json_settings)
-_render_settings_default = RenderSettings(json_settings)
-_ai_training_settings_default = AITrainingSettings(json_settings)
 
 AI_DEVICE = torch.device("cpu")
 if torch.cuda.is_available():
