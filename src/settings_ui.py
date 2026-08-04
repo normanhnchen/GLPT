@@ -126,6 +126,17 @@ class Button:
             imgui.end_disabled()
 
 
+class CycleButton:
+    def __init__(self, label):
+        self.label = label
+
+    def button(self, options, curr_idx, on_change):
+        if imgui.button(f"{self.label}: {options[curr_idx]}"):
+            curr_idx = (curr_idx + 1) % len(options)
+
+            on_change(curr_idx)
+
+
 class Dropdown:
     def __init__(self, label):
         self.label = label
@@ -278,6 +289,11 @@ class PathTracingUI:
         self.transmission_bounces_slider = IntSlider(0, 1024, "Transmission Bounces")
         self.max_samples_slider = IntSlider(1, 16384, "Max Samples")
         self.spp_slider = IntSlider(1, 128, "Samples Per Pixel")
+
+        self.specular_cycle_button = CycleButton("Specular Mode")
+        self.geometry_cycle_button = CycleButton("Geometry Mode")
+        self.transmission_cycle_button = CycleButton("Transmission Mode")
+        self.mis_cycle_button = CycleButton("Multiple Importance Sample")
     
     def draw_total_bounces_slider(self):
         def on_change(new_val):
@@ -345,41 +361,41 @@ class PathTracingUI:
         self.spp_slider.plus_button(on_change)
         self.spp_slider.draw_label()
 
-    def draw_specular_mode_combo(self):
+    def draw_specular_cycle_button(self):
         specular_modes = ["GGX VNDF", "Cosine Hemisphere"]
 
-        current_mode_name = specular_modes[self.pt_state.specular_mode]
-
-        if imgui.button(f"Specular Mode: {current_mode_name}"):
-            self.pt_state.specular_mode = (self.pt_state.specular_mode + 1) % len(specular_modes)
+        def on_change(next_val):
+            self.pt_state.specular_mode = next_val
             self.pt_state.restart_render()
 
-    def draw_geometry_mode_combo(self):
+        self.specular_cycle_button.button(specular_modes, self.pt_state.specular_mode, on_change)
+
+    def draw_geometry_cycle_button(self):
         geometry_modes = ["Height-Correlated Smith Method", "Schlick-GGX Approximation Method"]
-
-        current_mode_name = geometry_modes[self.pt_state.geometry_mode]
         
-        if imgui.button(f"Geometry Mode: {current_mode_name}"):
-            self.pt_state.geometry_mode = (self.pt_state.geometry_mode + 1) % len(geometry_modes)
+        def on_change(next_val):
+            self.pt_state.geometry_mode = next_val
             self.pt_state.restart_render()
+
+        self.geometry_cycle_button.button(geometry_modes, self.pt_state.geometry_mode, on_change)
     
-    def draw_transmission_mode_combo(self):
+    def draw_transmission_cycle_button(self):
         transmissions_modes = ["Beer-Lambert", "None"]
-
-        current_mode_name = transmissions_modes[self.pt_state.transmission_mode]
         
-        if imgui.button(f"Transmission Mode: {current_mode_name}"):
-            self.pt_state.transmission_mode = (self.pt_state.transmission_mode + 1) % len(transmissions_modes)
+        def on_change(next_val):
+            self.pt_state.transmission_mode = next_val
             self.pt_state.restart_render()
 
-    def draw_mis_mode_combo(self):
+        self.transmission_cycle_button.button(transmissions_modes, self.pt_state.transmission_mode, on_change)
+
+    def draw_mis_cycle_button(self):
         mis_modes = ["On", "Off"]
-
-        current_mode_name = mis_modes[self.pt_state.mis_mode]
         
-        if imgui.button(f"MIS Mode: {current_mode_name}"):
-            self.pt_state.mis_mode = (self.pt_state.mis_mode + 1) % len(mis_modes)
+        def on_change(next_val):
+            self.pt_state.mis_mode = next_val
             self.pt_state.restart_render()
+
+        self.mis_cycle_button.button(mis_modes, self.pt_state.mis_mode, on_change)
     
     def draw_reset_pt_button(self):
         if imgui.button("Reset Path Tracing Settings"):
@@ -732,10 +748,10 @@ class SettingsUI(CameraCapturingUI, SceneUI, DebugUI, ScreenUI, PostProcessingUI
         self.draw_max_samples_slider()
         self.draw_spp_slider()
         if imgui.tree_node("BSDF Sampling"):
-            self.draw_specular_mode_combo()
-            self.draw_geometry_mode_combo()
-            self.draw_transmission_mode_combo()
-            self.draw_mis_mode_combo()
+            self.draw_specular_cycle_button()
+            self.draw_geometry_cycle_button()
+            self.draw_transmission_cycle_button()
+            self.draw_mis_cycle_button()
 
             imgui.tree_pop()
         self.draw_reset_pt_button()
