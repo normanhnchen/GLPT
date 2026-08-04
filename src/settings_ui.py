@@ -159,6 +159,20 @@ class Dropdown:
             imgui.end_combo()
 
 
+class Checkbox:
+    def __init__(self, label):
+        self.label = label
+
+    def checkbox(self, already_enabled, on_change, on_enable, on_disable):
+        changed, enabled = imgui.checkbox(self.label, already_enabled)
+        if changed:
+            on_change(enabled)
+            if enabled:
+                on_enable()
+            else:
+                on_disable()
+
+
 class RenderingUI:
     def __init__(self, **kwargs):
         self.pt_state = kwargs.get("pt_state")
@@ -470,10 +484,12 @@ class PostProcessingUI:
         self.exposure_slider = FloatSlider(0, 10, "Exposure", slider_speed=0.1)
         self.hdri_exposure_slider = FloatSlider(0, 10, "HDRI Exposure", slider_speed=0.1)
         self.blur_slider = FloatSlider(0, 100, "Blur")
-        self.aperture_slider = FloatSlider(0.1, 10, "Aperture", slider_speed=0.1)
+        self.aperture_slider = FloatSlider(0, 1, "Aperture", slider_speed=0.01)
         self.focus_dist_slider = FloatSlider(0.1, 1000, "Focus Distance", slider_speed=0.1)
         
         self.tonemap_dropdown = Dropdown("Render Mode")
+
+        self.dof_checkbox = Checkbox("Depth of Field")
 
     def draw_tonemap_dropdown(self):
         options = ["None", "ACESFilm", "AgX", "AgXGolden", "AgXPunchy", "Filmic", "Lottes",
@@ -520,18 +536,20 @@ class PostProcessingUI:
         self.blur_slider.draw_label()
     
     def draw_dof_checkbox(self):
-        enabled = self.post_process_state.dof_enabled
-        changed, enabled = imgui.checkbox("Enable Depth of Field", enabled)
-        if changed:
+        def on_change(enabled):
             self.post_process_state.dof_enabled = enabled
-            if not enabled:
-                post_process_settings.aperture = 0
-                self.camera_buffer.update_data()
-                self.pt_state.restart_render()
-            else:
-                post_process_settings.aperture = self.post_process_state.aperture
-                self.camera_buffer.update_data()
-                self.pt_state.restart_render()
+
+        def on_enable():
+            post_process_settings.aperture = self.post_process_state.aperture
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+
+        def on_disable():
+            post_process_settings.aperture = 0
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+
+        self.dof_checkbox.checkbox(self.post_process_state.dof_enabled, on_change, on_enable, on_disable)
         
     def draw_aperture_slider(self):
         if not self.post_process_state.dof_enabled:
@@ -543,11 +561,11 @@ class PostProcessingUI:
             self.camera_buffer.update_data()
             self.pt_state.restart_render()
         
-        self.blur_slider.slider(post_process_settings.aperture)
-        self.blur_slider.dragging_logic(on_change)
-        self.blur_slider.minus_button(on_change)
-        self.blur_slider.plus_button(on_change)
-        self.blur_slider.draw_label()
+        self.aperture_slider.slider(post_process_settings.aperture, val_format="%.2f")
+        self.aperture_slider.dragging_logic(on_change)
+        self.aperture_slider.minus_button(on_change)
+        self.aperture_slider.plus_button(on_change)
+        self.aperture_slider.draw_label()
     
     def draw_focus_dist_slider(self):
         if not self.post_process_state.dof_enabled:
@@ -559,11 +577,11 @@ class PostProcessingUI:
             self.camera_buffer.update_data()
             self.pt_state.restart_render()
         
-        self.blur_slider.slider(post_process_settings.focus_dist)
-        self.blur_slider.dragging_logic(on_change)
-        self.blur_slider.minus_button(on_change)
-        self.blur_slider.plus_button(on_change)
-        self.blur_slider.draw_label()
+        self.focus_dist_slider.slider(post_process_settings.focus_dist)
+        self.focus_dist_slider.dragging_logic(on_change)
+        self.focus_dist_slider.minus_button(on_change)
+        self.focus_dist_slider.plus_button(on_change)
+        self.focus_dist_slider.draw_label()
 
 
 class ScreenUI:
@@ -574,18 +592,23 @@ class ScreenUI:
         super().__init__(**kwargs)
 
         self.fps_slider = IntSlider(30, 361, "FPS", slider_speed=1)
+
+        self.vsync_checkbox = Checkbox("VSync")
     
     def draw_vsync_checkbox(self):
-        enabled = screen.vsync
-        changed, enabled = imgui.checkbox("VSync", enabled)
-
-        if changed:
+        def on_change(enabled):
             screen.vsync = enabled
 
-            if screen.vsync == True:
-                glfwSwapInterval(1)
-            else:
-                glfwSwapInterval(0)
+        def on_enable():
+            glfwSwapInterval(1)
+
+        def on_disable():
+            glfwSwapInterval(0)
+        
+        enabled = screen.vsync
+
+        self.vsync_checkbox.checkbox(enabled,  on_change, on_enable, on_disable)
+
     
     def draw_fps_slider(self):
         is_unlimited = screen.fps_cap == -1
