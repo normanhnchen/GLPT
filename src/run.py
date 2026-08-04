@@ -213,17 +213,6 @@ def main():
             # ---------------
             pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
             
-            # Options:
-            #   - None
-            #   - ACESFilm
-            #   - AgX, AgXGolden, AgXPunchy
-            #   - Filmic
-            #   - Lottes
-            #   - Neutral
-            #   - Reinhard, Reinhard2
-            #   - Uchimura
-            #   - Uncharted2
-            #   - Unreal
             pt_shaders.final.set_tonemap(post_process_settings.tonemap)
 
             pt_quad.draw()
@@ -298,15 +287,6 @@ def main():
 
                 pt_shaders.pt.prog["uOffset"].value = np.array([offset_x, offset_y], dtype=i4)
 
-                pt_state.curr_tile_x += pt_state.tile_width
-                if pt_state.curr_tile_x > screen.width:
-                    pt_state.curr_tile_x = 0
-                    pt_state.curr_tile_y += pt_state.tile_height
-                
-                if pt_state.curr_tile_y > screen.height:
-                    pt_state.curr_tile_y = 0
-
-                    # Finished rendering entire screen
                     if samples_left < pt_settings.spp:
                         pt_state.total_samples += samples_left
                     else:
@@ -326,17 +306,6 @@ def main():
             # ---------------
             pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
             
-            # Options:
-            #   - None
-            #   - ACESFilm
-            #   - AgX, AgXGolden, AgXPunchy
-            #   - Filmic
-            #   - Lottes
-            #   - Neutral
-            #   - Reinhard, Reinhard2
-            #   - Uchimura
-            #   - Uncharted2
-            #   - Unreal
             pt_shaders.final.set_tonemap(post_process_settings.tonemap)
 
             pt_quad.draw()
@@ -377,17 +346,6 @@ def main():
             # ---------------
             raster_shaders.final.prog["exposure"].value = post_process_settings.exposure
             
-            # Options:
-            #   - None
-            #   - ACESFilm
-            #   - AgX, AgXGolden, AgXPunchy
-            #   - Filmic
-            #   - Lottes
-            #   - Neutral
-            #   - Reinhard, Reinhard2
-            #   - Uchimura
-            #   - Uncharted2
-            #   - Unreal
             raster_shaders.final.set_tonemap(post_process_settings.tonemap)
 
             raster_quad.draw()

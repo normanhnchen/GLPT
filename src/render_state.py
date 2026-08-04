@@ -13,93 +13,30 @@ from src.settings import *
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 
 
-class PTState:
+class FramebufferState:
     def __init__(self, ctx):
         self.ctx = ctx
+        
         self.combined_pass = ctx.texture(screen.resolution, 4, dtype=f4)
         self.albedo_pass = ctx.texture(screen.resolution, 4, dtype=f4)
         self.normal_pass = ctx.texture(screen.resolution, 4, dtype=f4)
         self.depth_pass = ctx.texture(screen.resolution, 4, dtype=f4)
 
-        self.combined_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-        self.albedo_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-        self.normal_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-        self.depth_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-        
+        self._clear_active_buffers()
+
         self.saved_combined = None
         self.saved_albedo = None
         self.saved_normal = None
         self.saved_depth = None
-        self.saved_denoised = None
 
-        # Current tile position in pixels
-        self.curr_tile_x = 0
-        self.curr_tile_y = 0
-        # Apply ceiling function
-        # Allows the compute shader to reach the entire screen
-        self.tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
-        self.tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
+    def _clear_active_buffers(self):
+        zeros = np.zeros((*screen.resolution, 4), dtype=f4)
+        self.combined_pass.write(zeros)
+        self.albedo_pass.write(zeros)
+        self.normal_pass.write(zeros)
+        self.depth_pass.write(zeros)
 
-        self.render_complete = False
-        self.view_saved = False
-        self.should_render = False
-        self.should_denoise = False
-        self.total_samples = 0
-        # "off", "albedo", "normal", "depth"
-        self.debug_mode = "off"
-
-        self.specular_mode = pt_settings.specular_mode
-        self.geometry_mode = pt_settings.geometry_mode
-        self.transmission_mode = pt_settings.transmission_mode
-        self.mis_mode = pt_settings.mis_mode
-    
-    def resize(self):
-        self.combined_pass.release()
-        self.albedo_pass.release()
-        self.normal_pass.release()
-        self.depth_pass.release()
-
-        self.combined_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.albedo_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.normal_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.depth_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
-
-        self.combined_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-        self.albedo_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-        self.normal_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-        self.depth_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-
-        self.total_samples = 0
-        self.render_complete = False
-
-        # Reset tiling
-        self.curr_tile_x = 0
-        self.curr_tile_y = 0
-
-        # Recalculate tile sizes
-        self.tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
-        self.tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
-    
-    def start_render(self, camera_buffer):
-        render_settings.render_mode = "path_tracing"
-
-        camera_buffer.update_data()
-
-        self.total_samples = 0
-        self.should_render = True
-        self.render_complete = False
-        
-        # Reset tiling
-        self.curr_tile_x = 0
-        self.curr_tile_y = 0
-
-        # Reset accumulation buffers
-        self.combined_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-        self.albedo_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-        self.normal_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-        self.depth_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-    
-    def save_render(self):
+    def _release_saved_buffers(self):
         if self.saved_combined is not None:
             self.saved_combined.release()
         if self.saved_albedo is not None:
@@ -108,6 +45,17 @@ class PTState:
             self.saved_normal.release()
         if self.saved_depth is not None:
             self.saved_depth.release()
+    
+    def reset(self):
+        self.combined_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.albedo_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.normal_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.depth_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
+
+        self._clear_active_buffers()
+
+    def save(self):
+        self._release_saved_buffers()
         
         self.saved_combined = self.ctx.texture(screen.resolution, 4, dtype=f4)
         self.saved_albedo = self.ctx.texture(screen.resolution, 4, dtype=f4)
@@ -119,35 +67,100 @@ class PTState:
         self.saved_normal.write(self.normal_pass.read())
         self.saved_depth.write(self.depth_pass.read())
 
-        self.render_complete = True
-        self.view_saved = True
-    
-    def denoise(self, ai_denoiser):
-        if self.saved_denoised is None:
-            self.saved_denoised = self.ctx.texture(screen.resolution, 3, dtype=f4)
-            ai_denoiser.denoise(self.saved_combined, self.saved_albedo, self.saved_normal, self.saved_depth, self.saved_denoised)
-    
-    def restart_render(self):
-        self.total_samples = 0
-        self.render_complete = False
-        self.view_saved = False
-        self.should_denoise = False
-        self.should_render = True
-        self.debug_mode = "off"
 
-        # Reset tiling
+class RenderTilerState:
+    def __init__(self):
+        # Current tile position in pixels
         self.curr_tile_x = 0
         self.curr_tile_y = 0
+        
         # Apply ceiling function
         # Allows the compute shader to reach the entire screen
         self.tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
         self.tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
+
+        self.frame_finished = False
+
+    def reset(self):
+        # Reset tiling position
+        self.curr_tile_x = 0
+        self.curr_tile_y = 0
+
+        # Recalculate tile sizes
+        self.tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
+        self.tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
+
+    def advance(self):
+        self.curr_tile_x += self.tile_width
+        if self.curr_tile_x > screen.width:
+            self.curr_tile_x = 0
+            self.curr_tile_y += self.tile_height
         
-        # Reset accumulation buffers
-        self.combined_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-        self.albedo_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-        self.normal_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
-        self.depth_pass.write(np.zeros((*screen.resolution, 4), dtype=f4))
+        if self.curr_tile_y > screen.height:
+            self.curr_tile_y = 0
+            self.frame_finished = True
+        else:
+            self.frame_finished = False
+
+
+class RenderProgressState:
+    def __init__(self):
+        self.total_samples = 0
+        self.render_complete = False
+        self.view_saved = False
+        self.should_render = False
+        self.should_denoise = False
+        # "off", "albedo", "normal", "depth"
+        self.debug_mode = "off"
+
+    def start(self):
+        self.should_render = True
+
+    def stop_render(self):
+        self.should_render = False
+
+    def continue_render(self):
+        self.should_render = True
+
+    def reset(self):
+        self.total_samples = 0
+        self.render_complete = False
+        self.view_saved = False
+        self.should_render = False
+        self.should_denoise = False
+        # "off", "albedo", "normal", "depth"
+        self.debug_mode = "off"
+
+    def complete(self):
+        self.render_complete = True
+        self.view_saved = True
+
+
+class PTState:
+    def __init__(self, ctx):
+        self.ctx = ctx
+        self.framebuffers = FramebufferState(ctx)
+        self.tiles = RenderTilerState()
+        self.rendering = RenderProgressState()
+    
+    def reset(self):
+        self.framebuffers.reset()
+        self.tiles.reset()
+        self.rendering.reset()
+
+
+class DenoiseState:
+    def __init__(self, ctx):
+        self.ctx = ctx
+        self.saved_denoised = None
+
+    def _release_buffer(self):
+        if self.saved_denoised is not None:
+            self.saved_denoised.release()
+
+    def denoise(self, ai_denoiser, combined, albedo, normal, depth):
+        self.saved_denoised = self.ctx.texture(screen.resolution, 3, dtype=f4)
+        ai_denoiser.denoise(combined, albedo, normal, depth, self.denoised)
 
 
 class RasterState:
