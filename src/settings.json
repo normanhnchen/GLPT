@@ -65,6 +65,7 @@
     },
     "post_processing": {
         "blur": 1.0,
+        "dof_enabled": false,
         "aperture": 0.0,
         "focus_dist": 10,
         "auto_focus": 0,

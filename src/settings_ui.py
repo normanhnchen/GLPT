@@ -448,9 +448,8 @@ class CameraUI:
 
 
 class PostProcessingUI:
-    def __init__(self, pt_state, post_process_state, camera_buffer):
+    def __init__(self, pt_state, camera_buffer):
         self.pt_state = pt_state
-        self.post_process_state = post_process_state
         self.camera_buffer = camera_buffer
         self.window = glfwGetCurrentContext()
 
@@ -469,11 +468,10 @@ class PostProcessingUI:
                    "Neutral", "Reinhard", "Reinhard2", "Uchimura", "Uncharted2", "Unreal"]
 
         def on_change(new_val):
-            self.post_process_state.tonemap = new_val
-            post_process_settings.tonemap = self.post_process_state.tonemap
+            post_process_settings.tonemap = new_val
             self.pt_state.restart_render()
 
-        self.tonemap_dropdown.dropdown(options, self.post_process_state.tonemap, on_change)
+        self.tonemap_dropdown.dropdown(options, post_process_settings.tonemap, on_change)
         
     def draw_exposure_slider(self):
         def on_change(new_val):
@@ -510,10 +508,10 @@ class PostProcessingUI:
     
     def draw_dof_checkbox(self):
         def on_change(enabled):
-            self.post_process_state.dof_enabled = enabled
+            post_process_settings.dof_enabled = enabled
 
         def on_enable():
-            post_process_settings.aperture = self.post_process_state.aperture
+            post_process_settings.aperture = post_process_settings.aperture
             self.camera_buffer.update_data()
             self.pt_state.restart_render()
 
@@ -522,15 +520,15 @@ class PostProcessingUI:
             self.camera_buffer.update_data()
             self.pt_state.restart_render()
 
-        self.dof_checkbox.checkbox(self.post_process_state.dof_enabled, on_change, on_enable, on_disable)
+        self.dof_checkbox.checkbox(post_process_settings.dof_enabled, on_change, on_enable, on_disable)
         
     def draw_aperture_slider(self):
-        if not self.post_process_state.dof_enabled:
+        if not post_process_settings.dof_enabled:
             return
 
         def on_change(new_val):
             post_process_settings.aperture = new_val
-            self.post_process_state.aperture = post_process_settings.aperture
+            post_process_settings.aperture = post_process_settings.aperture
             self.camera_buffer.update_data()
             self.pt_state.restart_render()
         
@@ -541,12 +539,12 @@ class PostProcessingUI:
         self.aperture_slider.draw_label()
     
     def draw_focus_dist_slider(self):
-        if not self.post_process_state.dof_enabled:
+        if not post_process_settings.dof_enabled:
             return
 
         def on_change(new_val):
             post_process_settings.focus_dist = new_val
-            self.post_process_state.focus_dist = post_process_settings.focus_dist
+            post_process_settings.focus_dist = post_process_settings.focus_dist
             self.camera_buffer.update_data()
             self.pt_state.restart_render()
         
@@ -677,7 +675,6 @@ class CameraCapturingUI:
 class SettingsUI:
     def __init__(self,
             pt_state,
-            post_process_state,
             scene_state,
             camera_capture_state,
             camera_buffer,
@@ -685,7 +682,6 @@ class SettingsUI:
         ):
 
         self.pt_state = pt_state
-        self.post_process_state = post_process_state
         self.scene_state = scene_state
         self.camera_capture_state = camera_capture_state
         self.camera_buffer = camera_buffer
@@ -694,7 +690,7 @@ class SettingsUI:
         self.rendering_ui = RenderingUI(pt_state, camera_buffer)
         self.path_tracing_ui = PathTracingUI(pt_state)
         self.camera_ui = CameraUI(pt_state, camera)
-        self.post_processing_ui = PostProcessingUI(pt_state, post_process_state, camera_buffer)
+        self.post_processing_ui = PostProcessingUI(pt_state, camera_buffer)
         self.screen_ui = ScreenUI(pt_state)
         self.debug_ui = DebugUI(pt_state)
         self.scene_ui = SceneUI(scene_state)

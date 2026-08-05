@@ -17,11 +17,7 @@ class FramebufferState:
     def __init__(self, ctx):
         self.ctx = ctx
         
-        self.combined_pass = ctx.texture(screen.resolution, 4, dtype=f4)
-        self.albedo_pass = ctx.texture(screen.resolution, 4, dtype=f4)
-        self.normal_pass = ctx.texture(screen.resolution, 4, dtype=f4)
-        self.depth_pass = ctx.texture(screen.resolution, 4, dtype=f4)
-
+        self._create_active_buffers()
         self._clear_active_buffers()
 
         self.saved_combined = None
@@ -29,14 +25,26 @@ class FramebufferState:
         self.saved_normal = None
         self.saved_depth = None
 
+    def _create_active_buffers(self):
+        self.combined = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.albedo = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.normal = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.depth = self.ctx.texture(screen.resolution, 4, dtype=f4)
+    
+    def _create_saved_buffers(self):
+        self.saved_combined = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.saved_albedo = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.saved_normal = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.saved_depth = self.ctx.texture(screen.resolution, 4, dtype=f4)
+
     def _clear_active_buffers(self):
         zeros = np.zeros((*screen.resolution, 4), dtype=f4)
-        self.combined_pass.write(zeros)
-        self.albedo_pass.write(zeros)
-        self.normal_pass.write(zeros)
-        self.depth_pass.write(zeros)
+        self.combined.write(zeros)
+        self.albedo.write(zeros)
+        self.normal.write(zeros)
+        self.depth.write(zeros)
 
-    def _release_saved_buffers(self):
+    def _release_active_buffers(self):
         if self.saved_combined is not None:
             self.saved_combined.release()
         if self.saved_albedo is not None:
@@ -45,33 +53,60 @@ class FramebufferState:
             self.saved_normal.release()
         if self.saved_depth is not None:
             self.saved_depth.release()
+
+    def _release_saved_buffers(self):
+        if self.combined is not None:
+            self.combined.release()
+        if self.albedo is not None:
+            self.albedo.release()
+        if self.normal is not None:
+            self.normal.release()
+        if self.depth is not None:
+            self.depth.release()
     
     def reset(self):
-        self.combined_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.albedo_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.normal_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.depth_pass = self.ctx.texture(screen.resolution, 4, dtype=f4)
-
+        self._release_active_buffers()
+        self._create_active_buffers()
         self._clear_active_buffers()
 
     def save(self):
         self._release_saved_buffers()
-        
-        self.saved_combined = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.saved_albedo = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.saved_normal = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.saved_depth = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self._create_saved_buffers()
 
-        self.saved_combined.write(self.combined_pass.read())
-        self.saved_albedo.write(self.albedo_pass.read())
-        self.saved_normal.write(self.normal_pass.read())
-        self.saved_depth.write(self.depth_pass.read())
+        self.saved_combined.write(self.combined.read())
+        self.saved_albedo.write(self.albedo.read())
+        self.saved_normal.write(self.normal.read())
+        self.saved_depth.write(self.depth.read())
 
     def bind_to_images(self, combined_loc=0, albedo_loc=1, normal_loc=2, depth_loc=3):
-        self.combined_pass.bind_to_image(combined_loc, read=True, write=True)
-        self.albedo_pass.bind_to_image(albedo_loc, read=True, write=True)
-        self.normal_pass.bind_to_image(normal_loc, read=True, write=True)
-        self.depth_pass.bind_to_image(depth_loc, read=True, write=True)
+        self.combined.bind_to_image(combined_loc, read=True, write=True)
+        self.albedo.bind_to_image(albedo_loc, read=True, write=True)
+        self.normal.bind_to_image(normal_loc, read=True, write=True)
+        self.depth.bind_to_image(depth_loc, read=True, write=True)
+
+    def _get_ndarray(self, buffer):
+        data = buffer.read()
+        w, h = buffer.size
+        c = buffer.components
+
+        # Convert to numpy array
+        IsADirectoryError = np.frombuffer(data, dtype=f4)
+        # Reshape to OpenGL convention (H, W, C)
+        IsADirectoryError = IsADirectoryError.reshape(h, w, c)
+
+        return IsADirectoryError
+
+    def get_ndarray_combined(self):
+        return self._get_ndarray(self.combined)
+
+    def get_ndarray_albedo(self):
+        return self._get_ndarray(self.albedo)
+
+    def get_ndarray_normal(self):
+        return self._get_ndarray(self.normal)
+
+    def get_ndarray_depth(self):
+        return self._get_ndarray(self.depth)
 
 
 class RenderTilerState:
@@ -157,7 +192,6 @@ class DenoiseState:
 
     def reset(self):
         self._release_buffer()
-
         self.saved_denoised = None
 
 
@@ -220,52 +254,53 @@ class PTState:
 class RasterState:
     def __init__(self, ctx):
         self.ctx = ctx
-        self.raster_color_tex = ctx.texture(screen.resolution, 4, dtype=f4)
-        self.raster_depth_texture = ctx.depth_texture(screen.resolution)
-        self.raster_fbo = ctx.framebuffer(
-            color_attachments=[self.raster_color_tex],
-            depth_attachment=self.raster_depth_texture
-        )
-    
-    def resize(self):
-        self.raster_color_tex.release()
-        self.raster_depth_texture.release()
-        self.raster_fbo.release()
 
+        self._create_active_buffers()
+
+    def _create_active_buffers(self):
         self.raster_color_tex = self.ctx.texture(screen.resolution, 4, dtype=f4)
         self.raster_depth_texture = self.ctx.depth_texture(screen.resolution)
         self.raster_fbo = self.ctx.framebuffer(
             color_attachments=[self.raster_color_tex],
             depth_attachment=self.raster_depth_texture
         )
-
-
-class PostProcessState:
-    def __init__(self):
-        self.tonemap = post_process_settings.tonemap
-        self.dof_enabled = False
-        self.aperture = 0
-        self.focus_dist = 10
+    
+    def _release_active_buffers(self):
+        self.raster_color_tex.release()
+        self.raster_depth_texture.release()
+        self.raster_fbo.release()
+    
+    def resize(self):
+        self._release_active_buffers()
+        self._create_active_buffers()
 
 
 class ExportState:
     def __init__(self, pt_state):
         self.pt_state = pt_state
-        self.noisy_saved = False
-        self.target_saved = False
+        self.noisy = None
+        self.target = None
     
     def auto_save_training_renders(self):
-        if self.pt_state.total_samples == 8:
-            self.noisy_saved = True
-        if self.pt_state.total_samples == pt_settings.max_samples:
-            self.target_saved = True
-        
-        if self.noisy_saved and self.target_saved:
-            self._export_training_noisy()
-            self._export_training_target()
+        total_samples = self.pt_state.rendering.total_samples
 
-            self.noisy_saved = False
-            self.target_saved = False
+        if self.noisy is None and total_samples >= 8:
+            self.noisy = {
+                "combined": self.pt_state.framebuffers.get_ndarray_combined(),
+                "albedo": self.pt_state.framebuffers.get_ndarray_albedo(),
+                "normal": self.pt_state.framebuffers.get_ndarray_normal(),
+                "depth": self.pt_state.framebuffers.get_ndarray_depth(),
+            }
+        
+        if self.noisy is not None and total_samples >= pt_settings.max_samples:
+            self.target = self.pt_state.framebuffers.get_ndarray_combined()
+        
+        if self.noisy is not None and self.target is not None:
+            self._export_training_noisy(self.noisy)
+            self._export_training_target(self.target)
+
+            self.noisy = None
+            self.target = None
 
     def _get_next_exr_path(self, path, prefix):
         counter = 0
@@ -276,15 +311,7 @@ class ExportState:
             counter += 1
         
     def export_render(self):
-        combined_data = self.pt_state.combined_pass.read()
-        combined_width, combined_height = self.pt_state.combined_pass.size
-        combined_channels = self.pt_state.combined_pass.components
-
-        # Convert to numpy array
-        combined_array = np.frombuffer(combined_data, dtype=f4)
-
-        # Reshape to OpenGL convention (H, W, C)
-        combined_array = combined_array.reshape(combined_height, combined_width, combined_channels)
+        combined_array = self.pt_state.framebuffers.get_ndarray_combined()
         
         # Flip image vertically
         # OpenGL is bottom-up, EXR is top-down
@@ -296,34 +323,11 @@ class ExportState:
         # Save to .exr file
         self._export_exr(combined_path, combined_array)
     
-    def _export_training_noisy(self):
-        combined_data = self.pt_state.combined_pass.read()
-        combined_width, combined_height = self.pt_state.combined_pass.size
-        combined_channels = self.pt_state.combined_pass.components
-
-        albedo_data = self.pt_state.albedo_pass.read()
-        albedo_width, albedo_height = self.pt_state.albedo_pass.size
-        albedo_channels = self.pt_state.albedo_pass.components
-        
-        normal_data = self.pt_state.normal_pass.read()
-        normal_width, normal_height = self.pt_state.normal_pass.size
-        normal_channels = self.pt_state.normal_pass.components
-
-        depth_data = self.pt_state.depth_pass.read()
-        depth_width, depth_height = self.pt_state.depth_pass.size
-        depth_channels = self.pt_state.depth_pass.components
-
-        # Convert to numpy arrays
-        combined_array = np.frombuffer(combined_data, dtype=f4)
-        albedo_array = np.frombuffer(albedo_data, dtype = f4)
-        normal_array = np.frombuffer(normal_data, dtype = f4)
-        depth_array = np.frombuffer(depth_data, dtype = f4)
-
-        # Reshape to OpenGL convention (H, W, C)
-        combined_array = combined_array.reshape(combined_height, combined_width, combined_channels)
-        albedo_array = albedo_array.reshape(albedo_height, albedo_width, albedo_channels)
-        normal_array = normal_array.reshape(normal_height, normal_width, normal_channels)
-        depth_array = depth_array.reshape(depth_height, depth_width, depth_channels)
+    def _export_training_noisy(self, noisy):
+        combined_array = noisy["combined"]
+        albedo_array = noisy["albedo"]
+        normal_array = noisy["normal"]
+        depth_array = noisy["depth"]
         
         # Flip image vertically
         # OpenGL is bottom-up, EXR is top-down
@@ -344,16 +348,8 @@ class ExportState:
         self._export_exr(normal_path, normal_array)
         self._export_exr(depth_path, depth_array)
     
-    def _export_training_target(self):
-        target_data = self.pt_state.combined_pass.read()
-        target_width, target_height = self.pt_state.combined_pass.size
-        target_channels = self.pt_state.combined_pass.components
-
-        # Convert to numpy array
-        target_array = np.frombuffer(target_data, dtype=f4)
-
-        # Reshape to OpenGL convention (H, W, C)
-        target_array = target_array.reshape(target_height, target_width, target_channels)
+    def _export_training_target(self, target):
+        target_array = target
         
         # Flip image vertically
         # OpenGL is bottom-up, EXR is top-down
@@ -365,7 +361,7 @@ class ExportState:
         # Save to .exr file
         self._export_exr(target_path, target_array)
     
-    def _export_exr(export_path, img_arr):
+    def _export_exr(self, export_path, img_arr):
         # Convert image to BGR as OpenCV expects BGR order
         img = cv2.cvtColor(img_arr.astype(np.float32), cv2.COLOR_RGB2BGR)
         cv2.imwrite(str(export_path), img)

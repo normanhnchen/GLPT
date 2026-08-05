@@ -75,6 +75,7 @@ class PostProcessSettings:
 
     def _load(self, config):
         self.blur = config["blur"]
+        self.dof_enabled = config["dof_enabled"]
         self.aperture = config["aperture"]
         self.focus_dist = config["focus_dist"]
         self.auto_focus = config["auto_focus"]
