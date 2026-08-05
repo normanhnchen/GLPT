@@ -75,6 +75,7 @@ def main():
     export_state = ExportState(pt_state)
     scene_state = SceneState()
     camera_capture_state = CameraCaptureState(scene_state, camera)
+    frame_stats = FrameStatsState()
 
     pt_quad = FullScreenQuad(ctx, pt_shaders.final)
     raster_quad = FullScreenQuad(ctx, raster_shaders.final)
@@ -104,13 +105,6 @@ def main():
 
     scene.hdri.bind_img(ctx, 6)
     scene.hdri.bind_cdfs(ctx, 7, 8)
-    
-    last_frame_start = 0
-    stats_start_time = time.perf_counter()
-
-    avg_fps = 0
-
-    stats_frame_count = 0
 
     if render_settings.render_mode == "path_tracing":
         ctx.disable(moderngl.DEPTH_TEST)
@@ -136,26 +130,15 @@ def main():
     # Load saved weights and biases
     ai_denoiser.load_state_dict(torch.load("src/denoiser/checkpoint.pt")["model_state_dict"])
 
+    frame_stats.start_tracking()
+
     # Render loop
     while not glfwWindowShouldClose(window):
-        frame_start = time.perf_counter()
-        delta_time = frame_start - last_frame_start
-        last_frame_start = frame_start
+        frame_stats.track()
 
         if screen.width <= 0 or screen.height <= 0:
             glfwPollEvents()
             continue
-
-        stats_elapsed_time = time.perf_counter() - stats_start_time
-        
-        # Log stats every 0.5 seconds
-        if stats_elapsed_time >= 0.5:
-            # Calculate average FPS over the 0.5 second window
-            avg_fps = stats_frame_count / stats_elapsed_time
-
-            # Reset stats counters
-            stats_start_time = time.perf_counter()
-            stats_frame_count = 0
 
         if not bvh_ready and bvh_builder.is_done:
             print("Creating BVH buffers...")
@@ -179,13 +162,13 @@ def main():
 
             need_resize = False
         
-        update_stats(window, avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
+        update_stats(window, frame_stats.avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
         
         ctx.clear(0, 0, 0, 1)
 
         glfwPollEvents()
 
-        process_input(window, delta_time)
+        process_input(window, frame_stats.delta_time)
 
         impl.process_inputs()
         
@@ -342,9 +325,9 @@ def main():
 
         glfwSwapBuffers(window)
 
-        stats_frame_count += 1
+        frame_stats.increment_frame_count()
 
-        cap_fps(frame_start, screen.fps_cap)
+        cap_fps(frame_stats.frame_start, screen.fps_cap)
     
     impl.shutdown()
     glfwTerminate()
