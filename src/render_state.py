@@ -113,7 +113,7 @@ class RenderProgressState:
     def __init__(self):
         self.total_samples = 0
         self.render_complete = False
-        self.view_saved = False
+        self.should_view_saved = False
         self.should_render = False
         # "off", "albedo", "normal", "depth"
         self.debug_mode = "off"
@@ -130,14 +130,14 @@ class RenderProgressState:
     def reset(self):
         self.total_samples = 0
         self.render_complete = False
-        self.view_saved = False
+        self.should_view_saved = False
         self.should_render = False
         # "off", "albedo", "normal", "depth"
         self.debug_mode = "off"
 
     def complete(self):
         self.render_complete = True
-        self.view_saved = True
+        self.should_view_saved = True
 
 
 class DenoiseState:
@@ -174,6 +174,23 @@ class PTState:
         self.tiles.reset()
         self.rendering.reset()
         self.denoising.reset()
+
+    def start_render(self):
+        self.reset()
+        self.rendering.start()
+
+    def restart_render(self):
+        self.reset()
+        self.rendering.start()
+
+    def stop_render(self):
+        self.rendering.stop_render()
+
+    def continue_render(self):
+        self.rendering.continue_render()
+
+    def cancel_render(self):
+        self.rendering.reset()
 
     def advance_render(self):
         self.tiles.advance()

@@ -194,15 +194,13 @@ class RenderingUI:
     
     def draw_stop_button(self):
         def on_change():
-            self.pt_state.view_saved = False
-            self.pt_state.should_render = False
+            self.pt_state.stop_render()
         
         self.stop_button.button(on_change)
     
     def draw_continue_button(self):
         def on_change():
-            self.pt_state.view_saved = False
-            self.pt_state.should_render = True
+            self.pt_state.continue_render()
 
         self.continue_button.button(on_change)
         
@@ -215,47 +213,43 @@ class RenderingUI:
     def draw_cancel_button(self):
         def on_change():
             render_settings.render_mode = "rasterization"
-            self.pt_state.view_saved = False
-            self.pt_state.should_denoise = False
+            self.pt_state.cancel_render()
 
         self.cancel_button.button(on_change)
     
     def draw_viewport_button(self):
         def on_change():
             render_settings.render_mode = "rasterization"
-            self.pt_state.view_saved = False
-            self.pt_state.should_denoise = False
+            self.pt_state.cancel_render()
 
         self.viewport_button.button(on_change)
     
     def draw_start_button(self):
         def on_change():
-            self.pt_state.start_render(self.camera_buffer)
-            self.pt_state.view_saved = False
-            self.pt_state.should_render = True
-            self.pt_state.should_denoise = False
+            render_settings.render_mode = "path_tracing"
+            self.camera_buffer.update_data()
+            self.pt_state.start_render()
 
         self.start_button.button(on_change)
     
     def draw_start_new_button(self):
         def on_change():
-            self.pt_state.start_render(self.camera_buffer)
-            self.pt_state.view_saved = False
-            self.pt_state.should_render = True
-            self.pt_state.should_denoise = False
+            render_settings.render_mode = "path_tracing"
+            self.camera_buffer.update_data()
+            self.pt_state.start_render()
 
         self.start_new_button.button(on_change)
         
     def draw_denoise_button(self):
         def on_change():
-            self.pt_state.should_denoise = True
+            self.pt_state.denoising.should_denoise = True
 
         self.denoise_button.button(on_change)
     
     def draw_view_saved_button(self):
         def on_change():
             render_settings.render_mode = "path_tracing"
-            self.pt_state.view_saved = True
+            self.pt_state.rendering.should_view_saved = True
 
         self.view_saved_button.button(on_change)
     
@@ -263,7 +257,6 @@ class RenderingUI:
         def on_change(new_val):
             render_settings.tiles_x = new_val
             self.pt_state.restart_render()
-            self.pt_state.total_samples = 0
             
         self.tiles_x_slider.slider(render_settings.tiles_x)
         self.tiles_x_slider.dragging_logic(on_change)
@@ -275,7 +268,6 @@ class RenderingUI:
         def on_change(new_val):
             render_settings.tiles_y = new_val
             self.pt_state.restart_render()
-            self.pt_state.total_samples = 0
             
         self.tiles_y_slider.slider(render_settings.tiles_y)
         self.tiles_y_slider.dragging_logic(on_change)
@@ -374,37 +366,37 @@ class PathTracingUI:
         specular_modes = ["GGX VNDF", "Cosine Hemisphere"]
 
         def on_change(next_val):
-            self.pt_state.specular_mode = next_val
+            pt_settings.specular_mode = next_val
             self.pt_state.restart_render()
 
-        self.specular_cycle_button.button(specular_modes, self.pt_state.specular_mode, on_change)
+        self.specular_cycle_button.button(specular_modes, pt_settings.specular_mode, on_change)
 
     def draw_geometry_cycle_button(self):
         geometry_modes = ["Height-Correlated Smith Method", "Schlick-GGX Approximation Method"]
         
         def on_change(next_val):
-            self.pt_state.geometry_mode = next_val
+            pt_settings.geometry_mode = next_val
             self.pt_state.restart_render()
 
-        self.geometry_cycle_button.button(geometry_modes, self.pt_state.geometry_mode, on_change)
+        self.geometry_cycle_button.button(geometry_modes, pt_settings.geometry_mode, on_change)
     
     def draw_transmission_cycle_button(self):
         transmissions_modes = ["Beer-Lambert", "None"]
         
         def on_change(next_val):
-            self.pt_state.transmission_mode = next_val
+            pt_settings.transmission_mode = next_val
             self.pt_state.restart_render()
 
-        self.transmission_cycle_button.button(transmissions_modes, self.pt_state.transmission_mode, on_change)
+        self.transmission_cycle_button.button(transmissions_modes, pt_settings.transmission_mode, on_change)
 
     def draw_mis_cycle_button(self):
         mis_modes = ["On", "Off"]
         
         def on_change(next_val):
-            self.pt_state.mis_mode = next_val
+            pt_settings.mis_mode = next_val
             self.pt_state.restart_render()
 
-        self.mis_cycle_button.button(mis_modes, self.pt_state.mis_mode, on_change)
+        self.mis_cycle_button.button(mis_modes, pt_settings.mis_mode, on_change)
     
     def draw_reset_pt_button(self):
         if imgui.button("Reset Path Tracing Settings"):
@@ -602,6 +594,7 @@ class ScreenUI:
         self.fps_slider.draw_label()
     
 
+# Currently broken
 class DebugUI:
     def __init__(self, pt_state):
         self.pt_state = pt_state
@@ -612,26 +605,22 @@ class DebugUI:
         self.debug_depth_button = Button("View Depth")
     
     def draw_debug_mode_button(self):
-        if self.pt_state.saved_combined is not None:
-            def set_off():
-                self.pt_state.debug_mode = "off"
+        def set_off():
+            self.pt_state.rendering.debug_mode = "off"
 
-            def set_albedo():
-                self.pt_state.debug_mode = "albedo"
+        def set_albedo():
+            self.pt_state.rendering.debug_mode = "albedo"
 
-            def set_normal():
-                self.pt_state.debug_mode = "normal"
+        def set_normal():
+            self.pt_state.rendering.debug_mode = "normal"
 
-            def set_depth():
-                self.pt_state.debug_mode = "depth"
+        def set_depth():
+            self.pt_state.rendering.debug_mode = "depth"
 
-            self.debug_off_button.button(set_off)
-            self.debug_albedo_button.button(set_albedo)
-            self.debug_normal_button.button(set_normal)
-            self.debug_depth_button.button(set_depth)
-        
-        else:
-            imgui.text_disabled("No saved renders")
+        self.debug_off_button.button(set_off)
+        self.debug_albedo_button.button(set_albedo)
+        self.debug_normal_button.button(set_normal)
+        self.debug_depth_button.button(set_depth)
 
 
 class SceneUI:
@@ -713,8 +702,8 @@ class SettingsUI:
 
     def draw_rendering_ui(self):
         if render_settings.render_mode == "path_tracing":
-            if not self.pt_state.view_saved:
-                if self.pt_state.should_render:
+            if not self.pt_state.rendering.should_view_saved:
+                if self.pt_state.rendering.should_render:
                     self.rendering_ui.draw_stop_button()
                 
                 else:
@@ -732,7 +721,7 @@ class SettingsUI:
             self.rendering_ui.draw_restart_button()
         
         else:
-            if self.pt_state.saved_combined is None:
+            if self.pt_state.framebuffers.saved_combined is None:
                 self.rendering_ui.draw_start_button()
             
             else:

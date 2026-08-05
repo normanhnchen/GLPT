@@ -214,7 +214,7 @@ def main():
 
             pt_quad.draw()
 
-        elif pt_state.rendering.view_saved:
+        elif pt_state.rendering.should_view_saved:
             # Draw texture to screen depending on the debug mode
             if pt_state.rendering.debug_mode == "off":
                 pt_state.framebuffers.saved_combined.use(location=0)
@@ -379,7 +379,7 @@ def cap_fps(frame_start, target_fps):
 
 def update_stats(window, fps, samples, render_complete):
     if render_settings.render_mode == "path_tracing":
-        if render_complete or pt_state.view_saved:
+        if render_complete or pt_state.rendering.should_view_saved:
             glfwSetWindowTitle(
                 window,
                 f"FPS: {fps:.2f} | Render Complete"
