@@ -174,7 +174,7 @@ def main():
             print("Path tracing is ready")
         
         if need_resize:
-            pt_state.resize()
+            pt_state.reset()
             raster_state.resize()
 
             ctx.screen.use()
@@ -182,7 +182,7 @@ def main():
 
             need_resize = False
         
-        update_stats(window, avg_fps, pt_state.total_samples, pt_state.render_complete)
+        update_stats(window, avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
         
         ctx.clear(0, 0, 0, 1)
 
@@ -193,21 +193,18 @@ def main():
         impl.process_inputs()
         
         imgui.new_frame()
-        
-        if pt_state.total_samples == pt_settings.max_samples and not pt_state.render_complete:
-            pt_state.save_render()
 
         settings_ui.draw(settings_window)
         
-        if pt_state.should_denoise:
+        if pt_state.denoising.should_denoise:
             pt_state.denoise(ai_denoiser)
 
             # Draw to screen
-            pt_state.saved_denoised.use(location=0)
+            pt_state.denoising.saved_denoised.use(location=0)
 
             # Prevent resizing saved texture
             # Clips the image
-            ctx.viewport = (0, 0, *pt_state.saved_combined.size)
+            ctx.viewport = (0, 0, *pt_state.framebuffers.saved_combined.size)
 
             # Post Processing
             # ---------------
@@ -217,20 +214,20 @@ def main():
 
             pt_quad.draw()
 
-        elif pt_state.view_saved:
+        elif pt_state.rendering.view_saved:
             # Draw texture to screen depending on the debug mode
-            if pt_state.debug_mode == "off":
-                pt_state.saved_combined.use(location=0)
-            elif pt_state.debug_mode == "albedo":
-                pt_state.saved_albedo.use(location=0)
-            elif pt_state.debug_mode == "normal":
-                pt_state.saved_normal.use(location=0)
-            elif pt_state.debug_mode == "depth":
-                pt_state.saved_depth.use(location=0)
+            if pt_state.rendering.debug_mode == "off":
+                pt_state.framebuffers.saved_combined.use(location=0)
+            elif pt_state.rendering.debug_mode == "albedo":
+                pt_state.framebuffers.saved_albedo.use(location=0)
+            elif pt_state.rendering.debug_mode == "normal":
+                pt_state.framebuffers.saved_normal.use(location=0)
+            elif pt_state.rendering.debug_mode == "depth":
+                pt_state.framebuffers.saved_depth.use(location=0)
 
             # Prevent resizing saved texture to new screen dimensions
             # Doesn't matter which saved texture to use since all are saved at the same dimensions
-            ctx.viewport = (0, 0, *pt_state.saved_combined.size)
+            ctx.viewport = (0, 0, *pt_state.framebuffers.saved_combined.size)
 
             # Post Processing
             # ---------------
@@ -241,22 +238,19 @@ def main():
             pt_quad.draw()
 
         elif render_settings.render_mode == "path_tracing":
-            if pt_state.total_samples >= pt_settings.max_samples:
-                pt_state.should_render = False
-            
-            if pt_state.should_render:
+            if pt_state.rendering.should_render:
                 aspect_ratio = screen.width / max(screen.height, 1)
                 pt_shaders.pt.prog["aspectRatio"].value = set_f4(aspect_ratio)
 
                 # Prevent the samples from going over the max samples limit
-                samples_left = pt_settings.max_samples - pt_state.total_samples
+                samples_left = pt_settings.max_samples - pt_state.rendering.total_samples
 
                 if samples_left < pt_settings.spp:
                     pt_shaders.pt.prog["samplesPerPixel"].value = samples_left
                 else:
                     pt_shaders.pt.prog["samplesPerPixel"].value = pt_settings.spp
                 
-                pt_shaders.pt.prog["totalSamples"].value = pt_state.total_samples
+                pt_shaders.pt.prog["totalSamples"].value = pt_state.rendering.total_samples
                 
                 pt_shaders.pt.prog["maxTotalBounces"].value = pt_settings.total_bounces
                 pt_shaders.pt.prog["maxDiffuseBounces"].value = pt_settings.diffuse_bounces
@@ -272,35 +266,29 @@ def main():
                 pt_shaders.pt.prog["numFiniteLights"].value = scene.num_finite_lights
                 pt_shaders.pt.prog["numEmissiveTriangles"].value = scene.num_emissive_triangles
 
-                pt_shaders.pt.prog["specularMode"].value = pt_state.specular_mode
-                pt_shaders.pt.prog["geometryMode"].value = pt_state.geometry_mode
-                pt_shaders.pt.prog["transmissionMode"].value = pt_state.transmission_mode
-                pt_shaders.pt.prog["misMode"].value = pt_state.mis_mode
+                pt_shaders.pt.prog["specularMode"].value = pt_settings.specular_mode
+                pt_shaders.pt.prog["geometryMode"].value = pt_settings.geometry_mode
+                pt_shaders.pt.prog["transmissionMode"].value = pt_settings.transmission_mode
+                pt_shaders.pt.prog["misMode"].value = pt_settings.mis_mode
 
                 # Apply ceiling function
                 # Allows the compute shader to reach the entire screen
-                groups_x = (pt_state.tile_width + 15) // 16
-                groups_y = (pt_state.tile_height + 15) // 16
+                groups_x = (pt_state.tiles.tile_width + 15) // 16
+                groups_y = (pt_state.tiles.tile_height + 15) // 16
 
-                offset_x = pt_state.curr_tile_x
-                offset_y = pt_state.curr_tile_y
+                offset_x = pt_state.tiles.curr_tile_x
+                offset_y = pt_state.tiles.curr_tile_y
 
                 pt_shaders.pt.prog["uOffset"].value = np.array([offset_x, offset_y], dtype=i4)
 
-                    if samples_left < pt_settings.spp:
-                        pt_state.total_samples += samples_left
-                    else:
-                        pt_state.total_samples += pt_settings.spp
+                pt_state.advance_render()
                 
-                # Run compute shader
-                pt_state.combined_pass.bind_to_image(0, read=True, write=True)
-                pt_state.albedo_pass.bind_to_image(1, read=True, write=True)
-                pt_state.normal_pass.bind_to_image(2, read=True, write=True)
-                pt_state.depth_pass.bind_to_image(3, read=True, write=True)
+                # Dispatch compute shader
+                pt_state.framebuffers.bind_to_images()
                 pt_shaders.pt.prog.run(groups_x, groups_y)
             
             # Draw to screen
-            pt_state.combined_pass.use(location=0)
+            pt_state.framebuffers.combined_pass.use(location=0)
 
             # Post Processing
             # ---------------

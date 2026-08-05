@@ -67,6 +67,12 @@ class FramebufferState:
         self.saved_normal.write(self.normal_pass.read())
         self.saved_depth.write(self.depth_pass.read())
 
+    def bind_to_images(self, combined_loc=0, albedo_loc=1, normal_loc=2, depth_loc=3):
+        self.combined_pass.bind_to_image(combined_loc, read=True, write=True)
+        self.albedo_pass.bind_to_image(albedo_loc, read=True, write=True)
+        self.normal_pass.bind_to_image(normal_loc, read=True, write=True)
+        self.depth_pass.bind_to_image(depth_loc, read=True, write=True)
+
 
 class RenderTilerState:
     def __init__(self):
@@ -109,7 +115,6 @@ class RenderProgressState:
         self.render_complete = False
         self.view_saved = False
         self.should_render = False
-        self.should_denoise = False
         # "off", "albedo", "normal", "depth"
         self.debug_mode = "off"
 
@@ -127,7 +132,6 @@ class RenderProgressState:
         self.render_complete = False
         self.view_saved = False
         self.should_render = False
-        self.should_denoise = False
         # "off", "albedo", "normal", "depth"
         self.debug_mode = "off"
 
@@ -136,31 +140,64 @@ class RenderProgressState:
         self.view_saved = True
 
 
-class PTState:
-    def __init__(self, ctx):
-        self.ctx = ctx
-        self.framebuffers = FramebufferState(ctx)
-        self.tiles = RenderTilerState()
-        self.rendering = RenderProgressState()
-    
-    def reset(self):
-        self.framebuffers.reset()
-        self.tiles.reset()
-        self.rendering.reset()
-
-
 class DenoiseState:
     def __init__(self, ctx):
         self.ctx = ctx
         self.saved_denoised = None
+        self.should_denoise = False
 
     def _release_buffer(self):
         if self.saved_denoised is not None:
             self.saved_denoised.release()
 
     def denoise(self, ai_denoiser, combined, albedo, normal, depth):
-        self.saved_denoised = self.ctx.texture(screen.resolution, 3, dtype=f4)
-        ai_denoiser.denoise(combined, albedo, normal, depth, self.denoised)
+        if self.saved_denoised is None:
+            self.saved_denoised = self.ctx.texture(screen.resolution, 3, dtype=f4)
+            ai_denoiser.denoise(combined, albedo, normal, depth, self.saved_denoised)
+
+    def reset(self):
+        self._release_buffer()
+
+        self.saved_denoised = None
+
+
+class PTState:
+    def __init__(self, ctx):
+        self.ctx = ctx
+        self.framebuffers = FramebufferState(ctx)
+        self.tiles = RenderTilerState()
+        self.rendering = RenderProgressState()
+        self.denoising = DenoiseState(ctx)
+    
+    def reset(self):
+        self.framebuffers.reset()
+        self.tiles.reset()
+        self.rendering.reset()
+        self.denoising.reset()
+
+    def advance_render(self):
+        self.tiles.advance()
+        if not self.tiles.frame_finished:
+            return
+
+        samples_left = pt_settings.max_samples - self.rendering.total_samples
+        if samples_left < pt_settings.spp:
+            self.rendering.total_samples += samples_left
+        else:
+            self.rendering.total_samples += pt_settings.spp
+
+        if self.rendering.total_samples >= pt_settings.max_samples:
+            self.framebuffers.save()
+            self.rendering.complete()
+
+    def denoise(self, ai_denoiser):
+        self.denoising.denoise(
+            ai_denoiser,
+            self.framebuffers.saved_combined,
+            self.framebuffers.saved_albedo,
+            self.framebuffers.saved_normal,
+            self.framebuffers.saved_depth,
+        )
 
 
 class RasterState:

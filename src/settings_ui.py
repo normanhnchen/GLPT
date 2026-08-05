@@ -1,7 +1,6 @@
 from imgui_bundle import imgui
 from glfw.GLFW import *
 from src.settings import *
-from src.settings import _pt_settings_default
 
 
 class IntSlider:
@@ -409,16 +408,7 @@ class PathTracingUI:
     
     def draw_reset_pt_button(self):
         if imgui.button("Reset Path Tracing Settings"):
-            pt_settings.total_bounces = _pt_settings_default.total_bounces
-            pt_settings.diffuse_bounces = _pt_settings_default.diffuse_bounces
-            pt_settings.specular_bounces = _pt_settings_default.specular_bounces
-            pt_settings.transmission_bounces = _pt_settings_default.transmission_bounces
-            pt_settings.max_samples = _pt_settings_default.max_samples
-            pt_settings.spp = _pt_settings_default.spp
-            self.pt_state.specular_mode = _pt_settings_default.specular_mode
-            self.pt_state.geometry_mode = _pt_settings_default.geometry_mode
-            self.pt_state.transmission_mode = _pt_settings_default.transmission_mode
-            self.pt_state.mis_mode = _pt_settings_default.mis_mode
+            pt_settings.reset()
             self.pt_state.restart_render()
 
 
