@@ -506,7 +506,8 @@ class FrameStatsState:
 
 class WindowState:
     def __init__(self):
-        self.window = glfwGetCurrentContext()
+        self.window = None
+        self.need_resize = False
 
     def create(self, title):
         if not glfwInit():
@@ -523,6 +524,8 @@ class WindowState:
     
         if not window:
             return "Failed to create GLFW window"
+
+        self.window = window
         
         glfwMakeContextCurrent(window)
         if screen.vsync == True:
@@ -540,6 +543,8 @@ class WindowState:
         screen.width = width
         screen.height = height
         screen.resolution = [width, height]
+
+        self.need_resize = True
 
     def shutdown(self):
         glfwTerminate()
@@ -633,9 +638,11 @@ class GlfwCallbackState:
         if button == GLFW_MOUSE_BUTTON_MIDDLE:
             if action == GLFW_PRESS:
                 self.input_state.begin_drag()
+                self.window_state.disable_cursor()
                 
             elif action == GLFW_RELEASE:
                 self.input_state.end_drag()
+                self.window_state.enable_cursor()
 
     def _mouse_callback(self, window, xpos, ypos):
         if hasattr(self.impl, "mouse_callback"):

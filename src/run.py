@@ -21,14 +21,6 @@ from src.network import *
 
 camera = Camera()
 
-first_mouse = True
-last_x = screen.width / 2
-last_y = screen.height / 2
-
-middle_mouse_down = False
-
-need_resize = False
-
 
 def main():
     window_state = WindowState()
@@ -44,7 +36,7 @@ def main():
     global impl
     impl = GlfwRenderer(window_state.window)
 
-    glfw_callback_state = GlfwCallbackState(window_state, input_state, ui_state, camera)
+    glfw_callback_state = GlfwCallbackState(window_state, input_state, ui_state, camera, impl)
     # Set callbacks after so imgui doesn't override them
     glfw_callback_state.set_callbacks()
 
@@ -98,11 +90,6 @@ def main():
         ctx.enable(moderngl.DEPTH_TEST)
         ctx.enable(moderngl.BLEND)
         ctx.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
-    
-    global settings_window
-    settings_window = False
-
-    global need_resize
 
     settings_ui = SettingsUI(
             pt_state,
@@ -139,14 +126,14 @@ def main():
 
             print("Path tracing is ready")
         
-        if need_resize:
+        if window_state.need_resize:
             pt_state.reset()
             raster_state.resize()
 
             ctx.screen.use()
             ctx.viewport = (0, 0, screen.width, screen.height)
 
-            need_resize = False
+            window_state.need_resize = False
         
         update_stats(window_state.window, frame_stats.avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
         
@@ -160,7 +147,7 @@ def main():
         
         imgui.new_frame()
 
-        settings_ui.draw(settings_window)
+        settings_ui.draw(ui_state.settings_window)
         
         if pt_state.denoising.should_denoise:
             pt_state.denoise(ai_denoiser)
