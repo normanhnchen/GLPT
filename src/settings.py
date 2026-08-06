@@ -15,6 +15,7 @@ class Screen:
         self.width = config["width"]
         self.height = config["height"]
         self.resolution = [self.width, self.height]
+        self.aspect_ratio = screen.width / max(screen.height, 1)
         self.vsync = config["vsync"]
         self.fps_cap = config["fps_cap"]
 

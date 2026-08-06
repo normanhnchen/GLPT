@@ -568,6 +568,7 @@ class GlfwWindow:
         screen.width = width
         screen.height = height
         screen.resolution = [width, height]
+        self.aspect_ratio = screen.width / max(screen.height, 1)
 
         self.need_resize = True
 

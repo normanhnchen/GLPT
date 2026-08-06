@@ -17,9 +17,7 @@ from src.draw_passes import *
 from src.bvh_builder import *
 from src.settings_ui import *
 from src.network import *
-
-
-camera = Camera()
+from src.uniforms import *
 
 
 def main():
@@ -27,13 +25,14 @@ def main():
     imgui_state = ImguiState()
     input_state = InputState(glfw_window, imgui_state)
     ui_state = UIState()
+    camera = Camera()
 
     glfw_window.create("FPS: 0 | Samples: 0")
 
     ctx = moderngl.create_context()
 
     imgui_state.create(glfw_window.window)
-
+    
     glfw_callback_state = GlfwCallbackState(glfw_window, input_state, ui_state, imgui_state, camera)
     # Set callbacks after so imgui doesn't override them
     glfw_callback_state.set_callbacks()
@@ -185,47 +184,13 @@ def main():
 
         elif render_settings.render_mode == "path_tracing":
             if pt_state.rendering.should_render:
-                aspect_ratio = screen.width / max(screen.height, 1)
-                pt_shaders.pt.prog["aspectRatio"].value = set_f4(aspect_ratio)
-
-                # Prevent the samples from going over the max samples limit
-                samples_left = pt_settings.max_samples - pt_state.rendering.total_samples
-
-                if samples_left < pt_settings.spp:
-                    pt_shaders.pt.prog["samplesPerPixel"].value = samples_left
-                else:
-                    pt_shaders.pt.prog["samplesPerPixel"].value = pt_settings.spp
-                
-                pt_shaders.pt.prog["totalSamples"].value = pt_state.rendering.total_samples
-                
-                pt_shaders.pt.prog["maxTotalBounces"].value = pt_settings.total_bounces
-                pt_shaders.pt.prog["maxDiffuseBounces"].value = pt_settings.diffuse_bounces
-                pt_shaders.pt.prog["maxSpecularBounces"].value = pt_settings.specular_bounces
-                pt_shaders.pt.prog["maxTransmissionBounces"].value = pt_settings.transmission_bounces
-
-                pt_shaders.pt.prog["blur"].value = post_process_settings.blur
-
-                pt_shaders.pt.prog["hdriExposure"].value = post_process_settings.hdri_exposure
-
-                pt_shaders.pt.prog["depthFactor"].value = 1 / scene.extent
-
-                pt_shaders.pt.prog["numFiniteLights"].value = scene.num_finite_lights
-                pt_shaders.pt.prog["numEmissiveTriangles"].value = scene.num_emissive_triangles
-
-                pt_shaders.pt.prog["specularMode"].value = pt_settings.specular_mode
-                pt_shaders.pt.prog["geometryMode"].value = pt_settings.geometry_mode
-                pt_shaders.pt.prog["transmissionMode"].value = pt_settings.transmission_mode
-                pt_shaders.pt.prog["misMode"].value = pt_settings.mis_mode
+                uniform_dict = compute_pt_render_uniforms(scene, pt_state)
+                set_uniforms(pt_shaders.pt.prog, uniform_dict)
 
                 # Apply ceiling function
                 # Allows the compute shader to reach the entire screen
                 groups_x = (pt_state.tiles.tile_width + 15) // 16
                 groups_y = (pt_state.tiles.tile_height + 15) // 16
-
-                offset_x = pt_state.tiles.curr_tile_x
-                offset_y = pt_state.tiles.curr_tile_y
-
-                pt_shaders.pt.prog["uOffset"].value = np.array([offset_x, offset_y], dtype=i4)
 
                 pt_state.advance_render()
                 
