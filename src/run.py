@@ -31,36 +31,22 @@ need_resize = False
 
 
 def main():
-    if not glfwInit():
-        return "Failed to initialize GLFW"
+    window_state = WindowState()
+    input_state = InputState()
+    ui_state = UIState()
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4)
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6)
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE)
-    # Apple system required config
-    if sys.platform == "darwin":
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE)
-    
-    window = glfwCreateWindow(screen.width, screen.height, "FPS: 0 | Samples: 0", None, None)
-
-    if not window:
-        return "Failed to create GLFW window"
-    
-    glfwMakeContextCurrent(window)
-    if screen.vsync == True:
-        glfwSwapInterval(1)
-    else:
-        glfwSwapInterval(0)
+    window_state.create("FPS: 0 | Samples: 0")
 
     ctx = moderngl.create_context()
 
     imgui.create_context()
 
     global impl
-    impl = GlfwRenderer(window)
-    
+    impl = GlfwRenderer(window_state.window)
+
+    glfw_callback_state = GlfwCallbackState(window_state, input_state, ui_state, camera)
     # Set callbacks after so imgui doesn't override them
-    glfw_set_callbacks(window)
+    glfw_callback_state.set_callbacks()
 
     scene = load_scene(file_paths.scene)
     scene.hdri = HDRI(file_paths.hdri)
@@ -133,7 +119,7 @@ def main():
     frame_stats.start_tracking()
 
     # Render loop
-    while not glfwWindowShouldClose(window):
+    while not glfwWindowShouldClose(window_state.window):
         frame_stats.track()
 
         if screen.width <= 0 or screen.height <= 0:
@@ -162,13 +148,13 @@ def main():
 
             need_resize = False
         
-        update_stats(window, frame_stats.avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
+        update_stats(window_state.window, frame_stats.avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
         
         ctx.clear(0, 0, 0, 1)
 
-        glfwPollEvents()
+        window_state.poll()
 
-        process_input(window, frame_stats.delta_time)
+        process_input(window_state.window, frame_stats.delta_time)
 
         impl.process_inputs()
         
@@ -323,7 +309,7 @@ def main():
         imgui.render()
         impl.render(imgui.get_draw_data())
 
-        glfwSwapBuffers(window)
+        window_state.swap()
 
         frame_stats.increment_frame_count()
 
@@ -376,28 +362,6 @@ def update_stats(window, fps, samples, render_complete):
         )
 
 
-def glfw_set_callbacks(window):
-    glfwSetCursorPosCallback(window, mouse_callback)
-    glfwSetScrollCallback(window, scroll_callback)
-    glfwSetMouseButtonCallback(window, mouse_button_callback)
-    glfwSetKeyCallback(window, key_callback)
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback)
-    glfwSetWindowSizeLimits(window, 400, 300, GLFW_DONT_CARE, GLFW_DONT_CARE)
-
-
-def framebuffer_size_callback(window, width, height):
-    global need_resize, screen
-
-    width = max(1, int(width))
-    height = max(1, int(height))
-
-    need_resize = True
-
-    screen.width = width
-    screen.height = height
-    screen.resolution = np.array([width, height], dtype=np.int32)
-
-
 def process_input(window, delta_time):
     if imgui.get_io().want_text_input:
         return
@@ -417,78 +381,6 @@ def process_input(window, delta_time):
         camera.process_keyboard(CameraMovement.UP, delta_time)
     if glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS:
         camera.process_keyboard(CameraMovement.DOWN, delta_time)
-
-
-def key_callback(window, key, scancode, action, mods):
-    if hasattr(impl, "keyboard_callback"):
-        impl.keyboard_callback(window, key, scancode, action, mods)
-    
-    global settings_window
-
-    if key == GLFW_KEY_ESCAPE and action == GLFW_PRESS:
-        settings_window = not settings_window
-
-
-def mouse_button_callback(window, button, action, mods):
-    if hasattr(impl, "mouse_button_callback"):
-        impl.mouse_button_callback(window, button, action, mods)
-    
-    if imgui.get_io().want_capture_mouse:
-        return
-
-    if render_settings.render_mode == "path_tracing":
-        return
-    
-    global middle_mouse_down, first_mouse
-
-    if button == GLFW_MOUSE_BUTTON_MIDDLE:
-        if action == GLFW_PRESS:
-            middle_mouse_down = True
-            first_mouse = True
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-        elif action == GLFW_RELEASE:
-            middle_mouse_down = False
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-
-
-def mouse_callback(window, xpos, ypos):
-    if hasattr(impl, "mouse_callback"):
-        impl.mouse_callback(window, xpos, ypos)
-    
-    if imgui.get_io().want_capture_mouse:
-        return
-
-    if render_settings.render_mode == "path_tracing":
-        return
-
-    if middle_mouse_down:
-        global first_mouse, last_x, last_y
-
-        if first_mouse:
-            last_x = xpos
-            last_y = ypos
-            first_mouse = False
-        
-        xoffset = xpos - last_x
-        # Reversed since y-coordinates go from bottom to top
-        yoffset = last_y - ypos
-        last_x = xpos
-        last_y = ypos
-
-        camera.process_mouse_movement(xoffset, yoffset)
-
-
-def scroll_callback(window, xoffset, yoffset):
-    if hasattr(impl, "scroll_callback"):
-        impl.scroll_callback(window, xoffset, yoffset)
-    
-    if imgui.get_io().want_capture_mouse:
-        return
-    
-    if render_settings.render_mode == "path_tracing":
-        return
-
-    camera.process_mouse_scroll(yoffset)
 
 
 class PTShaders:

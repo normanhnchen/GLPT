@@ -5,6 +5,9 @@ import random
 import cv2
 import os
 import time
+from glfw.GLFW import *
+import sys
+from imgui_bundle import imgui
 
 from src.dtypes import *
 from src.settings import *
@@ -499,3 +502,164 @@ class FrameStatsState:
 
     def increment_frame_count(self):
         self.stats_frame_count += 1
+
+
+class WindowState:
+    def __init__(self):
+        self.window = glfwGetCurrentContext()
+
+    def create(self, title):
+        if not glfwInit():
+            return "Failed to initialize GLFW"
+    
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4)
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6)
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE)
+        # Apple system required config
+        if sys.platform == "darwin":
+            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE)
+        
+        window = glfwCreateWindow(screen.width, screen.height, title, None, None)
+    
+        if not window:
+            return "Failed to create GLFW window"
+        
+        glfwMakeContextCurrent(window)
+        if screen.vsync == True:
+            glfwSwapInterval(1)
+        else:
+            glfwSwapInterval(0)
+
+    def set_title(self, title):
+        glfwSetWindowTitle(self.window, title)
+
+    def resize(self, width, height):
+        width = max(1, int(width))
+        height = max(1, int(height))
+
+        screen.width = width
+        screen.height = height
+        screen.resolution = [width, height]
+
+    def shutdown(self):
+        glfwTerminate()
+
+    def swap(self):
+        glfwSwapBuffers(self.window)
+
+    def disable_cursor(self):
+        glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+
+    def enable_cursor(self):
+        glfwSetInputMode(self.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+
+    def poll(self):
+        glfwPollEvents()
+
+
+class InputState:
+    def __init__(self):
+        self.first_mouse = True
+        self.last_x = screen.width / 2
+        self.last_y = screen.height / 2
+        self.middle_mouse_down = False
+
+    def begin_drag(self):
+        self.middle_mouse_down = True
+        self.first_mouse = True
+
+    def end_drag(self):
+        self.middle_mouse_down = False
+
+    def drag_delta(self, xpos, ypos):
+        if self.first_mouse:
+            self.last_x, self.last_y = xpos, ypos
+            self.first_mouse = False
+        
+        xoffset = xpos - self.last_x
+        # Reversed since y-coordinates go from bottom to top
+        yoffset = self.last_y - ypos
+        self.last_x, self.last_y = xpos, ypos
+
+        return xoffset, yoffset
+
+
+class UIState:
+    def __init__(self):
+        self.settings_window = False
+
+    def toggle_settings(self):
+        self.settings_window = not self.settings_window
+
+
+class GlfwCallbackState:
+    def __init__(self, window_state, input_state, ui_state, camera, impl):
+        self.window_state = window_state
+        self.input_state = input_state
+        self.ui_state = ui_state
+        self.camera = camera
+
+        self.window = self.window_state.window
+        self.impl = impl
+
+    def set_callbacks(self):
+        glfwSetCursorPosCallback(self.window, self._mouse_callback)
+        glfwSetScrollCallback(self.window, self._scroll_callback)
+        glfwSetMouseButtonCallback(self.window, self._mouse_button_callback)
+        glfwSetKeyCallback(self.window, self._key_callback)
+        glfwSetFramebufferSizeCallback(self.window, self._framebuffer_size_callback)
+        glfwSetWindowSizeLimits(self.window, 400, 300, GLFW_DONT_CARE, GLFW_DONT_CARE)
+
+    def _framebuffer_size_callback(self, window, width, height):
+        self.window_state.resize(width, height)
+
+    def _key_callback(self, window, key, scancode, action, mods):
+        if hasattr(self.impl, "keyboard_callback"):
+            self.impl.keyboard_callback(window, key, scancode, action, mods)
+
+        if key == GLFW_KEY_ESCAPE and action == GLFW_PRESS:
+            self.ui_state.toggle_settings()
+
+    def _mouse_button_callback(self, window, button, action, mods):
+        if hasattr(self.impl, "mouse_button_callback"):
+            self.impl.mouse_button_callback(window, button, action, mods)
+        
+        if imgui.get_io().want_capture_mouse:
+            return
+
+        if render_settings.render_mode == "path_tracing":
+            return
+
+        if button == GLFW_MOUSE_BUTTON_MIDDLE:
+            if action == GLFW_PRESS:
+                self.input_state.begin_drag()
+                
+            elif action == GLFW_RELEASE:
+                self.input_state.end_drag()
+
+    def _mouse_callback(self, window, xpos, ypos):
+        if hasattr(self.impl, "mouse_callback"):
+            self.impl.mouse_callback(window, xpos, ypos)
+        
+        if imgui.get_io().want_capture_mouse:
+            return
+
+        if render_settings.render_mode == "path_tracing":
+            return
+
+        if self.input_state.middle_mouse_down:
+            xoffset, yoffset = self.input_state.drag_delta(xpos, ypos)
+
+            self.camera.process_mouse_movement(xoffset, yoffset)
+
+    def _scroll_callback(self, window, xoffset, yoffset):
+        if hasattr(self.impl, "scroll_callback"):
+            self.impl.scroll_callback(window, xoffset, yoffset)
+        
+        if imgui.get_io().want_capture_mouse:
+            return
+        
+        if render_settings.render_mode == "path_tracing":
+            return
+
+        self.camera.process_mouse_scroll(yoffset)

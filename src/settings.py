@@ -14,7 +14,7 @@ class Screen:
     def _load(self, config):
         self.width = config["width"]
         self.height = config["height"]
-        self.resolution = np.array([self.width, self.height])
+        self.resolution = [self.width, self.height]
         self.vsync = config["vsync"]
         self.fps_cap = config["fps_cap"]
 
