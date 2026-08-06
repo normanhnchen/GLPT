@@ -17,7 +17,7 @@ from src.draw_passes import *
 from src.bvh_builder import *
 from src.settings_ui import *
 from src.network import *
-from src.uniforms import *
+from src.pipelines.path_tracing import *
 
 
 def main():
@@ -99,6 +99,8 @@ def main():
     ai_denoiser = KPCN()
     # Load saved weights and biases
     ai_denoiser.load_state_dict(torch.load("src/denoiser/checkpoint.pt")["model_state_dict"])
+
+    pt_pipeline = PathTracingPipeline(scene, pt_state, pt_shaders, pt_quad)
 
     frame_stats.start_tracking()
 
@@ -183,31 +185,7 @@ def main():
             pt_quad.draw()
 
         elif render_settings.render_mode == "path_tracing":
-            if pt_state.rendering.should_render:
-                uniform_dict = compute_pt_render_uniforms(scene, pt_state)
-                set_uniforms(pt_shaders.pt.prog, uniform_dict)
-
-                # Apply ceiling function
-                # Allows the compute shader to reach the entire screen
-                groups_x = (pt_state.tiles.tile_width + 15) // 16
-                groups_y = (pt_state.tiles.tile_height + 15) // 16
-
-                pt_state.advance_render()
-                
-                # Dispatch compute shader
-                pt_state.framebuffers.bind_to_images()
-                pt_shaders.pt.prog.run(groups_x, groups_y)
-            
-            # Draw to screen
-            pt_state.framebuffers.combined.use(location=0)
-
-            # Post Processing
-            # ---------------
-            pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
-            
-            pt_shaders.final.set_tonemap(post_process_settings.tonemap)
-
-            pt_quad.draw()
+            pt_pipeline.render()
         
         elif render_settings.render_mode == "rasterization":
             raster_state.raster_fbo.use()
