@@ -23,18 +23,18 @@ camera = Camera()
 
 
 def main():
-    window_state = WindowState()
-    input_state = InputState()
-    ui_state = UIState()
+    glfw_window = GlfwWindow()
     imgui_state = ImguiState()
+    input_state = InputState(glfw_window, imgui_state)
+    ui_state = UIState()
 
-    window_state.create("FPS: 0 | Samples: 0")
+    glfw_window.create("FPS: 0 | Samples: 0")
 
     ctx = moderngl.create_context()
 
-    imgui_state.create(window_state.window)
+    imgui_state.create(glfw_window.window)
 
-    glfw_callback_state = GlfwCallbackState(window_state, input_state, ui_state, imgui_state, camera)
+    glfw_callback_state = GlfwCallbackState(glfw_window, input_state, ui_state, imgui_state, camera)
     # Set callbacks after so imgui doesn't override them
     glfw_callback_state.set_callbacks()
 
@@ -104,7 +104,7 @@ def main():
     frame_stats.start_tracking()
 
     # Render loop
-    while not glfwWindowShouldClose(window_state.window):
+    while not glfw_window.should_close():
         frame_stats.track()
 
         if screen.width <= 0 or screen.height <= 0:
@@ -124,21 +124,21 @@ def main():
 
             print("Path tracing is ready")
         
-        if window_state.need_resize:
+        if glfw_window.need_resize:
             pt_state.reset()
             raster_state.resize()
 
             ctx.screen.use()
             ctx.viewport = (0, 0, screen.width, screen.height)
 
-            window_state.need_resize = False
+            glfw_window.need_resize = False
         
-        update_stats(window_state.window, frame_stats.avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
+        update_stats(glfw_window, frame_stats.avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
         
         ctx.clear(0, 0, 0, 1)
 
-        window_state.poll()
-        process_input(window_state.window, frame_stats.delta_time)
+        glfw_window.poll()
+        input_state.process_input(frame_stats.delta_time, camera)
         imgui_state.begin_frame()
         ui_state.settings_window = settings_ui.draw(ui_state.settings_window)
         
@@ -285,77 +285,23 @@ def main():
             raster_quad.draw()
     
         imgui_state.end_frame()
-        window_state.swap()
+        glfw_window.swap()
         frame_stats.increment_frame_count()
 
-        cap_fps(frame_stats.frame_start, screen.fps_cap)
+        frame_stats.cap_fps(screen.fps_cap)
     
     imgui_state.shutdown()
-    window_state.shutdown()
+    glfw_window.shutdown()
 
 
-def cap_fps(frame_start, target_fps):
-    target_duration = 1 / target_fps
-    # Target time when the target_fps is reached
-    target_time = frame_start + target_duration
-
-    # Sleep/wait until the target_time is reached
-    while True:
-        remaining_time = target_time - time.perf_counter()
-
-        if remaining_time <= 0:
-            break
-        
-        # Sleep for the majority of the time to save CPU resources
-        if remaining_time > 0.001:
-            # Sleep for half of the remaining time
-            # This methods allow sleeping precision as remaining time approaches zero
-            sleep_time = remaining_time * 0.5
-            time.sleep(sleep_time)
-        
-        # Wait until the target time is reached
-        else:
-            pass
-
-
-def update_stats(window, fps, samples, render_complete):
+def update_stats(glfw_window, fps, samples, render_complete):
     if render_settings.render_mode == "path_tracing":
         if render_complete or pt_state.rendering.should_view_saved:
-            glfwSetWindowTitle(
-                window,
-                f"FPS: {fps:.2f} | Render Complete"
-            )
+            glfw_window.set_title(f"FPS: {fps:.2f} | Render Complete")
         else:
-            glfwSetWindowTitle(
-                window,
-                f"FPS: {fps:.2f} | Samples: {samples}"
-            )
+            glfw_window.set_title(f"FPS: {fps:.2f} | Samples: {samples}")
     else:
-        glfwSetWindowTitle(
-            window,
-            f"FPS: {fps:.2f}"
-        )
-
-
-def process_input(window, delta_time):
-    if imgui.get_io().want_text_input:
-        return
-    
-    if render_settings.render_mode == "path_tracing":
-        return
-    
-    if glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.FORWARD, delta_time)
-    if glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.BACKWARD, delta_time)
-    if glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.LEFT, delta_time)
-    if glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.RIGHT, delta_time)
-    if glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.UP, delta_time)
-    if glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.DOWN, delta_time)
+        glfw_window.set_title(f"FPS: {fps:.2f}")
 
 
 class PTShaders:

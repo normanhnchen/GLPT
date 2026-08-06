@@ -12,6 +12,7 @@ from imgui_bundle.python_backends.glfw_backend import GlfwRenderer
 
 from src.dtypes import *
 from src.settings import *
+from src.camera import *
 
 
 # Required as OpenCV disables EXR support by default
@@ -504,8 +505,31 @@ class FrameStatsState:
     def increment_frame_count(self):
         self.stats_frame_count += 1
 
+    def cap_fps(self, target_fps):
+        target_duration = 1 / target_fps
+        # Target time when the target_fps is reached
+        target_time = self.frame_start + target_duration
 
-class WindowState:
+        # Sleep/wait until the target_time is reached
+        while True:
+            remaining_time = target_time - time.perf_counter()
+
+            if remaining_time <= 0:
+                break
+            
+            # Sleep for the majority of the time to save CPU resources
+            if remaining_time > 0.001:
+                # Sleep for half of the remaining time
+                # This methods allow sleeping precision as remaining time approaches zero
+                sleep_time = remaining_time * 0.5
+                time.sleep(sleep_time)
+            
+            # Wait until the target time is reached
+            else:
+                pass
+
+
+class GlfwWindow:
     def __init__(self):
         self.window = None
         self.need_resize = False
@@ -547,6 +571,9 @@ class WindowState:
 
         self.need_resize = True
 
+    def should_close(self):
+        return glfwWindowShouldClose(self.window)
+
     def shutdown(self):
         glfwTerminate()
 
@@ -564,7 +591,10 @@ class WindowState:
 
 
 class InputState:
-    def __init__(self):
+    def __init__(self, glfw_window, imgui_state):
+        self.glfw_window = glfw_window
+        self.imgui_state = imgui_state
+
         self.first_mouse = True
         self.last_x = screen.width / 2
         self.last_y = screen.height / 2
@@ -589,6 +619,29 @@ class InputState:
 
         return xoffset, yoffset
 
+    def _pressed(self, key):
+        return glfwGetKey(self.glfw_window.window, key) == GLFW_PRESS
+
+    def process_input(self, delta_time, camera):
+        if self.imgui_state.want_text_input():
+            return
+        
+        if render_settings.render_mode == "path_tracing":
+            return
+        
+        if self._pressed(GLFW_KEY_W):
+            camera.process_keyboard(CameraMovement.FORWARD, delta_time)
+        if self._pressed(GLFW_KEY_S):
+            camera.process_keyboard(CameraMovement.BACKWARD, delta_time)
+        if self._pressed(GLFW_KEY_A):
+            camera.process_keyboard(CameraMovement.LEFT, delta_time)
+        if self._pressed(GLFW_KEY_D):
+            camera.process_keyboard(CameraMovement.RIGHT, delta_time)
+        if self._pressed(GLFW_KEY_SPACE):
+            camera.process_keyboard(CameraMovement.UP, delta_time)
+        if self._pressed(GLFW_KEY_LEFT_SHIFT):
+            camera.process_keyboard(CameraMovement.DOWN, delta_time)
+
 
 class UIState:
     def __init__(self):
@@ -609,7 +662,7 @@ class ImguiState:
     def want_capture_mouse(self):
         return imgui.get_io().want_capture_mouse
 
-    def want_capture_input(self):
+    def want_text_input(self):
         return imgui.get_io().want_text_input
 
     def begin_frame(self):
@@ -641,26 +694,24 @@ class ImguiState:
 
 
 class GlfwCallbackState:
-    def __init__(self, window_state, input_state, ui_state, imgui_state, camera):
-        self.window_state = window_state
+    def __init__(self, glfw_window, input_state, ui_state, imgui_state, camera):
+        self.glfw_window = glfw_window
         self.input_state = input_state
         self.ui_state = ui_state
         self.imgui_state = imgui_state
         self.camera = camera
 
-        self.window = self.window_state.window
-        self.impl = imgui_state.impl
-
     def set_callbacks(self):
-        glfwSetCursorPosCallback(self.window, self._mouse_callback)
-        glfwSetScrollCallback(self.window, self._scroll_callback)
-        glfwSetMouseButtonCallback(self.window, self._mouse_button_callback)
-        glfwSetKeyCallback(self.window, self._key_callback)
-        glfwSetFramebufferSizeCallback(self.window, self._framebuffer_size_callback)
-        glfwSetWindowSizeLimits(self.window, 400, 300, GLFW_DONT_CARE, GLFW_DONT_CARE)
+        window = self.glfw_window.window
+        glfwSetCursorPosCallback(window, self._mouse_callback)
+        glfwSetScrollCallback(window, self._scroll_callback)
+        glfwSetMouseButtonCallback(window, self._mouse_button_callback)
+        glfwSetKeyCallback(window, self._key_callback)
+        glfwSetFramebufferSizeCallback(window, self._framebuffer_size_callback)
+        glfwSetWindowSizeLimits(window, 400, 300, GLFW_DONT_CARE, GLFW_DONT_CARE)
 
     def _framebuffer_size_callback(self, window, width, height):
-        self.window_state.resize(width, height)
+        self.glfw_window.resize(width, height)
 
     def _key_callback(self, window, key, scancode, action, mods):
         self.imgui_state.forward_key(window, key, scancode, action, mods)
@@ -680,11 +731,11 @@ class GlfwCallbackState:
         if button == GLFW_MOUSE_BUTTON_MIDDLE:
             if action == GLFW_PRESS:
                 self.input_state.begin_drag()
-                self.window_state.disable_cursor()
+                self.glfw_window.disable_cursor()
                 
             elif action == GLFW_RELEASE:
                 self.input_state.end_drag()
-                self.window_state.enable_cursor()
+                self.glfw_window.enable_cursor()
 
     def _mouse_callback(self, window, xpos, ypos):
         self.imgui_state.forward_mouse(window, xpos, ypos)
