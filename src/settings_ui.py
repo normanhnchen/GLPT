@@ -775,63 +775,67 @@ class SettingsUI:
         self.camera_capturing_ui.draw_remove_state_button()
 
     def draw(self, settings_window):
-        if settings_window:
-            imgui.set_next_window_size((600, 600))
-            is_expand, settings_window = imgui.begin("Settings", settings_window)
+        if not settings_window:
+            return settings_window
 
-            if ai_training_settings.camera_setup_mode:
-                if is_expand:
-                    if imgui.tree_node("Camera UI"):
-                        self.draw_camera_ui()
+        imgui.set_next_window_size((600, 600))
+        is_expand, settings_window = imgui.begin("Settings", settings_window)
 
-                        imgui.tree_pop()
+        if ai_training_settings.camera_setup_mode:
+            if is_expand:
+                if imgui.tree_node("Camera UI"):
+                    self.draw_camera_ui()
+
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Post Processing"):
+                    self.draw_post_processing_ui()
+
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Screen"):
+                    self.draw_screen_ui()
+
+                    imgui.tree_pop()
                     
-                    if imgui.tree_node("Post Processing"):
-                        self.draw_post_processing_ui()
+                if imgui.tree_node("AI Training"):
+                    self.draw_scene_ui()
+                    self.draw_camera_capturing_ui()
 
-                        imgui.tree_pop()
-                    
-                    if imgui.tree_node("Screen"):
-                        self.draw_screen_ui()
+                    imgui.tree_pop()
+        
+        else:
+            if is_expand:
+                if imgui.tree_node("Rendering"):
+                    self.draw_rendering_ui()
 
-                        imgui.tree_pop()
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Path Tracing"):
+                    self.draw_path_tracing_ui()
                         
-                    if imgui.tree_node("AI Training"):
-                        self.draw_scene_ui()
-                        self.draw_camera_capturing_ui()
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Camera UI"):
+                    self.draw_camera_ui()
 
-                        imgui.tree_pop()
-            
-            else:
-                if is_expand:
-                    if imgui.tree_node("Rendering"):
-                        self.draw_rendering_ui()
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Post Processing"):
+                    self.draw_post_processing_ui()
 
-                        imgui.tree_pop()
-                    
-                    if imgui.tree_node("Path Tracing"):
-                        self.draw_path_tracing_ui()
-                            
-                        imgui.tree_pop()
-                    
-                    if imgui.tree_node("Camera UI"):
-                        self.draw_camera_ui()
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Screen"):
+                    self.draw_screen_ui()
 
-                        imgui.tree_pop()
-                    
-                    if imgui.tree_node("Post Processing"):
-                        self.draw_post_processing_ui()
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Debug"):
+                    self.draw_debug_ui()
 
-                        imgui.tree_pop()
-                    
-                    if imgui.tree_node("Screen"):
-                        self.draw_screen_ui()
+                    imgui.tree_pop()
+        
+        imgui.end()
 
-                        imgui.tree_pop()
-                    
-                    if imgui.tree_node("Debug"):
-                        self.draw_debug_ui()
-
-                        imgui.tree_pop()
-            
-            imgui.end()
+        return settings_window

@@ -8,6 +8,7 @@ import time
 from glfw.GLFW import *
 import sys
 from imgui_bundle import imgui
+from imgui_bundle.python_backends.glfw_backend import GlfwRenderer
 
 from src.dtypes import *
 from src.settings import *
@@ -597,15 +598,58 @@ class UIState:
         self.settings_window = not self.settings_window
 
 
+class ImguiState:
+    def __init__(self):
+        self.impl = None
+
+    def create(self, window):
+        imgui.create_context()
+        self.impl = GlfwRenderer(window)
+
+    def want_capture_mouse(self):
+        return imgui.get_io().want_capture_mouse
+
+    def want_capture_input(self):
+        return imgui.get_io().want_text_input
+
+    def begin_frame(self):
+        self.impl.process_inputs()
+        imgui.new_frame()
+
+    def end_frame(self):
+        imgui.render()
+        self.impl.render(imgui.get_draw_data())
+
+    def shutdown(self):
+        self.impl.shutdown()
+
+    def forward_mouse(self, window, xpos, ypos):
+        if hasattr(self.impl, "mouse_callback"):
+            self.impl.mouse_callback(window, xpos, ypos)
+
+    def forward_key(self, window, key, scancode, action, mods):
+        if hasattr(self.impl, "keyboard_callback"):
+            self.impl.keyboard_callback(window, key, scancode, action, mods)
+
+    def forward_mouse_button(self, window, button, action, mods):
+        if hasattr(self.impl, "mouse_button_callback"):
+            self.impl.mouse_button_callback(window, button, action, mods)
+
+    def forward_scroll(self, window, xoffset, yoffset):
+        if hasattr(self.impl, "scroll_callback"):
+            self.impl.scroll_callback(window, xoffset, yoffset)
+
+
 class GlfwCallbackState:
-    def __init__(self, window_state, input_state, ui_state, camera, impl):
+    def __init__(self, window_state, input_state, ui_state, imgui_state, camera):
         self.window_state = window_state
         self.input_state = input_state
         self.ui_state = ui_state
+        self.imgui_state = imgui_state
         self.camera = camera
 
         self.window = self.window_state.window
-        self.impl = impl
+        self.impl = imgui_state.impl
 
     def set_callbacks(self):
         glfwSetCursorPosCallback(self.window, self._mouse_callback)
@@ -619,17 +663,15 @@ class GlfwCallbackState:
         self.window_state.resize(width, height)
 
     def _key_callback(self, window, key, scancode, action, mods):
-        if hasattr(self.impl, "keyboard_callback"):
-            self.impl.keyboard_callback(window, key, scancode, action, mods)
+        self.imgui_state.forward_key(window, key, scancode, action, mods)
 
         if key == GLFW_KEY_ESCAPE and action == GLFW_PRESS:
             self.ui_state.toggle_settings()
 
     def _mouse_button_callback(self, window, button, action, mods):
-        if hasattr(self.impl, "mouse_button_callback"):
-            self.impl.mouse_button_callback(window, button, action, mods)
+        self.imgui_state.forward_mouse_button(window, button, action, mods)
         
-        if imgui.get_io().want_capture_mouse:
+        if self.imgui_state.want_capture_mouse():
             return
 
         if render_settings.render_mode == "path_tracing":
@@ -645,10 +687,9 @@ class GlfwCallbackState:
                 self.window_state.enable_cursor()
 
     def _mouse_callback(self, window, xpos, ypos):
-        if hasattr(self.impl, "mouse_callback"):
-            self.impl.mouse_callback(window, xpos, ypos)
+        self.imgui_state.forward_mouse(window, xpos, ypos)
         
-        if imgui.get_io().want_capture_mouse:
+        if self.imgui_state.want_capture_mouse():
             return
 
         if render_settings.render_mode == "path_tracing":
@@ -660,10 +701,9 @@ class GlfwCallbackState:
             self.camera.process_mouse_movement(xoffset, yoffset)
 
     def _scroll_callback(self, window, xoffset, yoffset):
-        if hasattr(self.impl, "scroll_callback"):
-            self.impl.scroll_callback(window, xoffset, yoffset)
+        self.imgui_state.forward_scroll(window, xoffset, yoffset)
         
-        if imgui.get_io().want_capture_mouse:
+        if self.imgui_state.want_capture_mouse():
             return
         
         if render_settings.render_mode == "path_tracing":

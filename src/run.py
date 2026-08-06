@@ -26,17 +26,15 @@ def main():
     window_state = WindowState()
     input_state = InputState()
     ui_state = UIState()
+    imgui_state = ImguiState()
 
     window_state.create("FPS: 0 | Samples: 0")
 
     ctx = moderngl.create_context()
 
-    imgui.create_context()
+    imgui_state.create(window_state.window)
 
-    global impl
-    impl = GlfwRenderer(window_state.window)
-
-    glfw_callback_state = GlfwCallbackState(window_state, input_state, ui_state, camera, impl)
+    glfw_callback_state = GlfwCallbackState(window_state, input_state, ui_state, imgui_state, camera)
     # Set callbacks after so imgui doesn't override them
     glfw_callback_state.set_callbacks()
 
@@ -140,14 +138,9 @@ def main():
         ctx.clear(0, 0, 0, 1)
 
         window_state.poll()
-
         process_input(window_state.window, frame_stats.delta_time)
-
-        impl.process_inputs()
-        
-        imgui.new_frame()
-
-        settings_ui.draw(ui_state.settings_window)
+        imgui_state.begin_frame()
+        ui_state.settings_window = settings_ui.draw(ui_state.settings_window)
         
         if pt_state.denoising.should_denoise:
             pt_state.denoise(ai_denoiser)
@@ -291,19 +284,14 @@ def main():
 
             raster_quad.draw()
     
-        # Render UI
-        # ---------
-        imgui.render()
-        impl.render(imgui.get_draw_data())
-
+        imgui_state.end_frame()
         window_state.swap()
-
         frame_stats.increment_frame_count()
 
         cap_fps(frame_stats.frame_start, screen.fps_cap)
     
-    impl.shutdown()
-    glfwTerminate()
+    imgui_state.shutdown()
+    window_state.shutdown()
 
 
 def cap_fps(frame_start, target_fps):
