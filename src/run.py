@@ -13,7 +13,6 @@ from src.camera import *
 from src.model import *
 from src.render_state import *
 from src.buffer_loading import *
-from src.draw_passes import *
 from src.bvh_builder import *
 from src.settings_ui import *
 from src.network import *
@@ -52,9 +51,6 @@ def main():
     scene_state = SceneState()
     camera_capture_state = CameraCaptureState(scene_state, camera)
     frame_stats = FrameStatsState()
-
-    pt_quad = FullScreenQuad(ctx, pt_shaders.final)
-    raster_quad = FullScreenQuad(ctx, raster_shaders.final)
 
     camera_buffer = CameraBuffer(camera)
     material_buffer = MaterialBuffer(scene)
@@ -98,8 +94,8 @@ def main():
     # Load saved weights and biases
     ai_denoiser.load_state_dict(torch.load("src/denoiser/checkpoint.pt")["model_state_dict"])
 
-    pt_pipeline = PathTracingPipeline(scene, pt_state, pt_shaders, pt_quad)
-    raster_pipeline = RasterizationPipeline(ctx, scene, camera, raster_state, raster_shaders, raster_quad)
+    pt_pipeline = PathTracingPipeline(ctx, scene, pt_state, pt_shaders)
+    raster_pipeline = RasterizationPipeline(ctx, scene, camera, raster_state, raster_shaders)
 
     frame_stats.start_tracking()
 
@@ -143,6 +139,7 @@ def main():
         ui_state.settings_window = settings_ui.draw(ui_state.settings_window)
         
         if pt_state.denoising.should_denoise:
+            continue
             pt_state.denoise(ai_denoiser)
 
             # Draw to screen
@@ -161,6 +158,7 @@ def main():
             pt_quad.draw()
 
         elif pt_state.rendering.should_view_saved:
+            continue
             # Draw texture to screen depending on the debug mode
             # Currently broken!
             if pt_state.rendering.debug_mode == "off":
@@ -188,9 +186,6 @@ def main():
             pt_pipeline.render()
         
         elif render_settings.render_mode == "rasterization":
-            raster_state.raster_fbo.use()
-            raster_state.raster_fbo.clear(0.0, 0.0, 0.0, 1.0)
-
             raster_pipeline.render()
     
         imgui_state.end_frame()

@@ -1,4 +1,5 @@
 from src.settings import *
+from src.fullscreen_quad import *
 
 
 def _compute_uniforms():
@@ -16,10 +17,10 @@ def _set_uniforms(prog, uniform_dict):
 
 
 class FinalPass:
-    def __init__(self, shader, pt_state, quad):
+    def __init__(self, ctx, shader, pt_state):
         self.shader = shader
         self.pt_state = pt_state
-        self.quad = quad
+        self.quad = FullScreenQuad(ctx, shader)
 
     def render(self):
         # Draw to screen

@@ -3,10 +3,10 @@ from src.passes.path_tracing.final import *
 
 
 class PathTracingPipeline:
-    def __init__(self, scene, pt_state, pt_shaders, pt_quad):
+    def __init__(self, ctx, scene, pt_state, pt_shaders):
         self.pt_state = pt_state
         self.pt_pass = PathTracePass(scene, pt_state, pt_shaders.pt)
-        self.final_pass = FinalPass(pt_shaders.final, pt_state, pt_quad)
+        self.final_pass = FinalPass(ctx, pt_shaders.final, pt_state)
 
     def render(self):
         if self.pt_state.rendering.should_render:
