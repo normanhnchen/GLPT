@@ -83,18 +83,18 @@ def main():
         ctx.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
 
     settings_ui = SettingsUI(
-            pt_state,
-            scene_state,
-            camera_capture_state,
-            camera_buffer,
-            camera
-        )
+        pt_state,
+        scene_state,
+        camera_capture_state,
+        camera_buffer,
+        camera
+    )
 
     ai_denoiser = KPCN()
     # Load saved weights and biases
     ai_denoiser.load_state_dict(torch.load("src/denoiser/checkpoint.pt")["model_state_dict"])
 
-    pt_pipeline = PathTracingPipeline(ctx, scene, pt_state, pt_shaders)
+    pt_pipeline = PathTracingPipeline(ctx, scene, pt_state, pt_shaders, ai_denoiser)
     raster_pipeline = RasterizationPipeline(ctx, scene, camera, raster_state, raster_shaders)
 
     frame_stats.start_tracking()
@@ -137,52 +137,8 @@ def main():
         input_state.process_input(frame_stats.delta_time, camera)
         imgui_state.begin_frame()
         ui_state.settings_window = settings_ui.draw(ui_state.settings_window)
-        
-        if pt_state.denoising.should_denoise:
-            continue
-            pt_state.denoise(ai_denoiser)
 
-            # Draw to screen
-            pt_state.denoising.saved_denoised.use(location=0)
-
-            # Prevent resizing saved texture
-            # Clips the image
-            ctx.viewport = (0, 0, *pt_state.framebuffers.saved_combined.size)
-
-            # Post Processing
-            # ---------------
-            pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
-            
-            pt_shaders.final.set_tonemap(post_process_settings.tonemap)
-
-            pt_quad.draw()
-
-        elif pt_state.rendering.should_view_saved:
-            continue
-            # Draw texture to screen depending on the debug mode
-            # Currently broken!
-            if pt_state.rendering.debug_mode == "off":
-                pt_state.framebuffers.saved_combined.use(location=0)
-            elif pt_state.rendering.debug_mode == "albedo":
-                pt_state.framebuffers.saved_albedo.use(location=0)
-            elif pt_state.rendering.debug_mode == "normal":
-                pt_state.framebuffers.saved_normal.use(location=0)
-            elif pt_state.rendering.debug_mode == "depth":
-                pt_state.framebuffers.saved_depth.use(location=0)
-
-            # Prevent resizing saved texture to new screen dimensions
-            # Doesn't matter which saved texture to use since all are saved at the same dimensions
-            ctx.viewport = (0, 0, *pt_state.framebuffers.saved_combined.size)
-
-            # Post Processing
-            # ---------------
-            pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
-            
-            pt_shaders.final.set_tonemap(post_process_settings.tonemap)
-
-            pt_quad.draw()
-
-        elif render_settings.render_mode == "path_tracing":
+        if render_settings.render_mode == "path_tracing":
             pt_pipeline.render()
         
         elif render_settings.render_mode == "rasterization":
