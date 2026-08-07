@@ -9,17 +9,21 @@ def _compute_uniforms():
 
 def _set_uniforms(prog, uniform_dict):
     for uniform, value in uniform_dict.items():
-        prog[uniform].value = value
+        if isinstance(value, bytes):
+            prog[uniform].write(value)
+        else:
+            prog[uniform].value = value
 
 
 class FinalPass:
-    def __init__(self, shader, quad):
+    def __init__(self, shader, pt_state, quad):
         self.shader = shader
+        self.pt_state = pt_state
         self.quad = quad
 
-    def render(self, texture):
+    def render(self):
         # Draw to screen
-        texture.use(location=0)
+        self.pt_state.framebuffers.combined.use(location=0)
 
         uniform_dict = _compute_uniforms()
         _set_uniforms(self.shader.prog, uniform_dict)

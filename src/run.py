@@ -18,6 +18,7 @@ from src.bvh_builder import *
 from src.settings_ui import *
 from src.network import *
 from src.pipelines.path_tracing import *
+from src.pipelines.rasterization import *
 
 
 def main():
@@ -54,9 +55,6 @@ def main():
 
     pt_quad = FullScreenQuad(ctx, pt_shaders.final)
     raster_quad = FullScreenQuad(ctx, raster_shaders.final)
-
-    pbr_pass = PBRPass(ctx, scene, raster_shaders.pbr)
-    bg_pass = BGPass(ctx, raster_shaders.bg)
 
     camera_buffer = CameraBuffer(camera)
     material_buffer = MaterialBuffer(scene)
@@ -101,6 +99,7 @@ def main():
     ai_denoiser.load_state_dict(torch.load("src/denoiser/checkpoint.pt")["model_state_dict"])
 
     pt_pipeline = PathTracingPipeline(scene, pt_state, pt_shaders, pt_quad)
+    raster_pipeline = RasterizationPipeline(ctx, scene, camera, raster_state, raster_shaders, raster_quad)
 
     frame_stats.start_tracking()
 
@@ -163,6 +162,7 @@ def main():
 
         elif pt_state.rendering.should_view_saved:
             # Draw texture to screen depending on the debug mode
+            # Currently broken!
             if pt_state.rendering.debug_mode == "off":
                 pt_state.framebuffers.saved_combined.use(location=0)
             elif pt_state.rendering.debug_mode == "albedo":
@@ -191,41 +191,7 @@ def main():
             raster_state.raster_fbo.use()
             raster_state.raster_fbo.clear(0.0, 0.0, 0.0, 1.0)
 
-            # Background Shader
-            # -----------------
-            ctx.depth_func = "<="
-
-            # Vertex shader uniforms
-            raster_shaders.bg.prog["view"].write(camera.get_view().to_bytes())
-            raster_shaders.bg.prog["projection"].write(camera.get_perspective().to_bytes())
-            raster_shaders.bg.prog["hdriExposure"].value = post_process_settings.hdri_exposure
-
-            bg_pass.draw()
-
-            ctx.depth_func = "<"
-
-            # PBR Shader
-            # ----------
-            # Vertex shader uniforms
-            raster_shaders.pbr.prog["view"].write(camera.get_view().to_bytes())
-            raster_shaders.pbr.prog["projection"].write(camera.get_perspective().to_bytes())
-
-            # Fragment shader uniforms
-            raster_shaders.pbr.prog["numLights"].value = set_i4(scene.num_lights)
-            raster_shaders.pbr.prog["cameraPos"].value = camera.pos
-
-            pbr_pass.draw()
-
-            ctx.screen.use()
-            raster_state.raster_color_tex.use(location=0)
-
-            # Post Processing
-            # ---------------
-            raster_shaders.final.prog["exposure"].value = post_process_settings.exposure
-            
-            raster_shaders.final.set_tonemap(post_process_settings.tonemap)
-
-            raster_quad.draw()
+            raster_pipeline.render()
     
         imgui_state.end_frame()
         glfw_window.swap()

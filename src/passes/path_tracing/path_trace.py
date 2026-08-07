@@ -38,24 +38,29 @@ def _compute_uniforms(scene, pt_state):
 
 def _set_uniforms(prog, uniform_dict):
     for uniform, value in uniform_dict.items():
-        prog[uniform].value = value
+        if isinstance(value, bytes):
+            prog[uniform].write(value)
+        else:
+            prog[uniform].value = value
 
 
 class PathTracePass:
-    def __init__(self, compute_shader):
+    def __init__(self, scene, pt_state, compute_shader):
+        self.scene = scene
+        self.pt_state = pt_state
         self.shader = compute_shader
 
-    def render(self, scene, pt_state):
-        uniform_dict = _compute_uniforms(scene, pt_state)
+    def render(self):
+        uniform_dict = _compute_uniforms(self.scene, self.pt_state)
         _set_uniforms(self.shader.prog, uniform_dict)
 
         # Apply ceiling function
         # Allows the compute shader to reach the entire screen
-        groups_x = (pt_state.tiles.tile_width + 15) // 16
-        groups_y = (pt_state.tiles.tile_height + 15) // 16
+        groups_x = (self.pt_state.tiles.tile_width + 15) // 16
+        groups_y = (self.pt_state.tiles.tile_height + 15) // 16
 
-        pt_state.advance_render()
+        self.pt_state.advance_render()
         
         # Dispatch compute shader
-        pt_state.framebuffers.bind_to_images()
+        self.pt_state.framebuffers.bind_to_images()
         self.shader.prog.run(groups_x, groups_y)
