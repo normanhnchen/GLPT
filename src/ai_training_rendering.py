@@ -13,8 +13,11 @@ from src.camera import *
 from src.model import *
 from src.render_state import *
 from src.buffer_loading import *
-from src.draw_passes import *
+from src.bvh_builder import *
 from src.settings_ui import *
+from src.network import *
+from src.pipelines.path_tracing import *
+from src.pipelines.rasterization import *
 
 
 camera = Camera()
@@ -29,56 +32,42 @@ need_resize = False
 
 
 def main():
-    if not glfwInit():
-        return "Failed to initialize GLFW"
+    glfw_window = GlfwWindow()
+    imgui_state = ImguiState()
+    input_state = InputState(glfw_window, imgui_state)
+    ui_state = UIState()
+    camera = Camera()
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4)
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6)
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE)
-    # Apple system required config
-    if sys.platform == "darwin":
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE)
-    
-    window = glfwCreateWindow(screen.width, screen.height, "FPS: 0 | Samples: 0", None, None)
-
-    if not window:
-        return "Failed to create GLFW window"
-    
-    glfwMakeContextCurrent(window)
-    if screen.vsync == True:
-        glfwSwapInterval(1)
-    else:
-        glfwSwapInterval(0)
+    glfw_window.create("FPS: 0 | Samples: 0")
 
     ctx = moderngl.create_context()
 
-    imgui.create_context()
-
-    global impl
-    impl = GlfwRenderer(window)
+    imgui_state.create(glfw_window.window)
     
+    glfw_callback_state = GlfwCallbackState(glfw_window, input_state, ui_state, imgui_state, camera)
     # Set callbacks after so imgui doesn't override them
-    glfw_set_callbacks(window)
+    glfw_callback_state.set_callbacks()
 
+    scene = load_scene(file_paths.scene)
+    scene.hdri = HDRI(file_paths.hdri)
+    
     pt_shaders = PTShaders(ctx)
     raster_shaders = RasterShaders(ctx)
     
-    global pt_state
-    global raster_state
-    global post_process_state
     pt_state = PTState(ctx)
     raster_state = RasterState(ctx)
-    post_process_state = PostProcessState()
-    export_state = ExportState(pt_state)
+    final_output_state = FinalOutputState(ctx)
+    export_state = ExportState(pt_state, final_output_state)
     scene_state = SceneState()
     camera_capture_state = CameraCaptureState(scene_state, camera)
+    frame_stats = FrameStatsState()
 
-    pt_quad = FullScreenQuad(ctx, pt_shaders.final)
-    raster_quad = FullScreenQuad(ctx, raster_shaders.final)
+    pt_pipeline = PathTracingPipeline(ctx, scene, pt_state, final_output_state, pt_shaders)
+    raster_pipeline = RasterizationPipeline(ctx, scene, camera, raster_state, raster_shaders)
+   
+    frame_stats.start_tracking()
 
-    while not glfwWindowShouldClose(window):
-        glfwSetWindowShouldClose(window, False)
-
+    while not glfw_window.should_close():
         if scene_state.ai_training_finished:
             break
 
@@ -86,9 +75,6 @@ def main():
         file_paths.hdri = scene_state.curr_hdri_file
         scene = load_scene(file_paths.scene)
         scene.hdri = HDRI(file_paths.hdri)
-
-        pbr_pass = PBRPass(ctx, scene, raster_shaders.pbr)
-        bg_pass = BGPass(ctx, raster_shaders.bg)
         
         if not ai_training_settings.camera_setup_mode:
             camera_capture_state.load_next_state()
@@ -119,13 +105,9 @@ def main():
 
         scene.hdri.bind_img(ctx, 6)
         scene.hdri.bind_cdfs(ctx, 7, 8)
-        
-        last_frame_start = 0
-        stats_start_time = time.perf_counter()
 
-        avg_fps = 0
-
-        stats_frame_count = 0
+        bvh_state = BVHState(ctx, scene)
+        bvh_state.build()
 
         if render_settings.render_mode == "path_tracing":
             ctx.disable(moderngl.DEPTH_TEST)
@@ -133,231 +115,91 @@ def main():
             ctx.enable(moderngl.DEPTH_TEST)
             ctx.enable(moderngl.BLEND)
             ctx.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
-        
-        global settings_window
-        settings_window = False
-
-        global need_resize
 
         settings_ui = SettingsUI(
             pt_state,
-            post_process_state,
             scene_state,
             camera_capture_state,
+            export_state,
+            bvh_state,
             camera_buffer,
             camera
         )
 
+        frame_stats.start_tracking()
+
         is_first_render = True
 
         # Render loop
-        while not glfwWindowShouldClose(window):
-            frame_start = time.perf_counter()
-            delta_time = frame_start - last_frame_start
-            last_frame_start = frame_start
+        while not glfw_window.should_close():
+            frame_stats.track()
 
             if screen.width <= 0 or screen.height <= 0:
                 glfwPollEvents()
                 continue
 
-            stats_elapsed_time = time.perf_counter() - stats_start_time
+            bvh_state.update(4, 5)
             
-            # Log stats every 0.5 seconds
-            if stats_elapsed_time >= 0.5:
-                # Calculate average FPS over the 0.5 second window
-                avg_fps = stats_frame_count / stats_elapsed_time
-
-                # Reset stats counters
-                stats_start_time = time.perf_counter()
-                stats_frame_count = 0
-            
-            if need_resize:
-                pt_state.resize()
+            if glfw_window.need_resize:
+                pt_state.reset()
                 raster_state.resize()
 
                 ctx.screen.use()
                 ctx.viewport = (0, 0, screen.width, screen.height)
 
-                need_resize = False
+                glfw_window.need_resize = False
             
             if scene_state.ai_training_finished:
                 break
 
-            update_stats(window, avg_fps, pt_state.total_samples, pt_state.render_complete)
+            update_stats(glfw_window, pt_state, frame_stats.avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
+
+            ctx.screen.use()
+            ctx.viewport = (0, 0, screen.width, screen.height)
             
             ctx.clear(0, 0, 0, 1)
 
-            glfwPollEvents()
-
-            process_input(window, delta_time)
-
-            impl.process_inputs()
-            
-            imgui.new_frame()
-
-            settings_ui.draw(settings_window)
+            glfw_window.poll()
+            input_state.process_input(frame_stats.delta_time, camera)
+            imgui_state.begin_frame()
+            ui_state.settings_window = settings_ui.draw(ui_state.settings_window)
             
             if not ai_training_settings.camera_setup_mode:
-                if is_first_render:
-                    pt_state.start_render(camera_buffer)
+                if is_first_render and bvh_state.ready:
+                    pt_state.start_render()
                     is_first_render = False
                 
                 render_settings.render_mode = "path_tracing"
-                pt_state.should_render = True
+                pt_state.rendering.should_render = True
 
             if render_settings.render_mode == "path_tracing":
-                if pt_state.total_samples >= pt_settings.max_samples:
-                    camera_capture_state.load_next_state()
-                    
-                    if scene_state.changed_scene:
-                        imgui.render()
-                        impl.render(imgui.get_draw_data())
-                        glfwSwapBuffers(window)
-                        scene_state.changed_scene = False
-                        break
- 
-                    pt_state.start_render(camera_buffer)
-                    pt_state.should_render = False
-                
-                if pt_state.should_render:
-                    aspect_ratio = screen.width / max(screen.height, 1)
-                    pt_shaders.pt.prog["aspectRatio"].value = set_f4(aspect_ratio)
+                if bvh_state.ready:
+                    pt_pipeline.render()
 
-                    # Prevent the samples from going over the max samples limit
-                    samples_left = pt_settings.max_samples - pt_state.total_samples
-    
-                    if samples_left < pt_settings.spp:
-                        pt_shaders.pt.prog["samplesPerPixel"].value = samples_left
-                    else:
-                        pt_shaders.pt.prog["samplesPerPixel"].value = pt_settings.spp
-                    
-                    pt_shaders.pt.prog["totalSamples"].value = pt_state.total_samples
-                    
-                    pt_shaders.pt.prog["maxTotalBounces"].value = pt_settings.total_bounces
-                    pt_shaders.pt.prog["maxDiffuseBounces"].value = pt_settings.diffuse_bounces
-                    pt_shaders.pt.prog["maxSpecularBounces"].value = pt_settings.specular_bounces
-                    pt_shaders.pt.prog["maxTransmissionBounces"].value = pt_settings.transmission_bounces
-    
-                    pt_shaders.pt.prog["blur"].value = post_process_settings.blur
-    
-                    pt_shaders.pt.prog["hdriExposure"].value = post_process_settings.hdri_exposure
-    
-                    pt_shaders.pt.prog["depthFactor"].value = 1 / scene.extent
-    
-                    pt_shaders.pt.prog["numFiniteLights"].value = scene.num_finite_lights
-                    pt_shaders.pt.prog["numEmissiveTriangles"].value = scene.num_emissive_triangles
-    
-                    pt_shaders.pt.prog["specularMode"].value = pt_state.specular_mode
-                    pt_shaders.pt.prog["geometryMode"].value = pt_state.geometry_mode
-                    pt_shaders.pt.prog["transmissionMode"].value = pt_state.transmission_mode
-                    pt_shaders.pt.prog["misMode"].value = pt_state.mis_mode
+                    if ai_training_settings.ai_training_mode and pt_state.rendering.should_render:
+                        export_state.auto_save_training_renders()
 
-                    # Apply ceiling function
-                    # Allows the compute shader to reach the entire screen
-                    groups_x = (pt_state.tile_width + 15) // 16
-                    groups_y = (pt_state.tile_height + 15) // 16
-
-                    offset_x = pt_state.curr_tile_x
-                    offset_y = pt_state.curr_tile_y
-
-                    pt_shaders.pt.prog["uOffset"].value = np.array([offset_x, offset_y], dtype=i4)
-
-                    pt_state.curr_tile_x += pt_state.tile_width
-                    if pt_state.curr_tile_x > screen.width:
-                        pt_state.curr_tile_x = 0
-                        pt_state.curr_tile_y += pt_state.tile_height
-                    
-                    if pt_state.curr_tile_y > screen.height:
-                        pt_state.curr_tile_y = 0
-
-                        # Finished rendering entire screen
-                        if samples_left < pt_settings.spp:
-                            pt_state.total_samples += samples_left
-                        else:
-                            pt_state.total_samples += pt_settings.spp
+                    if pt_state.rendering.render_complete:
+                        camera_capture_state.load_next_state()
                         
-                            if ai_training_settings.ai_training_mode:
-                                export_state.auto_save_training_renders()
-                    
-                    # Run compute shader
-                    pt_state.combined_pass.bind_to_image(0, read=True, write=True)
-                    pt_state.albedo_pass.bind_to_image(1, read=True, write=True)
-                    pt_state.normal_pass.bind_to_image(2, read=True, write=True)
-                    pt_state.depth_pass.bind_to_image(3, read=True, write=True)
-                    pt_shaders.pt.prog.run(groups_x, groups_y)
-                
-                # Draw to screen
-                pt_state.combined_pass.use(location=0)
+                        if scene_state.changed_scene:
+                            imgui_state.end_frame()
+                            glfw_window.swap()
+                            scene_state.changed_scene = False
 
-                # Post Processing
-                # ---------------
-                pt_shaders.final.prog["exposure"].value = post_process_settings.exposure
-                
-                # Options:
-                #   - None
-                #   - ACESFilm
-                #   - AgX, AgXGolden, AgXPunchy
-                #   - Filmic
-                #   - Lottes
-                #   - Neutral
-                #   - Reinhard, Reinhard2
-                #   - Uchimura
-                #   - Uncharted2
-                #   - Unreal
-                pt_shaders.final.set_tonemap(post_process_settings.tonemap)
-
-                pt_quad.draw()
+                            break
+        
+                        camera_buffer.update_data()
+                        pt_state.start_render()
             
             elif render_settings.render_mode == "rasterization":
-                raster_state.raster_fbo.use()
-                raster_state.raster_fbo.clear(0.0, 0.0, 0.0, 1.0)
-
-                # Background Shader
-                # -----------------
-                ctx.depth_func = "<="
-
-                # Vertex shader uniforms
-                raster_shaders.bg.prog["view"].write(camera.get_view().to_bytes())
-                raster_shaders.bg.prog["projection"].write(camera.get_perspective().to_bytes())
-                raster_shaders.bg.prog["hdriExposure"].value = post_process_settings.hdri_exposure
-
-                bg_pass.draw()
-
-                ctx.depth_func = "<"
-
-                # PBR Shader
-                # ----------
-                # Vertex shader uniforms
-                raster_shaders.pbr.prog["view"].write(camera.get_view().to_bytes())
-                raster_shaders.pbr.prog["projection"].write(camera.get_perspective().to_bytes())
-
-                # Fragment shader uniforms
-                raster_shaders.pbr.prog["numLights"].value = set_i4(scene.num_lights)
-                raster_shaders.pbr.prog["cameraPos"].value = camera.pos
-
-                pbr_pass.draw()
-
-                ctx.screen.use()
-                raster_state.raster_color_tex.use(location=0)
-
-                # Post Processing
-                # ---------------
-                raster_shaders.final.prog["exposure"].value = post_process_settings.exposure
-                
-                raster_shaders.final.set_tonemap(post_process_settings.tonemap)
-
-                raster_quad.draw()
+                raster_pipeline.render()
         
-            # Render UI
-            # ---------
-            imgui.render()
-            impl.render(imgui.get_draw_data())
-
-            glfwSwapBuffers(window)
-
-            stats_frame_count += 1
-
-            cap_fps(frame_start, screen.fps_cap)
+            imgui_state.end_frame()
+            glfw_window.swap()
+            frame_stats.increment_frame_count()
+    
+            frame_stats.cap_fps(screen.fps_cap)
 
             if scene_state.changed_scene:
                 scene_state.changed_scene = False
@@ -365,166 +207,18 @@ def main():
         
         scene.release_all()
     
-    impl.shutdown()
-    glfwTerminate()
+    imgui_state.shutdown()
+    glfw_window.shutdown()
 
 
-def cap_fps(frame_start, target_fps):
-    target_duration = 1 / target_fps
-    # Target time when the target_fps is reached
-    target_time = frame_start + target_duration
-
-    # Sleep/wait until the target_time is reached
-    while True:
-        remaining_time = target_time - time.perf_counter()
-
-        if remaining_time <= 0:
-            break
-        
-        # Sleep for the majority of the time to save CPU resources
-        if remaining_time > 0.001:
-            # Sleep for half of the remaining time
-            # This methods allow sleeping precision as remaining time approaches zero
-            sleep_time = remaining_time * 0.5
-            time.sleep(sleep_time)
-        
-        # Wait until the target time is reached
-        else:
-            pass
-
-
-def update_stats(window, fps, samples, render_complete):
+def update_stats(glfw_window, pt_state, fps, samples, render_complete):
     if render_settings.render_mode == "path_tracing":
-        if render_complete or pt_state.view_saved:
-            glfwSetWindowTitle(
-                window,
-                f"FPS: {fps:.2f} | Render Complete"
-            )
+        if render_complete or pt_state.rendering.should_view_saved:
+            glfw_window.set_title(f"FPS: {fps:.2f} | Render Complete")
         else:
-            glfwSetWindowTitle(
-                window,
-                f"FPS: {fps:.2f} | Samples: {samples}"
-            )
+            glfw_window.set_title(f"FPS: {fps:.2f} | Samples: {samples}")
     else:
-        glfwSetWindowTitle(
-            window,
-            f"FPS: {fps:.2f}"
-        )
-
-
-def glfw_set_callbacks(window):
-    glfwSetCursorPosCallback(window, mouse_callback)
-    glfwSetScrollCallback(window, scroll_callback)
-    glfwSetMouseButtonCallback(window, mouse_button_callback)
-    glfwSetKeyCallback(window, key_callback)
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback)
-    glfwSetWindowSizeLimits(window, 400, 300, GLFW_DONT_CARE, GLFW_DONT_CARE)
-
-
-def framebuffer_size_callback(window, width, height):
-    global need_resize, screen
-
-    width = max(1, int(width))
-    height = max(1, int(height))
-
-    need_resize = True
-
-    screen.width = width
-    screen.height = height
-    screen.resolution = np.array([width, height], dtype=np.int32)
-
-
-def process_input(window, delta_time):
-    if imgui.get_io().want_text_input:
-        return
-    
-    if render_settings.render_mode == "path_tracing":
-        return
-    
-    if glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.FORWARD, delta_time)
-    if glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.BACKWARD, delta_time)
-    if glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.LEFT, delta_time)
-    if glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.RIGHT, delta_time)
-    if glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.UP, delta_time)
-    if glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS:
-        camera.process_keyboard(CameraMovement.DOWN, delta_time)
-
-
-def key_callback(window, key, scancode, action, mods):
-    if hasattr(impl, "keyboard_callback"):
-        impl.keyboard_callback(window, key, scancode, action, mods)
-    
-    global settings_window
-
-    if key == GLFW_KEY_ESCAPE and action == GLFW_PRESS:
-        settings_window = not settings_window
-
-
-def mouse_button_callback(window, button, action, mods):
-    if hasattr(impl, "mouse_button_callback"):
-        impl.mouse_button_callback(window, button, action, mods)
-    
-    if imgui.get_io().want_capture_mouse:
-        return
-
-    if render_settings.render_mode == "path_tracing":
-        return
-    
-    global middle_mouse_down, first_mouse
-
-    if button == GLFW_MOUSE_BUTTON_MIDDLE:
-        if action == GLFW_PRESS:
-            middle_mouse_down = True
-            first_mouse = True
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
-        elif action == GLFW_RELEASE:
-            middle_mouse_down = False
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
-
-
-def mouse_callback(window, xpos, ypos):
-    if hasattr(impl, "mouse_callback"):
-        impl.mouse_callback(window, xpos, ypos)
-    
-    if imgui.get_io().want_capture_mouse:
-        return
-
-    if render_settings.render_mode == "path_tracing":
-        return
-
-    if middle_mouse_down:
-        global first_mouse, last_x, last_y
-
-        if first_mouse:
-            last_x = xpos
-            last_y = ypos
-            first_mouse = False
-        
-        xoffset = xpos - last_x
-        # Reversed since y-coordinates go from bottom to top
-        yoffset = last_y - ypos
-        last_x = xpos
-        last_y = ypos
-
-        camera.process_mouse_movement(xoffset, yoffset)
-
-
-def scroll_callback(window, xoffset, yoffset):
-    if hasattr(impl, "scroll_callback"):
-        impl.scroll_callback(window, xoffset, yoffset)
-    
-    if imgui.get_io().want_capture_mouse:
-        return
-    
-    if render_settings.render_mode == "path_tracing":
-        return
-
-    camera.process_mouse_scroll(yoffset)
+        glfw_window.set_title(f"FPS: {fps:.2f}")
 
 
 class PTShaders:

@@ -476,11 +476,26 @@ class BVHState:
         self.ctx = ctx
         self.scene = scene
 
-        self.builder = BVHBackgroundBuilder(scene)
         self.ready = False
+        self.built = False
+        self.builder = None
+
+    def background_build(self):
+        self.builder = BVHBackgroundBuilder(self.scene)
+
+    def build(self):
+        self.scene.build_bvh()
+        self.bvh_built = True
 
     def update(self, bvh_node_loc, tri_indices_loc):
-        if not self.ready and self.builder.is_done:
+        if self.ready:
+            return
+
+        if self.builder is not None and self.builder.is_done:
+            self.bvh_built = True
+            self.builder = None
+        
+        if self.bvh_built:
             print("Creating BVH buffers...")
 
             bvh_node_buffer = BVHNodeBuffer(self.scene)
@@ -498,10 +513,14 @@ class CameraCaptureState:
     def __init__(self, scene_state, camera):
         self.scene_state = scene_state
         self.camera = camera
+        # self.states = {self._key(f):[] for f in self.scene_state.scene_files}
         self.states = {str(scene_file):{} for scene_file in self.scene_state.scene_files}
         self.curr_state_idx = 0
 
         self._load_states()
+
+    def _key(self, scene_file):
+        return Path(scene_file).name
     
     def _load_states(self):
         try:
@@ -529,7 +548,7 @@ class CameraCaptureState:
         scene_captures.popitem()
 
         with open(file_paths.camera_capture_states, "w") as f:
-            json.dump(self.states, f)
+            json.dump(self.states, f, indent=2, sort_keys=True)
     
     def load_next_state(self):
         scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]

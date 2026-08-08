@@ -51,6 +51,7 @@ def main():
     camera_capture_state = CameraCaptureState(scene_state, camera)
     frame_stats = FrameStatsState()
     bvh_state = BVHState(ctx, scene)
+    bvh_state.background_build()
 
     camera_buffer = CameraBuffer(camera)
     material_buffer = MaterialBuffer(scene)
