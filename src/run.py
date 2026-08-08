@@ -84,6 +84,7 @@ def main():
         scene_state,
         camera_capture_state,
         export_state,
+        bvh_state,
         camera_buffer,
         camera
     )

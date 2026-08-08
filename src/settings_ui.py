@@ -692,6 +692,7 @@ class SettingsUI:
             scene_state,
             camera_capture_state,
             export_state,
+            bvh_state,
             camera_buffer,
             camera
         ):
@@ -700,6 +701,7 @@ class SettingsUI:
         self.scene_state = scene_state
         self.camera_capture_state = camera_capture_state
         self.export_state = export_state
+        self.bvh_state = bvh_state
         self.camera_buffer = camera_buffer
         self.camera = camera
 
@@ -714,6 +716,10 @@ class SettingsUI:
         self.export_ui = ExportUI(export_state)
 
     def draw_rendering_ui(self):
+        if not self.bvh_state.ready:
+            imgui.text_disabled("Path tracing is disabled while the BVH is building...")
+            return
+
         if render_settings.render_mode == "path_tracing":
             if not self.pt_state.rendering.should_view_saved:
                 if self.pt_state.rendering.should_render:
