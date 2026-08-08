@@ -52,7 +52,7 @@ class FramebufferState:
         self.normal.write(zeros)
         self.depth.write(zeros)
 
-    def _release_active_buffers(self):
+    def _release_saved_buffers(self):
         if self.saved_combined is not None:
             self.saved_combined.release()
         if self.saved_albedo is not None:
@@ -62,7 +62,7 @@ class FramebufferState:
         if self.saved_depth is not None:
             self.saved_depth.release()
 
-    def _release_saved_buffers(self):
+    def _release_active_buffers(self):
         if self.combined is not None:
             self.combined.release()
         if self.albedo is not None:

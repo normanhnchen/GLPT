@@ -4,6 +4,7 @@ from src.passes.path_tracing.final import *
 
 class PathTracingPipeline:
     def __init__(self, ctx, scene, pt_state, pt_shaders, ai_denoiser):
+        self.ctx = ctx
         self.pt_state = pt_state
         self.ai_denoiser = ai_denoiser
         self.pt_pass = PathTracePass(scene, pt_state, pt_shaders.pt)
