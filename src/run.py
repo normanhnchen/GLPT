@@ -43,14 +43,13 @@ def main():
     pt_shaders = PTShaders(ctx)
     raster_shaders = RasterShaders(ctx)
     
-    global pt_state
-    global raster_state
     pt_state = PTState(ctx)
     raster_state = RasterState(ctx)
     export_state = ExportState(pt_state)
     scene_state = SceneState()
     camera_capture_state = CameraCaptureState(scene_state, camera)
     frame_stats = FrameStatsState()
+    bvh_state = BVHState(ctx, scene)
 
     camera_buffer = CameraBuffer(camera)
     material_buffer = MaterialBuffer(scene)
@@ -58,9 +57,6 @@ def main():
     light_buffer = LightBuffer(scene)
     emissive_triangles_buffer = EmissiveTrianglesBuffer(scene)
     finite_lights_buffer = FiniteLightsbuffer(scene)
-
-    bvh_builder = BVHBackgroundBuilder(scene)
-    bvh_ready = False
 
     camera_buffer.bind(ctx, 0)
     triangle_buffer.bind(ctx, 1)
@@ -107,18 +103,7 @@ def main():
             glfwPollEvents()
             continue
 
-        if not bvh_ready and bvh_builder.is_done:
-            print("Creating BVH buffers...")
-
-            bvh_node_buffer = BVHNodeBuffer(scene)
-            tri_indices_buffer = TriangleIndicesBuffer(scene)
-
-            bvh_node_buffer.bind(ctx, 4)
-            tri_indices_buffer.bind(ctx, 5)
-
-            bvh_ready = True
-
-            print("Path tracing is ready")
+        bvh_state.update(4, 5)
         
         if glfw_window.need_resize:
             pt_state.reset()
@@ -129,7 +114,7 @@ def main():
 
             glfw_window.need_resize = False
         
-        update_stats(glfw_window, frame_stats.avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
+        update_stats(glfw_window, pt_state, frame_stats.avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
         
         ctx.clear(0, 0, 0, 1)
 
@@ -154,7 +139,7 @@ def main():
     glfw_window.shutdown()
 
 
-def update_stats(glfw_window, fps, samples, render_complete):
+def update_stats(glfw_window, pt_state, fps, samples, render_complete):
     if render_settings.render_mode == "path_tracing":
         if render_complete or pt_state.rendering.should_view_saved:
             glfw_window.set_title(f"FPS: {fps:.2f} | Render Complete")

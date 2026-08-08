@@ -13,6 +13,8 @@ from imgui_bundle.python_backends.glfw_backend import GlfwRenderer
 from src.dtypes import *
 from src.settings import *
 from src.camera import *
+from src.bvh_builder import *
+from src.buffer_loading import *
 
 
 # Required as OpenCV disables EXR support by default
@@ -415,6 +417,29 @@ class SceneState:
             self.curr_hdri_file = self.hdri_files[self.curr_hdri_idx]
 
             self.changed_scene = True
+
+
+class BVHState:
+    def __init__(self, ctx, scene):
+        self.ctx = ctx
+        self.scene = scene
+
+        self.builder = BVHBackgroundBuilder(scene)
+        self.ready = False
+
+    def update(self, bvh_node_loc, tri_indices_loc):
+        if not self.ready and self.builder.is_done:
+            print("Creating BVH buffers...")
+
+            bvh_node_buffer = BVHNodeBuffer(self.scene)
+            tri_indices_buffer = TriangleIndicesBuffer(self.scene)
+
+            bvh_node_buffer.bind(self.ctx, bvh_node_loc)
+            tri_indices_buffer.bind(self.ctx, tri_indices_loc)
+
+            self.ready = True
+
+            print("Path tracing is ready")
 
 
 class CameraCaptureState:
