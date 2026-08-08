@@ -17,12 +17,16 @@ def _set_uniforms(prog, uniform_dict):
 
 
 class FinalPass:
-    def __init__(self, ctx, shader, pt_state):
+    def __init__(self, ctx, shader, pt_state, final_output_state):
+        self.ctx = ctx
         self.shader = shader
         self.pt_state = pt_state
+        self.final_output_state = final_output_state
         self.quad = FullScreenQuad(ctx, shader)
 
     def render(self):
+        self.final_output_state.output_fbo.use()
+
         # Draw to screen
         self.pt_state.framebuffers.combined.use(location=0)
 
@@ -32,3 +36,6 @@ class FinalPass:
         self.shader.set_tonemap(post_process_settings.tonemap)
 
         self.quad.draw()
+
+        self.ctx.copy_framebuffer(self.ctx.screen, self.final_output_state.output_fbo)
+        self.ctx.screen.use()

@@ -98,11 +98,11 @@ class FramebufferState:
         c = buffer.components
 
         # Convert to numpy array
-        IsADirectoryError = np.frombuffer(data, dtype=f4)
+        arr = np.frombuffer(data, dtype=f4)
         # Reshape to OpenGL convention (H, W, C)
-        IsADirectoryError = IsADirectoryError.reshape(h, w, c)
+        arr = arr.reshape(h, w, c)
 
-        return IsADirectoryError
+        return arr
 
     def get_ndarray_combined(self):
         return self._get_ndarray(self.combined)
@@ -283,9 +283,43 @@ class RasterState:
         self._create_active_buffers()
 
 
+class FinalOutputState:
+    def __init__(self, ctx):
+        self.ctx = ctx
+
+        self._create_active_buffers()
+
+    def _create_active_buffers(self):
+        self.output_tex = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.output_fbo = self.ctx.framebuffer(
+            color_attachments=[self.output_tex]
+        )
+    
+    def _release_active_buffers(self):
+        self.output_tex.release()
+        self.output_fbo.release()
+    
+    def resize(self):
+        self._release_active_buffers()
+        self._create_active_buffers()
+
+    def get_ndarray(self):
+        data = self.output_tex.read()
+        w, h = self.output_tex.size
+        c = self.output_tex.components
+
+        # Convert to numpy array
+        arr = np.frombuffer(data, dtype=f4)
+        # Reshape to OpenGL convention (H, W, C)
+        arr = arr.reshape(h, w, c)
+
+        return arr
+
+
 class ExportState:
-    def __init__(self, pt_state):
+    def __init__(self, pt_state, final_output_state):
         self.pt_state = pt_state
+        self.final_output_state = final_output_state
         self.noisy = None
         self.target = None
     
@@ -317,19 +351,28 @@ class ExportState:
             if not file_path.exists():
                 return file_path
             counter += 1
+
+    def _get_next_png_path(self, path, prefix):
+        counter = 0
+        while True:
+            file_path = path / f"{prefix}_{counter}.png"
+            if not file_path.exists():
+                return file_path
+            counter += 1
         
     def export_render(self):
-        combined_array = self.pt_state.framebuffers.get_ndarray_combined()
+        # Drop alpha channel
+        img_arr = self.final_output_state.get_ndarray()[:, :, :3]
         
         # Flip image vertically
-        # OpenGL is bottom-up, EXR is top-down
-        combined_array = np.flipud(combined_array)
+        # OpenGL is bottom-up, image is top-down
+        img_arr = np.flipud(img_arr)
         
-        renders_dir = Path(file_paths.ai_training_renders)
-        combined_path = self._get_next_exr_path(renders_dir / "combined", "combined")
+        renders_dir = Path(file_paths.renders)
+        export_path = self._get_next_png_path(renders_dir, "render")
 
-        # Save to .exr file
-        self._export_exr(combined_path, combined_array)
+        # Save to .png file
+        self._export_png(export_path, img_arr)
     
     def _export_training_noisy(self, noisy):
         combined_array = noisy["combined"]
@@ -373,6 +416,15 @@ class ExportState:
         # Convert image to BGR as OpenCV expects BGR order
         img = cv2.cvtColor(img_arr.astype(np.float32), cv2.COLOR_RGB2BGR)
         cv2.imwrite(str(export_path), img)
+
+    def _export_png(self, export_path, img_arr):
+            # Convert to expected uint8 range (0-255)
+            img_arr = np.clip(img_arr, 0.0, 1.0)
+            img_arr = (img_arr * 255).astype(np.uint8)
+
+            # Convert image to BGR as OpenCV expects BGR order
+            img = cv2.cvtColor(img_arr, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(str(export_path), img)
 
 
 class SceneState:

@@ -3,12 +3,12 @@ from src.passes.path_tracing.final import *
 
 
 class PathTracingPipeline:
-    def __init__(self, ctx, scene, pt_state, pt_shaders, ai_denoiser):
+    def __init__(self, ctx, scene, pt_state, final_output_state, pt_shaders, ai_denoiser):
         self.ctx = ctx
         self.pt_state = pt_state
         self.ai_denoiser = ai_denoiser
         self.pt_pass = PathTracePass(scene, pt_state, pt_shaders.pt)
-        self.final_pass = FinalPass(ctx, pt_shaders.final, pt_state)
+        self.final_pass = FinalPass(ctx, pt_shaders.final, pt_state, final_output_state)
 
     def render(self):
         if self.pt_state.denoising.should_denoise:

@@ -672,11 +672,26 @@ class CameraCapturingUI:
         self.remove_state_button.button(on_change, enabled)
 
 
+
+class ExportUI:
+    def __init__(self, export_state):
+        self.export_state = export_state
+
+        self.export_button = Button("Export")
+
+    def draw_export_button(self):
+        def on_change():
+            self.export_state.export_render()
+
+        self.export_button.button(on_change)
+
+
 class SettingsUI:
     def __init__(self,
             pt_state,
             scene_state,
             camera_capture_state,
+            export_state,
             camera_buffer,
             camera
         ):
@@ -684,6 +699,7 @@ class SettingsUI:
         self.pt_state = pt_state
         self.scene_state = scene_state
         self.camera_capture_state = camera_capture_state
+        self.export_state = export_state
         self.camera_buffer = camera_buffer
         self.camera = camera
 
@@ -695,6 +711,7 @@ class SettingsUI:
         self.debug_ui = DebugUI(pt_state)
         self.scene_ui = SceneUI(scene_state)
         self.camera_capturing_ui = CameraCapturingUI(scene_state, camera_capture_state)
+        self.export_ui = ExportUI(export_state)
 
     def draw_rendering_ui(self):
         if render_settings.render_mode == "path_tracing":
@@ -774,6 +791,9 @@ class SettingsUI:
         self.camera_capturing_ui.draw_save_state_button()
         self.camera_capturing_ui.draw_remove_state_button()
 
+    def draw_export_ui(self):
+        self.export_ui.draw_export_button()
+
     def draw(self, settings_window):
         if not settings_window:
             return settings_window
@@ -833,6 +853,11 @@ class SettingsUI:
                 
                 if imgui.tree_node("Debug"):
                     self.draw_debug_ui()
+
+                    imgui.tree_pop()
+
+                if imgui.tree_node("Export"):
+                    self.draw_export_ui()
 
                     imgui.tree_pop()
         
