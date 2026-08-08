@@ -115,6 +115,8 @@ class Camera:
         self.up = glm.vec3(state["up"])
         self.right = glm.vec3(state["right"])
         self.fov = state["fov"]
+        
+        self._update_camera_vectors()
     
     def has_moved(self):
         current_state = self.get_state()

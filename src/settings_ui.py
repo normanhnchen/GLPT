@@ -651,26 +651,46 @@ class CameraCapturingUI:
         self.camera_capture_state = camera_capture_state
 
         self.save_state_button = Button("Save Current Camera State")
-        self.remove_state_button = Button("Remove Last Camera State From This Scene")
+        self.delete_current_button = Button("Delete Current Capture")
+        self.view_current_button = Button("View Current Capture")
+        self.previous_button = Button("< Previous")
+        self.next_button = Button("Next >")
     
     def draw_save_state_button(self):
         def on_change():
             self.camera_capture_state.save_state()
 
         self.save_state_button.button(on_change)
-    
-    def draw_remove_state_button(self):
-        scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]
-        scene_captures = self.camera_capture_state.states[str(scene_file)]
-        scene_capture_count = len(scene_captures)
 
-        enabled = scene_capture_count > 0
-
+    def draw_delete_current_button(self):
         def on_change():
-            self.camera_capture_state.remove_state()
+            self.camera_capture_state.delete_current()
 
-        self.remove_state_button.button(on_change, enabled)
+        self.delete_current_button.button(on_change)
 
+    def draw_view_current_button(self):
+        def on_change():
+            self.camera_capture_state.view_current()
+
+        self.view_current_button.button(on_change)
+
+    def draw_browse_controls(self):
+        captures = self.camera_capture_state._get_scene_captures()
+
+        if len(captures) == 0:
+            imgui.text_disabled("No captures for this scene yet")
+            return
+
+        imgui.text(f"Capture {self.camera_capture_state.browse_idx + 1} / {len(captures)}")
+
+        def on_prev():
+            self.camera_capture_state.previous_capture()
+
+        def on_next():
+            self.camera_capture_state.next_capture()
+
+        self.previous_button.button(on_prev)
+        self.next_button.button(on_next)
 
 
 class ExportUI:
@@ -800,10 +820,16 @@ class SettingsUI:
     
     def draw_camera_capturing_ui(self):
         self.camera_capturing_ui.draw_save_state_button()
-        self.camera_capturing_ui.draw_remove_state_button()
+        self.camera_capturing_ui.draw_delete_current_button()
+        self.camera_capturing_ui.draw_view_current_button()
+        self.camera_capturing_ui.draw_browse_controls()
 
     def draw_export_ui(self):
         self.export_ui.draw_export_button()
+
+    def draw_ai_training_ui(self):
+        self.draw_scene_ui()
+        self.draw_camera_capturing_ui()
 
     def draw(self, settings_window):
         if not settings_window:
@@ -814,6 +840,11 @@ class SettingsUI:
 
         if ai_training_settings.camera_setup_mode:
             if is_expand:
+                if imgui.tree_node("Rendering"):
+                    self.draw_rendering_ui()
+
+                    imgui.tree_pop()
+                
                 if imgui.tree_node("Camera UI"):
                     self.draw_camera_ui()
 
@@ -830,8 +861,7 @@ class SettingsUI:
                     imgui.tree_pop()
                     
                 if imgui.tree_node("AI Training"):
-                    self.draw_scene_ui()
-                    self.draw_camera_capturing_ui()
+                    self.draw_ai_training_ui()
 
                     imgui.tree_pop()
 
@@ -864,7 +894,7 @@ class SettingsUI:
                     imgui.tree_pop()
 
                 if imgui.tree_node("AI Training"):
-                    self.draw_scene_ui()
+                    self.draw_ai_training_ui()
 
                     imgui.tree_pop()
 

@@ -513,14 +513,18 @@ class CameraCaptureState:
     def __init__(self, scene_state, camera):
         self.scene_state = scene_state
         self.camera = camera
-        # self.states = {self._key(f):[] for f in self.scene_state.scene_files}
-        self.states = {str(scene_file):{} for scene_file in self.scene_state.scene_files}
+        self.states = {self._key(f):[] for f in self.scene_state.scene_files}
         self.curr_state_idx = 0
+        self.browse_idx = 0
 
         self._load_states()
 
     def _key(self, scene_file):
         return Path(scene_file).name
+
+    def _get_key(self):
+        scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]
+        return self._key(scene_file)
     
     def _load_states(self):
         try:
@@ -529,44 +533,70 @@ class CameraCaptureState:
         except:
             pass
 
-    def save_state(self):
-        scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]
-        state = self.camera.get_state()
-        
-        scene_captures = self.states[str(scene_file)]
-        num_scene_captures = len(scene_captures)
-        scene_captures[str(num_scene_captures)] = state
+    def _get_scene_captures(self):
+        return self.states[self._get_key()]
 
-        with open(file_paths.camera_capture_states, "w") as f:
-            json.dump(self.states, f)
-    
-    def remove_state(self):
-        # Remove the last captured state from the current scene
+    def _load_state(self, state):
+        self.camera.load_state(state)
 
-        scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]
-        scene_captures = self.states[str(scene_file)]
-        scene_captures.popitem()
-
+    def _write(self):
         with open(file_paths.camera_capture_states, "w") as f:
             json.dump(self.states, f, indent=2, sort_keys=True)
+
+    def save_state(self):
+        key = self._get_key()
+        self.states[key].append(self.camera.get_state())
+        self.browse_idx = len(self.states[key]) - 1
+        self._write()
     
     def load_next_state(self):
-        scene_file = self.scene_state.scene_files[self.scene_state.curr_scene_idx]
-        scene_captures = self.states[str(scene_file)]
-        num_scene_captures = len(scene_captures)
+        while True:
+            captures = self._get_scene_captures()
 
-        if num_scene_captures - self.curr_state_idx:
-            self.camera.load_state(scene_captures[str(self.curr_state_idx)])
-            self.curr_state_idx += 1
-            return
-        
-        self.scene_state.next_scene()
+            if self.curr_state_idx < len(captures):
+                self._load_state(captures[self.curr_state_idx])
+                self.curr_state_idx += 1
+                return
+            
+            self.scene_state.next_scene()
 
-        if self.scene_state.ai_training_finished:
+            if self.scene_state.ai_training_finished:
+                return
+            
+            self.curr_state_idx = 0
+
+    def view_current(self):
+        captures = self._get_scene_captures()
+        if captures:
+            self._load_state(captures[self.browse_idx])
+
+    def next_capture(self):
+        captures = self._get_scene_captures()
+        if not captures:
             return
-        
-        self.curr_state_idx = 0
-        self.load_next_state()
+        self.browse_idx = (self.browse_idx + 1) % len(captures)
+        self._load_state(captures[self.browse_idx])
+
+    def previous_capture(self):
+        captures = self._get_scene_captures()
+        if not captures:
+            return
+        self.browse_idx = (self.browse_idx - 1) % len(captures)
+        self._load_state(captures[self.browse_idx])
+
+    def delete_current(self):
+        captures = self._get_scene_captures()
+        if not captures:
+            return
+
+        captures.pop(self.browse_idx)
+        self._write()
+
+        if not captures:
+            self.browse_idx = 0
+            return
+
+        self.browse_idx = min(self.browse_idx, len(captures) - 1)
 
 
 class FrameStatsState:

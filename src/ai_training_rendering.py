@@ -47,9 +47,6 @@ def main():
     glfw_callback_state = GlfwCallbackState(glfw_window, input_state, ui_state, imgui_state, camera)
     # Set callbacks after so imgui doesn't override them
     glfw_callback_state.set_callbacks()
-
-    scene = load_scene(file_paths.scene)
-    scene.hdri = HDRI(file_paths.hdri)
     
     pt_shaders = PTShaders(ctx)
     raster_shaders = RasterShaders(ctx)
@@ -59,11 +56,8 @@ def main():
     final_output_state = FinalOutputState(ctx)
     export_state = ExportState(pt_state, final_output_state)
     scene_state = SceneState()
-    camera_capture_state = CameraCaptureState(scene_state, camera)
+    camera_capture_state = CameraCaptureState(scene_state, input_state, camera)
     frame_stats = FrameStatsState()
-
-    pt_pipeline = PathTracingPipeline(ctx, scene, pt_state, final_output_state, pt_shaders)
-    raster_pipeline = RasterizationPipeline(ctx, scene, camera, raster_state, raster_shaders)
    
     frame_stats.start_tracking()
 
@@ -126,6 +120,9 @@ def main():
             camera
         )
 
+        pt_pipeline = PathTracingPipeline(ctx, scene, pt_state, final_output_state, pt_shaders)
+        raster_pipeline = RasterizationPipeline(ctx, scene, camera, raster_state, raster_shaders)
+
         frame_stats.start_tracking()
 
         is_first_render = True
@@ -156,7 +153,7 @@ def main():
 
             ctx.screen.use()
             ctx.viewport = (0, 0, screen.width, screen.height)
-            
+
             ctx.clear(0, 0, 0, 1)
 
             glfw_window.poll()
