@@ -715,7 +715,14 @@ class SettingsUI:
         self.camera_capturing_ui = CameraCapturingUI(scene_state, camera_capture_state)
         self.export_ui = ExportUI(export_state)
 
-    def draw_rendering_ui(self):
+    def draw_rendering_ui(self,
+            allow_start=True,
+            allow_cancel=True,
+            allow_viewport=True,
+            allow_denoise=True,
+            allow_view_saved=True
+        ):
+
         if not self.bvh_state.ready:
             imgui.text_disabled("Path tracing is disabled while the BVH is building...")
             return
@@ -727,30 +734,27 @@ class SettingsUI:
                 
                 else:
                     self.rendering_ui.draw_continue_button()
-                
-                self.rendering_ui.draw_cancel_button()
+
+                if allow_cancel: self.rendering_ui.draw_cancel_button()
             
             else:
-                self.rendering_ui.draw_viewport_button()
-                self.rendering_ui.draw_denoise_button()
-                # Disable for now!
-                # Fix render exporting by adding an FBO to include tonemapping / gamma correction
-                # self.export_render_button()
-            
+                if allow_viewport: self.rendering_ui.draw_viewport_button()
+                if allow_denoise: self.rendering_ui.draw_denoise_button()
+
             self.rendering_ui.draw_restart_button()
         
         else:
             if self.pt_state.framebuffers.saved_combined is None:
-                self.rendering_ui.draw_start_button()
+                if allow_start: self.rendering_ui.draw_start_button()
             
             else:
-                self.rendering_ui.draw_start_new_button()
-                self.rendering_ui.draw_view_saved_button()
-            
+                if allow_start: self.rendering_ui.draw_start_new_button()
+                if allow_view_saved: self.rendering_ui.draw_view_saved_button()
+
         self.rendering_ui.draw_tiles_x_slider()
         self.rendering_ui.draw_tiles_y_slider()
 
-    def draw_path_tracing_ui(self):
+    def draw_path_tracing_ui(self, allow_modes=True):
         self.path_tracing_ui.draw_total_bounces_slider()
         self.path_tracing_ui.draw_diffuse_bounces_slider()
         self.path_tracing_ui.draw_specular_bounces_slider()
@@ -758,14 +762,15 @@ class SettingsUI:
         self.path_tracing_ui.draw_max_samples_slider()
         self.path_tracing_ui.draw_spp_slider()
 
-        if imgui.tree_node("BSDF Sampling"):
-            self.path_tracing_ui.draw_specular_cycle_button()
-            self.path_tracing_ui.draw_geometry_cycle_button()
-            self.path_tracing_ui.draw_transmission_cycle_button()
-            self.path_tracing_ui.draw_mis_cycle_button()
+        if allow_modes:
+            if imgui.tree_node("BSDF Sampling"):
+                self.path_tracing_ui.draw_specular_cycle_button()
+                self.path_tracing_ui.draw_geometry_cycle_button()
+                self.path_tracing_ui.draw_transmission_cycle_button()
+                self.path_tracing_ui.draw_mis_cycle_button()
 
-            imgui.tree_pop()
-        
+                imgui.tree_pop()
+
         self.path_tracing_ui.draw_reset_pt_button()
     
     def draw_camera_ui(self):
@@ -829,7 +834,40 @@ class SettingsUI:
                     self.draw_camera_capturing_ui()
 
                     imgui.tree_pop()
-        
+
+        elif ai_training_settings.ai_training_mode:
+            if is_expand:
+                if imgui.tree_node("Rendering"):
+                    self.draw_rendering_ui(
+                        allow_cancel=False,
+                        allow_view_saved=False,
+                        allow_viewport=False,
+                        allow_denoise=False,
+                        allow_start=False
+                    )
+
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Path Tracing"):
+                    self.draw_path_tracing_ui(allow_modes=False)
+                        
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Post Processing"):
+                    self.draw_post_processing_ui()
+
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Screen"):
+                    self.draw_screen_ui()
+
+                    imgui.tree_pop()
+
+                if imgui.tree_node("AI Training"):
+                    self.draw_scene_ui()
+
+                    imgui.tree_pop()
+
         else:
             if is_expand:
                 if imgui.tree_node("Rendering"):
