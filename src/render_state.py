@@ -488,6 +488,7 @@ class BVHState:
 
     def background_build(self):
         self.builder = BVHBackgroundBuilder(self.scene)
+        self.bvh_built = False
 
     def build(self):
         self.scene.build_bvh()

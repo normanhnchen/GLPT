@@ -58,7 +58,7 @@ class BVH:
         centroids = self.scene_centroids[indices]
         vertices = self.scene_vertices[triangles]
         
-        best_axis, best_pos, best_cost = find_best_split(centroids, vertices)
+        best_axis, best_pos, best_cost = find_best_split(centroids, vertices, bvh_settings.sah_bins)
 
         parent_cost = self.calculate_node_cost(node_idx)
 
@@ -124,9 +124,7 @@ class BVH:
 
 
 @njit(nogil=True, fastmath=True, parallel=True, cache=True)
-def find_best_split(centroids, vertices):
-    BINS = 16
-
+def find_best_split(centroids, vertices, bins):
     costs_per_axis = np.zeros(3, dtype=np.float32)
     pos_per_axis = np.zeros(3, dtype=np.float32)
 
@@ -140,18 +138,18 @@ def find_best_split(centroids, vertices):
         if bounds_min == bounds_max:
             continue
 
-        scale = BINS / (bounds_max - bounds_min)
+        scale = bins / (bounds_max - bounds_min)
         
-        bin_ids = np.minimum(BINS - 1, (c - bounds_min) * scale).astype(np.int32)
+        bin_ids = np.minimum(bins - 1, (c - bounds_min) * scale).astype(np.int32)
         # AABBs
-        bin_mins = np.full((BINS, 3), np.inf)
-        bin_maxs = np.full((BINS, 3), -np.inf)
+        bin_mins = np.full((bins, 3), np.inf)
+        bin_maxs = np.full((bins, 3), -np.inf)
 
-        bin_tri_counts = np.bincount(bin_ids, minlength=BINS)
+        bin_tri_counts = np.bincount(bin_ids, minlength=bins)
 
         # Populate the bins
         for i in range(len(c)):
-            bin_idx = int(min(BINS - 1, (c[i] - bounds_min) * scale))
+            bin_idx = int(min(bins - 1, (c[i] - bounds_min) * scale))
 
             v0 = vertices[i][0]
             v1 = vertices[i][1]
@@ -167,11 +165,11 @@ def find_best_split(centroids, vertices):
                 if tri_max > bin_maxs[bin_idx, j]:
                     bin_maxs[bin_idx, j] = tri_max
         
-        left_area = np.zeros(BINS - 1)
-        right_area = np.zeros(BINS - 1)
+        left_area = np.zeros(bins - 1)
+        right_area = np.zeros(bins - 1)
 
-        left_count = np.zeros(BINS - 1)
-        right_count = np.zeros(BINS - 1)
+        left_count = np.zeros(bins - 1)
+        right_count = np.zeros(bins - 1)
 
         # AABB boxes
         lb_mins = np.full(3,  np.inf)
@@ -182,8 +180,8 @@ def find_best_split(centroids, vertices):
         left_sum = 0
         right_sum = 0
         
-        # Gather data for the BINS - 1 planes
-        for i in range(BINS - 1):
+        # Gather data for the bins - 1 planes
+        for i in range(bins - 1):
             left_sum += bin_tri_counts[i]
             left_count[i] = left_sum
             for j in range(3):
@@ -193,18 +191,18 @@ def find_best_split(centroids, vertices):
                     lb_maxs[j] = bin_maxs[i, j]
             left_area[i] = get_aabb_area(lb_mins, lb_maxs)
 
-            right_sum += bin_tri_counts[BINS - 1 - i]
-            right_count[BINS - 2 - i] = right_sum
-            rb_mins = np.minimum(rb_mins, bin_mins[BINS - 2 - i])
-            rb_maxs = np.maximum(rb_maxs, bin_maxs[BINS - 2 - i])
-            right_area[BINS - 2 - i] = get_aabb_area(rb_mins, rb_maxs)
+            right_sum += bin_tri_counts[bins - 1 - i]
+            right_count[bins - 2 - i] = right_sum
+            rb_mins = np.minimum(rb_mins, bin_mins[bins - 2 - i])
+            rb_maxs = np.maximum(rb_maxs, bin_maxs[bins - 2 - i])
+            right_area[bins - 2 - i] = get_aabb_area(rb_mins, rb_maxs)
         
         best_pos = 0
         best_cost = np.inf
 
-        # Calculate the SAH cost for the BINS - 1 planes
-        scale = (bounds_max - bounds_min) / BINS
-        for i in range(BINS - 1):
+        # Calculate the SAH cost for the bins - 1 planes
+        scale = (bounds_max - bounds_min) / bins
+        for i in range(bins - 1):
             if left_count[i] == 0 or right_count[i] == 0:
                 plane_cost = np.inf
             else:

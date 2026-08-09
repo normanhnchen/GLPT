@@ -115,6 +115,8 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
     bool didIntersect = false;
     float closestT = INF;
 
+    int totalNodesVisited = si.nodesVisited;
+
     int nodeStack[MAX_BVH_DEPTH];
     int stackIdx = 0;
     // Push root node index onto the stack
@@ -123,6 +125,8 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
     vec3 invRayD = 1.0 / ray.d;
 
     while (stackIdx > 0) {
+        totalNodesVisited++;
+        
         // Pop the latest node index off
         int currIdx = nodeStack[--stackIdx];
         BvhNode currNode = BvhNodes[currIdx];
@@ -142,7 +146,7 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
                 int left = currNode.leftChildId;
                 int right = currNode.rightChildId;
 
-                if (stackIdx < MAX_BVH_DEPTH) {
+                if (stackIdx < maxBvhDepth && stackIdx < MAX_BVH_DEPTH) {
                     // Push children onto the stack if there are children
                     if (left != -1 && right != -1) {
                         BvhNode leftNode = BvhNodes[left];
@@ -168,6 +172,8 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
             }
         }
     }
+
+    si.nodesVisited = totalNodesVisited;
 
     return didIntersect;
 }

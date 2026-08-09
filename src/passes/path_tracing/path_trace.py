@@ -32,7 +32,9 @@ def _compute_uniforms(scene, camera, pt_state):
         "blur": camera.blur,
         "hdriExposure": post_process_settings.hdri_exposure,
 
-        "debugMode": pt_state.debug.mode
+        "debugMode": pt_state.debug.mode,
+
+        "maxBvhDepth": bvh_settings.max_depth
     }
 
 

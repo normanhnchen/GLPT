@@ -73,6 +73,16 @@ class PTSettings:
         self._load(self._default_config)
 
 
+class BVHSettings:
+    def __init__(self, json_settings):
+        self._default_config = json_settings["bvh"]
+
+        self._load(self._default_config)
+
+    def _load(self, config):
+        self.max_depth = config["max_depth"]
+        self.sah_bins = config["sah_bins"]
+
 class PostProcessSettings:
     def __init__(self, json_settings):
         self._default_config = json_settings["post_processing"]
@@ -165,6 +175,7 @@ LUMENS_TO_WATTS = 1.0 / 683.0
 screen = Screen(json_settings)
 camera_settings = CameraSettings(json_settings)
 pt_settings = PTSettings(json_settings)
+bvh_settings = BVHSettings(json_settings)
 post_process_settings = PostProcessSettings(json_settings)
 file_paths = FilePaths(json_settings)
 render_settings = RenderSettings(json_settings)

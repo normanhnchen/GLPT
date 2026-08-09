@@ -85,5 +85,16 @@ vec2 SampleUnitDisk(inout uvec3 rng) {
     return vec2(radius * cos(theta), radius * sin(theta));
 }
 
+vec3 GetBvhDepthColor(int currDepth, int maxDepth) {
+    float t = clamp(float(currDepth) / float(maxDepth), 0.0, 1.0);
+
+    vec3 col;
+    col.r = smoothstep(0.5, 0.75, t);
+    col.g = smoothstep(0.0, 0.25, t) - smoothstep(0.75, 1.0, t);
+    col.b = 1.0 - smoothstep(0.25, 0.5, t);
+
+    return col;
+}
+
 
 #endif

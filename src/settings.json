@@ -1,7 +1,7 @@
 {   
     "file_paths": {
         "ai_training_scenes": "src/assets/models/ai_training/",
-        "scene": "src/assets/models/cornell_box.glb",
+        "scene": "src/assets/models/ai_training/scene_6.glb",
         "ai_training_hdris": "src/assets/hdris/ai_training/",
         "hdri": "src/assets/hdris/day_sky_hdri.exr",
         "ai_training_renders": "src/assets/renders/ai_training",
@@ -66,6 +66,10 @@
         "geometry_mode": 0,
         "transmission_mode": 0,
         "mis_mode": 0
+    },
+    "bvh": {
+        "max_depth": 32,
+        "sah_bins": 16
     },
     "post_processing": {
         "exposure": 3.0,

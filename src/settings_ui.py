@@ -290,11 +290,14 @@ class PathTracingUI:
         self.transmission_bounces_slider = IntSlider(0, 1024, "Transmission Bounces")
         self.max_samples_slider = IntSlider(1, 16384, "Max Samples")
         self.spp_slider = IntSlider(1, 128, "Samples Per Pixel")
+        self.bvh_depth_slider = IntSlider(1, bvh_settings.max_depth, "BVH Depth")
 
         self.specular_cycle_button = CycleButton("Specular Mode")
         self.geometry_cycle_button = CycleButton("Geometry Mode")
         self.transmission_cycle_button = CycleButton("Transmission Mode")
         self.mis_cycle_button = CycleButton("Multiple Importance Sample")
+        self.reset_pt_button = Button("Reset Path Tracing Settings")
+        
     
     def draw_total_bounces_slider(self):
         def on_change(new_val):
@@ -399,9 +402,22 @@ class PathTracingUI:
         self.mis_cycle_button.button(mis_modes, pt_settings.mis_mode, on_change)
     
     def draw_reset_pt_button(self):
-        if imgui.button("Reset Path Tracing Settings"):
+        def on_change():
             pt_settings.reset()
             self.pt_state.restart_render()
+
+        self.reset_pt_button.button(on_change)
+
+    def draw_bvh_depth_slider(self):
+        def on_change(new_val):
+            bvh_settings.max_depth = new_val
+            self.pt_state.restart_render()
+        
+        self.bvh_depth_slider.slider(bvh_settings.max_depth)
+        self.bvh_depth_slider.dragging_logic(on_change)
+        self.bvh_depth_slider.minus_button(on_change)
+        self.bvh_depth_slider.plus_button(on_change)
+        self.bvh_depth_slider.draw_label()
 
 
 class CameraUI:
@@ -598,23 +614,24 @@ class DebugUI:
     def __init__(self, pt_state):
         self.pt_state = pt_state
 
-        self.debug_off_button = CycleButton("Debug Mode")
+        self.debug_off_button = Dropdown("Debug Mode")
     
-    def draw_debug_mode_button(self):
+    def draw_debug_mode_dropdown(self):
         options = [
-            "Off",      # 0
-            "Albedo",   # 1
-            "Normal",   # 2
-            "Depth",    # 3
-            "Direct",   # 4
+            "Off", # 0
+            "Albedo", # 1
+            "Normal", # 2
+            "Depth", # 3
+            "Direct", # 4
             "Indirect", # 5
+            "BVH Depth", # 6
         ]
 
         def on_change(new_val):
-            self.pt_state.debug.mode = new_val
+            self.pt_state.debug.mode = options.index(new_val)
             self.pt_state.restart_render()
 
-        self.debug_off_button.button(options, self.pt_state.debug.mode, on_change)
+        self.debug_off_button.dropdown(options, options[self.pt_state.debug.mode], on_change)
 
 
 class SceneUI:
@@ -783,6 +800,7 @@ class SettingsUI:
         self.path_tracing_ui.draw_transmission_bounces_slider()
         self.path_tracing_ui.draw_max_samples_slider()
         self.path_tracing_ui.draw_spp_slider()
+        self.path_tracing_ui.draw_bvh_depth_slider()
 
         if allow_modes:
             if imgui.tree_node("BSDF Sampling"):
@@ -814,7 +832,7 @@ class SettingsUI:
         self.screen_ui.draw_fps_slider()
     
     def draw_debug_ui(self):
-        self.debug_ui.draw_debug_mode_button()
+        self.debug_ui.draw_debug_mode_dropdown()
     
     def draw_scene_ui(self):
         self.scene_ui.draw_next_scene_button()

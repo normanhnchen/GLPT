@@ -35,6 +35,8 @@ uniform int misMode;
 
 uniform int debugMode;
 
+uniform int maxBvhDepth;
+
 
 // --- final.fs ---
 
