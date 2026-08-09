@@ -602,10 +602,12 @@ class DebugUI:
     
     def draw_debug_mode_button(self):
         options = [
-            "Off",    # 0
-            "Albedo", # 1
-            "Normal", # 2
-            "Depth"   # 3
+            "Off",      # 0
+            "Albedo",   # 1
+            "Normal",   # 2
+            "Depth",    # 3
+            "Direct",   # 4
+            "Indirect", # 5
         ]
 
         def on_change(new_val):

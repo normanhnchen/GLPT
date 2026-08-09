@@ -181,7 +181,7 @@ class RenderProgressState:
 
 class DebugState:
     def __init__(self):
-        # combined: 0, albedo: 1, normal: 2, depth: 3
+        # combined: 0, albedo: 1, normal: 2, depth: 3, direct: 4, indirect: 5
         self.mode = 0
 
     def reset(self):
