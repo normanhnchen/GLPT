@@ -19,7 +19,6 @@ uniform int samplesPerPixel;
 uniform int totalSamples;
 uniform float blur;
 uniform float hdriExposure;
-uniform float depthFactor;
 
 uniform int maxTotalBounces;
 uniform int maxDiffuseBounces;

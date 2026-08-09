@@ -1,5 +1,6 @@
 from src.passes.path_tracing.path_trace import *
 from src.passes.path_tracing.final import *
+from src.passes.path_tracing.depth_debug import *
 
 
 class PathTracingPipeline:
@@ -8,6 +9,7 @@ class PathTracingPipeline:
         self.pt_state = pt_state
         self.ai_denoiser = ai_denoiser
         self.pt_pass = PathTracePass(scene, camera, pt_state, pt_shaders.pt)
+        self.depth_debug_pass = DepthDebugPass(pt_state)
         self.final_pass = FinalPass(ctx, pt_shaders.final, pt_state, final_output_state)
 
     def render(self):
@@ -34,5 +36,9 @@ class PathTracingPipeline:
         
         elif self.pt_state.rendering.should_render:
             self.pt_pass.render()
+
+            # Depth
+            if self.pt_state.debug.mode == 3:
+                self.depth_debug_pass.render()
         
         self.final_pass.render()

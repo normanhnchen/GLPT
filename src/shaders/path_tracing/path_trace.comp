@@ -50,6 +50,10 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         if (!Intersect(ray, si)) {
             // Ray has exited the scene
 
+            if (isFirstHit) {
+                pathSample.depth = -1.0;
+            }
+
             vec3 envColor = SampleHdri(ray.d);
             if (misMode == 0) {
                 if (isFirstHit) {
@@ -200,9 +204,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         if (isFirstHit) {
             pathSample.baseCol = mat.baseCol;
             pathSample.normal = si.ns;
-            // Subtract from 1 as depth color reduces with distance
-            float depth = 1.0 - si.t * depthFactor / 2.0;
-            pathSample.depth = clamp(depth, 0.0, 1.0);
+            pathSample.depth = si.t;
 
             isFirstHit = false;
 
@@ -276,6 +278,8 @@ void main() {
     vec3 sampleBaseColor = vec3(0.0);
     vec3 sampleNormal = vec3(0.0);
     float sampleDepth = 0.0;
+    float sampleHitCount = 0.0;
+
     for (int i = 0; i < samplesPerPixel; i++) {
         // Get random vec3 (range [0, 1])
         // Convert to range [-0.5, 0.5]
@@ -310,23 +314,32 @@ void main() {
         sampleCombined += pathSample.combined;
         sampleBaseColor += pathSample.baseCol;
         sampleNormal += pathSample.normal;
-        sampleDepth += pathSample.depth;
+        
+        if (pathSample.depth >= 0.0) {
+            sampleDepth += pathSample.depth;
+            sampleHitCount += 1.0;
+        }
     }
+
     sampleCombined /= float(samplesPerPixel);
     sampleBaseColor /= float(samplesPerPixel);
     sampleNormal /= float(samplesPerPixel);
-    sampleDepth /= float(samplesPerPixel);
+    float sampleHitFraction = sampleHitCount / float(samplesPerPixel);
+    sampleDepth = sampleHitCount > 0.0 ? sampleDepth / sampleHitCount : 0.0;
 
     vec3 oldCombined = imageLoad(combinedPass, pixelCoords).rgb;
     vec3 oldBaseColor = imageLoad(baseColorPass, pixelCoords).rgb;
     vec3 oldNormal = imageLoad(normalPass, pixelCoords).rgb;
-    float oldDepth = imageLoad(depthPass, pixelCoords).r;
+    vec2 oldDepth = imageLoad(depthPass, pixelCoords).rg;
+
     float weight = float(samplesPerPixel) / (float(totalSamples + samplesPerPixel));
     
     vec3 finalCombined;
     vec3 finalBaseCol;
     vec3 finalNormal;
     float finalDepth;
+    float finalHitFraction;
+
     if (totalSamples == 0) {
         // Ignore old color
         // ----------------
@@ -334,15 +347,17 @@ void main() {
         finalBaseCol = sampleBaseColor;
         finalNormal = sampleNormal;
         finalDepth = sampleDepth;
+        finalHitFraction = sampleHitFraction;
     } else {
         finalCombined = mix(oldCombined.rgb, sampleCombined, weight);
         finalBaseCol = mix(oldBaseColor.rgb, sampleBaseColor, weight);
         finalNormal = mix(oldNormal.rgb, sampleNormal, weight);
         finalDepth = mix(oldDepth.r, sampleDepth, weight);
+        finalHitFraction = mix(oldDepth.g, sampleHitFraction, weight);
     }
     
     imageStore(combinedPass, pixelCoords, vec4(finalCombined, 1.0));
     imageStore(baseColorPass, pixelCoords, vec4(finalBaseCol, 1.0));
     imageStore(normalPass, pixelCoords, vec4(finalNormal, 1.0));
-    imageStore(depthPass, pixelCoords, vec4(vec3(finalDepth), 1.0));
+    imageStore(depthPass, pixelCoords, vec4(finalDepth, finalHitFraction, 0.0, 1.0));
 }

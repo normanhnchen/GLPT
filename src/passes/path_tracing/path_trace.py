@@ -20,8 +20,6 @@ def _compute_uniforms(scene, camera, pt_state):
         "maxSpecularBounces": pt_settings.specular_bounces,
         "maxTransmissionBounces": pt_settings.transmission_bounces,
 
-        "depthFactor": 1 / scene.extent,
-
         "numFiniteLights": scene.num_finite_lights,
         "numEmissiveTriangles": scene.num_emissive_triangles,
 
