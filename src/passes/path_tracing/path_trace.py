@@ -32,7 +32,9 @@ def _compute_uniforms(scene, camera, pt_state):
         "uOffset": np.array([pt_state.tiles.curr_tile_x, pt_state.tiles.curr_tile_y], dtype=i4),
 
         "blur": camera.blur,
-        "hdriExposure": post_process_settings.hdri_exposure
+        "hdriExposure": post_process_settings.hdri_exposure,
+
+        "debugMode": pt_state.debug.mode
     }
 
 

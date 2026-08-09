@@ -29,10 +29,12 @@ uniform int maxTransmissionBounces;
 uniform int numFiniteLights;
 uniform int numEmissiveTriangles;
 
-uniform int specularMode = 0;
-uniform int geometryMode = 0;
-uniform int transmissionMode = 0;
-uniform int misMode = 0;
+uniform int specularMode;
+uniform int geometryMode;
+uniform int transmissionMode;
+uniform int misMode;
+
+uniform int debugMode;
 
 
 // --- final.fs ---

@@ -11,7 +11,13 @@ class PathTracingPipeline:
         self.final_pass = FinalPass(ctx, pt_shaders.final, pt_state, final_output_state)
 
     def render(self):
-        if self.pt_state.denoising.should_denoise and self.ai_denoiser is not None:
+        is_denoising = (
+            self.pt_state.denoising.should_denoise and
+            self.ai_denoiser is not None and
+            self.pt_state.debug.mode == 0 # Off
+        )
+
+        if is_denoising:
             self.pt_state.denoise(self.ai_denoiser)
 
             # Draw to screen

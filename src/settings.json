@@ -80,6 +80,6 @@
     },
     "ai_training": {
         "ai_training_mode": false,
-        "camera_setup_mode": true
+        "camera_setup_mode": false
     }
 }

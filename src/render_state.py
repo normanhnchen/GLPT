@@ -158,8 +158,6 @@ class RenderProgressState:
         self.render_complete = False
         self.should_view_saved = False
         self.should_render = False
-        # "off", "albedo", "normal", "depth"
-        self.debug_mode = "off"
 
     def start(self):
         self.should_render = True
@@ -175,12 +173,19 @@ class RenderProgressState:
         self.render_complete = False
         self.should_view_saved = False
         self.should_render = False
-        # "off", "albedo", "normal", "depth"
-        self.debug_mode = "off"
 
     def complete(self):
         self.render_complete = True
         self.should_view_saved = True
+
+
+class DebugState:
+    def __init__(self):
+        # combined: 0, albedo: 1, normal: 2, depth: 3
+        self.mode = 0
+
+    def reset(self):
+        self.mode = 0
 
 
 class DenoiseState:
@@ -210,6 +215,7 @@ class PTState:
         self.tiles = RenderState()
         self.rendering = RenderProgressState()
         self.denoising = DenoiseState(ctx)
+        self.debug = DebugState()
     
     def reset(self):
         self.framebuffers.reset()

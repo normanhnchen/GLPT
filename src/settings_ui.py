@@ -598,28 +598,21 @@ class DebugUI:
     def __init__(self, pt_state):
         self.pt_state = pt_state
 
-        self.debug_off_button = Button("Off")
-        self.debug_albedo_button = Button("View Albedo")
-        self.debug_normal_button = Button("View Normal")
-        self.debug_depth_button = Button("View Depth")
+        self.debug_off_button = CycleButton("Debug Mode")
     
     def draw_debug_mode_button(self):
-        def set_off():
-            self.pt_state.rendering.debug_mode = "off"
+        options = [
+            "Off",    # 0
+            "Albedo", # 1
+            "Normal", # 2
+            "Depth"   # 3
+        ]
 
-        def set_albedo():
-            self.pt_state.rendering.debug_mode = "albedo"
+        def on_change(new_val):
+            self.pt_state.debug.mode = new_val
+            self.pt_state.restart_render()
 
-        def set_normal():
-            self.pt_state.rendering.debug_mode = "normal"
-
-        def set_depth():
-            self.pt_state.rendering.debug_mode = "depth"
-
-        self.debug_off_button.button(set_off)
-        self.debug_albedo_button.button(set_albedo)
-        self.debug_normal_button.button(set_normal)
-        self.debug_depth_button.button(set_depth)
+        self.debug_off_button.button(options, self.pt_state.debug.mode, on_change)
 
 
 class SceneUI:
