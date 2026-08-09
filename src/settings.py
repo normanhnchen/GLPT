@@ -69,6 +69,8 @@ class PTSettings:
         self.transmission_mode = config["transmission_mode"]
         self.mis_mode = config["mis_mode"]
 
+        self.backface_culling = config["backface_culling"]
+
     def reset(self):
         self._load(self._default_config)
 

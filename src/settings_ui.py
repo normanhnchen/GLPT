@@ -296,8 +296,10 @@ class PathTracingUI:
         self.geometry_cycle_button = CycleButton("Geometry Mode")
         self.transmission_cycle_button = CycleButton("Transmission Mode")
         self.mis_cycle_button = CycleButton("Multiple Importance Sample")
+
         self.reset_pt_button = Button("Reset Path Tracing Settings")
-        
+
+        self.backface_culling_checkbox = Checkbox("Backface Culling")
     
     def draw_total_bounces_slider(self):
         def on_change(new_val):
@@ -418,6 +420,18 @@ class PathTracingUI:
         self.bvh_depth_slider.minus_button(on_change)
         self.bvh_depth_slider.plus_button(on_change)
         self.bvh_depth_slider.draw_label()
+
+    def draw_backface_culling_checkbox(self):
+        def on_change(enabled):
+            pt_settings.backface_culling = enabled
+
+        def on_enable():
+            self.pt_state.restart_render()
+
+        def on_disable():
+            self.pt_state.restart_render()
+
+        self.backface_culling_checkbox.checkbox(pt_settings.backface_culling, on_change, on_enable, on_disable)
 
 
 class CameraUI:
@@ -801,6 +815,7 @@ class SettingsUI:
         self.path_tracing_ui.draw_max_samples_slider()
         self.path_tracing_ui.draw_spp_slider()
         self.path_tracing_ui.draw_bvh_depth_slider()
+        self.path_tracing_ui.draw_backface_culling_checkbox()
 
         if allow_modes:
             if imgui.tree_node("BSDF Sampling"):

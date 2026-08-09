@@ -65,7 +65,8 @@
         "specular_mode": 0,
         "geometry_mode": 0,
         "transmission_mode": 0,
-        "mis_mode": 0
+        "mis_mode": 0,
+        "backface_culling": false
     },
     "bvh": {
         "max_depth": 32,

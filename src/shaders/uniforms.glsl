@@ -37,6 +37,8 @@ uniform int debugMode;
 
 uniform int maxBvhDepth;
 
+uniform int backfaceCulling;
+
 
 // --- final.fs ---
 

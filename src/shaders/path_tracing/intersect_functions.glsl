@@ -30,8 +30,10 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triId, float closestT, inou
     // Check if the hit distance is positive and closer than current closest triangle
     if (t < EPSILON || t >= closestT) return false;
 
-    Material mat = materials[tri.matId];
-    if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
+    if (backfaceCulling == 1) {
+        Material mat = materials[tri.matId];
+        if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
+    }
 
     si.bary = vec2(u, v);
     si.t = t;
@@ -66,7 +68,9 @@ bool ShadowRayTriangleIntersect(inout uvec3 rng, inout Ray ray, Triangle tri, in
     if (t < EPSILON || t >= closestT) return false;
 
     Material mat = materials[tri.matId];
-    if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
+    if (backfaceCulling == 1) {
+        if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
+    }
 
     float w = 1.0 - u - v;
     vec2 texCoords = w * tri.v0.uv + u * tri.v1.uv + v * tri.v2.uv;

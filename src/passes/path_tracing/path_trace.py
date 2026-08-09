@@ -34,7 +34,9 @@ def _compute_uniforms(scene, camera, pt_state):
 
         "debugMode": pt_state.debug.mode,
 
-        "maxBvhDepth": bvh_settings.max_depth
+        "maxBvhDepth": bvh_settings.max_depth,
+
+        "backfaceCulling": set_i4(1) if pt_settings.backface_culling else set_i4(0)
     }
 
 
