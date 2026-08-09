@@ -56,8 +56,12 @@ def main():
     final_output_state = FinalOutputState(ctx)
     export_state = ExportState(pt_state, final_output_state)
     scene_state = SceneState()
-    camera_capture_state = CameraCaptureState(scene_state, input_state, camera)
+    camera_capture_state = CameraCaptureState(scene_state, camera)
     frame_stats = FrameStatsState()
+
+    camera_buffer = CameraBuffer(camera)
+    camera_buffer.bind(ctx, 0)
+    camera_capture_state.set_camera_buffer(camera_buffer)
    
     frame_stats.start_tracking()
 
@@ -73,7 +77,6 @@ def main():
         if not ai_training_settings.camera_setup_mode:
             camera_capture_state.load_next_state()
         
-        camera_buffer = CameraBuffer(camera)
         material_buffer = MaterialBuffer(scene)
         triangle_buffer = TriangleBuffer(scene)
         light_buffer = LightBuffer(scene)
@@ -87,7 +90,6 @@ def main():
             bvh_node_buffer.bind(ctx, 4)
             tri_indices_buffer.bind(ctx, 5)
 
-        camera_buffer.bind(ctx, 0)
         triangle_buffer.bind(ctx, 1)
         material_buffer.bind(ctx, 2)
         light_buffer.bind(ctx, 3)
@@ -120,7 +122,7 @@ def main():
             camera
         )
 
-        pt_pipeline = PathTracingPipeline(ctx, scene, pt_state, final_output_state, pt_shaders)
+        pt_pipeline = PathTracingPipeline(ctx, scene, camera, pt_state, final_output_state, pt_shaders)
         raster_pipeline = RasterizationPipeline(ctx, scene, camera, raster_state, raster_shaders)
 
         frame_stats.start_tracking()

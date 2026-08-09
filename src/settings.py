@@ -39,6 +39,11 @@ class CameraSettings:
         self._front = glm.vec3(config["_front"])
         self._up = glm.vec3(config["_up"])
         self._world_up = glm.vec3(config["_world_up"])
+        
+        self.blur = config["blur"]
+        self.dof_enabled = config["dof_enabled"]
+        self.aperture = config["aperture"]
+        self.focus_dist = config["focus_dist"]
 
     def reset(self):
         self._load(self._default_config)
@@ -75,11 +80,6 @@ class PostProcessSettings:
         self._load(self._default_config)
 
     def _load(self, config):
-        self.blur = config["blur"]
-        self.dof_enabled = config["dof_enabled"]
-        self.aperture = config["aperture"]
-        self.focus_dist = config["focus_dist"]
-        self.auto_focus = config["auto_focus"]
         self.exposure = config["exposure"]
         self.tonemap = config["tonemap"]
         self.hdri_exposure = config["hdri_exposure"]

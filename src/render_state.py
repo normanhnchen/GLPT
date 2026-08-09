@@ -513,11 +513,15 @@ class CameraCaptureState:
     def __init__(self, scene_state, camera):
         self.scene_state = scene_state
         self.camera = camera
+        self.camera_buffer = None
         self.states = {self._key(f):[] for f in self.scene_state.scene_files}
         self.curr_state_idx = 0
         self.browse_idx = 0
 
         self._load_states()
+
+    def set_camera_buffer(self, camera_buffer):
+        self.camera_buffer = camera_buffer
 
     def _key(self, scene_file):
         return Path(scene_file).name
@@ -538,6 +542,7 @@ class CameraCaptureState:
 
     def _load_state(self, state):
         self.camera.load_state(state)
+        self.camera_buffer.update_data()
 
     def _write(self):
         with open(file_paths.camera_capture_states, "w") as f:

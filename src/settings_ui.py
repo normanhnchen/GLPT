@@ -405,13 +405,19 @@ class PathTracingUI:
 
 
 class CameraUI:
-    def __init__(self, pt_state, camera):
+    def __init__(self, pt_state, camera, camera_buffer):
         self.pt_state = pt_state
         self.camera = camera
+        self.camera_buffer = camera_buffer
 
         self.movement_speed_slider = FloatSlider(0, 10000, "Movement Speed", increment=1)
         self.fov_slider = FloatSlider(1, 135, "Field Of View", slider_speed=1)
         self.mouse_sensitivity_slider = FloatSlider(0.1, 10, "Mouse Sensitivity", slider_speed=0.1, increment=0.1)
+        self.blur_slider = FloatSlider(0, 100, "Blur", increment=1)
+        self.aperture_slider = FloatSlider(0, 1, "Aperture", slider_speed=0.01, increment=0.01)
+        self.focus_dist_slider = FloatSlider(0.1, 1000, "Focus Distance", slider_speed=0.1, increment=0.1)
+
+        self.dof_checkbox = Checkbox("Depth of Field")
 
     def draw_movement_speed_slider(self):
         def on_change(new_val):
@@ -446,22 +452,76 @@ class CameraUI:
         self.mouse_sensitivity_slider.plus_button(on_change)
         self.mouse_sensitivity_slider.draw_label()
 
+    def draw_blur_slider(self):
+        def on_change(new_val):
+            self.camera.blur = new_val
+            self.pt_state.restart_render()
+        
+        self.blur_slider.slider(self.camera.blur)
+        self.blur_slider.dragging_logic(on_change)
+        self.blur_slider.minus_button(on_change)
+        self.blur_slider.plus_button(on_change)
+        self.blur_slider.draw_label()
+    
+    def draw_dof_checkbox(self):
+        def on_change(enabled):
+            self.camera.dof_enabled = enabled
+            self.pt_state.restart_render()
+
+        def on_enable():
+            self.camera.aperture = self.camera.aperture
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+
+        def on_disable():
+            self.camera.aperture = 0
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+
+        self.dof_checkbox.checkbox(self.camera.dof_enabled, on_change, on_enable, on_disable)
+        
+    def draw_aperture_slider(self):
+        if not self.camera.dof_enabled:
+            return
+
+        def on_change(new_val):
+            self.camera.aperture = new_val
+            self.camera.aperture = self.camera.aperture
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+        
+        self.aperture_slider.slider(self.camera.aperture, val_format="%.2f")
+        self.aperture_slider.dragging_logic(on_change)
+        self.aperture_slider.minus_button(on_change)
+        self.aperture_slider.plus_button(on_change)
+        self.aperture_slider.draw_label()
+    
+    def draw_focus_dist_slider(self):
+        if not self.camera.dof_enabled:
+            return
+
+        def on_change(new_val):
+            self.camera.focus_dist = new_val
+            self.camera.focus_dist = self.camera.focus_dist
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+        
+        self.focus_dist_slider.slider(self.camera.focus_dist)
+        self.focus_dist_slider.dragging_logic(on_change)
+        self.focus_dist_slider.minus_button(on_change)
+        self.focus_dist_slider.plus_button(on_change)
+        self.focus_dist_slider.draw_label()
+
 
 class PostProcessingUI:
-    def __init__(self, pt_state, camera_buffer):
+    def __init__(self, pt_state):
         self.pt_state = pt_state
-        self.camera_buffer = camera_buffer
         self.window = glfwGetCurrentContext()
 
         self.exposure_slider = FloatSlider(0, 10, "Exposure", slider_speed=0.1, increment=0.1)
         self.hdri_exposure_slider = FloatSlider(0, 10, "HDRI Exposure", slider_speed=0.1, increment=0.1)
-        self.blur_slider = FloatSlider(0, 100, "Blur", increment=1)
-        self.aperture_slider = FloatSlider(0, 1, "Aperture", slider_speed=0.01, increment=0.01)
-        self.focus_dist_slider = FloatSlider(0.1, 1000, "Focus Distance", slider_speed=0.1, increment=0.1)
         
         self.tonemap_dropdown = Dropdown("Render Mode")
-
-        self.dof_checkbox = Checkbox("Depth of Field")
 
     def draw_tonemap_dropdown(self):
         options = ["None", "ACESFilm", "AgX", "AgXGolden", "AgXPunchy", "Filmic", "Lottes",
@@ -494,65 +554,6 @@ class PostProcessingUI:
         self.hdri_exposure_slider.minus_button(on_change)
         self.hdri_exposure_slider.plus_button(on_change)
         self.hdri_exposure_slider.draw_label()
-
-    def draw_blur_slider(self):
-        def on_change(new_val):
-            post_process_settings.blur = new_val
-            self.pt_state.restart_render()
-        
-        self.blur_slider.slider(post_process_settings.blur)
-        self.blur_slider.dragging_logic(on_change)
-        self.blur_slider.minus_button(on_change)
-        self.blur_slider.plus_button(on_change)
-        self.blur_slider.draw_label()
-    
-    def draw_dof_checkbox(self):
-        def on_change(enabled):
-            post_process_settings.dof_enabled = enabled
-
-        def on_enable():
-            post_process_settings.aperture = post_process_settings.aperture
-            self.camera_buffer.update_data()
-            self.pt_state.restart_render()
-
-        def on_disable():
-            post_process_settings.aperture = 0
-            self.camera_buffer.update_data()
-            self.pt_state.restart_render()
-
-        self.dof_checkbox.checkbox(post_process_settings.dof_enabled, on_change, on_enable, on_disable)
-        
-    def draw_aperture_slider(self):
-        if not post_process_settings.dof_enabled:
-            return
-
-        def on_change(new_val):
-            post_process_settings.aperture = new_val
-            post_process_settings.aperture = post_process_settings.aperture
-            self.camera_buffer.update_data()
-            self.pt_state.restart_render()
-        
-        self.aperture_slider.slider(post_process_settings.aperture, val_format="%.2f")
-        self.aperture_slider.dragging_logic(on_change)
-        self.aperture_slider.minus_button(on_change)
-        self.aperture_slider.plus_button(on_change)
-        self.aperture_slider.draw_label()
-    
-    def draw_focus_dist_slider(self):
-        if not post_process_settings.dof_enabled:
-            return
-
-        def on_change(new_val):
-            post_process_settings.focus_dist = new_val
-            post_process_settings.focus_dist = post_process_settings.focus_dist
-            self.camera_buffer.update_data()
-            self.pt_state.restart_render()
-        
-        self.focus_dist_slider.slider(post_process_settings.focus_dist)
-        self.focus_dist_slider.dragging_logic(on_change)
-        self.focus_dist_slider.minus_button(on_change)
-        self.focus_dist_slider.plus_button(on_change)
-        self.focus_dist_slider.draw_label()
 
 
 class ScreenUI:
@@ -646,7 +647,8 @@ class SceneUI:
 
 
 class CameraCapturingUI:
-    def __init__(self, scene_state, camera_capture_state):
+    def __init__(self, pt_state, scene_state, camera_capture_state):
+        self.pt_state = pt_state
         self.scene_state = scene_state
         self.camera_capture_state = camera_capture_state
 
@@ -659,18 +661,21 @@ class CameraCapturingUI:
     def draw_save_state_button(self):
         def on_change():
             self.camera_capture_state.save_state()
+            self.pt_state.restart_render()
 
         self.save_state_button.button(on_change)
 
     def draw_delete_current_button(self):
         def on_change():
             self.camera_capture_state.delete_current()
+            self.pt_state.restart_render()
 
         self.delete_current_button.button(on_change)
 
     def draw_view_current_button(self):
         def on_change():
             self.camera_capture_state.view_current()
+            self.pt_state.restart_render()
 
         self.view_current_button.button(on_change)
 
@@ -685,9 +690,11 @@ class CameraCapturingUI:
 
         def on_prev():
             self.camera_capture_state.previous_capture()
+            self.pt_state.restart_render()
 
         def on_next():
             self.camera_capture_state.next_capture()
+            self.pt_state.restart_render()
 
         self.previous_button.button(on_prev)
         self.next_button.button(on_next)
@@ -727,12 +734,12 @@ class SettingsUI:
 
         self.rendering_ui = RenderingUI(pt_state, camera_buffer)
         self.path_tracing_ui = PathTracingUI(pt_state)
-        self.camera_ui = CameraUI(pt_state, camera)
-        self.post_processing_ui = PostProcessingUI(pt_state, camera_buffer)
+        self.camera_ui = CameraUI(pt_state, camera, camera_buffer)
+        self.post_processing_ui = PostProcessingUI(pt_state)
         self.screen_ui = ScreenUI(pt_state)
         self.debug_ui = DebugUI(pt_state)
         self.scene_ui = SceneUI(scene_state)
-        self.camera_capturing_ui = CameraCapturingUI(scene_state, camera_capture_state)
+        self.camera_capturing_ui = CameraCapturingUI(pt_state, scene_state, camera_capture_state)
         self.export_ui = ExportUI(export_state)
 
     def draw_rendering_ui(self,
@@ -797,15 +804,15 @@ class SettingsUI:
         self.camera_ui.draw_movement_speed_slider()
         self.camera_ui.draw_fov_slider()
         self.camera_ui.draw_mouse_sensitivity_slider()
+        self.camera_ui.draw_blur_slider()
+        self.camera_ui.draw_dof_checkbox()
+        self.camera_ui.draw_aperture_slider()
+        self.camera_ui.draw_focus_dist_slider()
     
     def draw_post_processing_ui(self):
         self.post_processing_ui.draw_exposure_slider()
         self.post_processing_ui.draw_hdri_exposure_slider()
         self.post_processing_ui.draw_tonemap_dropdown()
-        self.post_processing_ui.draw_blur_slider()
-        self.post_processing_ui.draw_dof_checkbox()
-        self.post_processing_ui.draw_aperture_slider()
-        self.post_processing_ui.draw_focus_dist_slider()
     
     def draw_screen_ui(self):
         self.screen_ui.draw_vsync_checkbox()

@@ -28,7 +28,11 @@ class Camera:
             pitch=camera_settings._pitch,
             movement_speed=camera_settings.movement_speed,
             mouse_sensitivity=camera_settings.mouse_sensitivity,
-            fov=camera_settings.fov
+            fov=camera_settings.fov,
+            blur=camera_settings.blur,
+            dof_enabled=camera_settings.dof_enabled,
+            aperture=camera_settings.aperture,
+            focus_dist=camera_settings.focus_dist
         ):
         self.pos = pos
         self.front = front
@@ -42,6 +46,11 @@ class Camera:
         self.movement_speed = movement_speed
         self.mouse_sensitivity = mouse_sensitivity
         self.fov = fov
+
+        self.blur = blur
+        self.dof_enabled = dof_enabled
+        self.aperture = aperture
+        self.focus_dist = focus_dist
 
         self._update_camera_vectors()
 
@@ -103,19 +112,25 @@ class Camera:
     def get_state(self):
         return {
             "pos": list(self.pos),
-            "front": list(self.front),
-            "up": list(self.up),
-            "right": list(self.right),
-            "fov": self.fov
+            "yaw": self.yaw,
+            "pitch": self.pitch,
+            "fov": self.fov,
+            "dof_enabled": self.dof_enabled,
+            "aperture": self.aperture,
+            "focus_dist": self.focus_dist,
+            "blur": self.blur,
         }
 
     def load_state(self, state):
         self.pos = glm.vec3(state["pos"])
-        self.front = glm.vec3(state["front"])
-        self.up = glm.vec3(state["up"])
-        self.right = glm.vec3(state["right"])
+        self.yaw = state["yaw"]
+        self.pitch = state["pitch"]
         self.fov = state["fov"]
-        
+        self.dof_enabled = state["dof_enabled"]
+        self.aperture = state["aperture"]
+        self.focus_dist = state["focus_dist"]
+        self.blur = state["blur"]
+
         self._update_camera_vectors()
     
     def has_moved(self):

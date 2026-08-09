@@ -94,7 +94,7 @@ def main():
     # Load saved weights and biases
     ai_denoiser.load_state_dict(torch.load("src/denoiser/checkpoint.pt")["model_state_dict"])
 
-    pt_pipeline = PathTracingPipeline(ctx, scene, pt_state, final_output_state, pt_shaders, ai_denoiser)
+    pt_pipeline = PathTracingPipeline(ctx, scene, camera, pt_state, final_output_state, pt_shaders, ai_denoiser)
     raster_pipeline = RasterizationPipeline(ctx, scene, camera, raster_state, raster_shaders)
 
     frame_stats.start_tracking()

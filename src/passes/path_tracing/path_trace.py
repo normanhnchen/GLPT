@@ -2,7 +2,7 @@ from src.dtypes import *
 from src.settings import *
 
 
-def _compute_uniforms(scene, pt_state):
+def _compute_uniforms(scene, camera, pt_state):
     # Prevent the samples from going over the max samples limit
     samples_left = pt_settings.max_samples - pt_state.rendering.total_samples
     if samples_left < pt_settings.spp:
@@ -31,7 +31,7 @@ def _compute_uniforms(scene, pt_state):
         "misMode": pt_settings.mis_mode,
         "uOffset": np.array([pt_state.tiles.curr_tile_x, pt_state.tiles.curr_tile_y], dtype=i4),
 
-        "blur": post_process_settings.blur,
+        "blur": camera.blur,
         "hdriExposure": post_process_settings.hdri_exposure
     }
 
@@ -45,13 +45,14 @@ def _set_uniforms(prog, uniform_dict):
 
 
 class PathTracePass:
-    def __init__(self, scene, pt_state, compute_shader):
+    def __init__(self, scene, camera, pt_state, compute_shader):
         self.scene = scene
+        self.camera = camera
         self.pt_state = pt_state
         self.shader = compute_shader
 
     def render(self):
-        uniform_dict = _compute_uniforms(self.scene, self.pt_state)
+        uniform_dict = _compute_uniforms(self.scene, self.camera, self.pt_state)
         _set_uniforms(self.shader.prog, uniform_dict)
 
         # Apply ceiling function

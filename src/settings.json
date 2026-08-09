@@ -49,7 +49,11 @@
         "pos": [0, 0, 0],
         "_front": [0, 0, -1],
         "_up": [0, 1, 0],
-        "_world_up": [0, 1, 0]
+        "_world_up": [0, 1, 0],
+        "blur": 1.0,
+        "dof_enabled": false,
+        "aperture": 0.0,
+        "focus_dist": 10
     },
     "path_tracing": {
         "samples_per_pixel": 1,
@@ -64,11 +68,6 @@
         "mis_mode": 0
     },
     "post_processing": {
-        "blur": 1.0,
-        "dof_enabled": false,
-        "aperture": 0.0,
-        "focus_dist": 10,
-        "auto_focus": 0,
         "exposure": 3.0,
         "tonemap": "AgX",
         "hdri_exposure": 1.0

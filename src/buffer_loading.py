@@ -7,9 +7,8 @@ class CameraBuffer:
     def __init__(self, camera):
         camera_data = np.zeros(1, dtype=camera_dtype)
 
-        camera_data["aperture"] = post_process_settings.aperture
-        camera_data["focusDist"] = post_process_settings.focus_dist
-        camera_data["autoFocus"] = post_process_settings.auto_focus
+        camera_data["aperture"] = camera.aperture
+        camera_data["focusDist"] = camera.focus_dist
 
         self.camera = camera
         self.camera_data = camera_data
@@ -20,9 +19,8 @@ class CameraBuffer:
         self.camera_data["up"] = self.camera.up
         self.camera_data["right"] = self.camera.right
         self.camera_data["fov"] = self.camera.fov
-        self.camera_data["aperture"] = post_process_settings.aperture
-        self.camera_data["focusDist"] = post_process_settings.focus_dist
-        self.camera_data["autoFocus"] = post_process_settings.auto_focus
+        self.camera_data["aperture"] = self.camera.aperture
+        self.camera_data["focusDist"] = self.camera.focus_dist
 
         self.camera_buffer.write(self.camera_data.tobytes())
     
