@@ -96,23 +96,5 @@ vec3 GetBvhDepthColor(int currDepth, int maxDepth) {
     return col;
 }
 
-vec3 GetBvhBoundsColor(int currDepth, int maxDepth) {
-    float t = clamp(float(currDepth) / float(maxDepth), 0.0, 1.0);
-
-    const vec3 stops[5] = vec3[](
-        vec3(0.0, 0.0, 1.0), // blue  (shallow)
-        vec3(0.0, 1.0, 1.0), // cyan
-        vec3(0.0, 1.0, 0.0), // green
-        vec3(1.0, 1.0, 0.0), // yellow
-        vec3(1.0, 0.0, 0.0)  // red   (deep)
-    );
-
-    float scaled = t * 4.0;              // 4 segments across 5 stops
-    int   i      = clamp(int(scaled), 0, 3);
-    float frac   = smoothstep(0.0, 1.0, scaled - float(i)); // ease in/out of each segment
-
-    return mix(stops[i], stops[i + 1], frac);
-}
-
 
 #endif
