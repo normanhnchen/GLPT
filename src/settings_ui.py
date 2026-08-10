@@ -690,12 +690,6 @@ class DebugUI:
     def draw_bvh_view_layer_slider(self):
         self._clamp_to_scene_max_depth()
 
-        # View layer can't go past view depth
-        max_idx = max(self.scene.bvh.max_depth - 1, -1)
-        if debug_settings.bvh.view_depth != -1:
-            max_idx = min(max_idx, debug_settings.bvh.view_depth)
-        self.bvh_view_layer_slider.max_val = max_idx
-
         is_all = debug_settings.bvh.view_layer == -1
         display_layer = -1 if is_all else debug_settings.bvh.view_layer
         layer_format = "All" if is_all else "%d"
@@ -711,11 +705,7 @@ class DebugUI:
 
     def draw_bvh_view_depth_slider(self):
         self._clamp_to_scene_max_depth()
-
-        # View depth can't go past actual scene node max depth
-        max_idx = max(self.scene.bvh.max_depth - 1, -1)
-        self.bvh_view_depth_slider.max_val = max_idx
-
+        
         is_max = debug_settings.bvh.view_depth == -1
         display_depth = -1 if is_max else debug_settings.bvh.view_depth
         depth_format = "Max" if is_max else "%d"

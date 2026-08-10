@@ -157,6 +157,8 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             if (mat.alpha < mat.alphaCutoff) {
                 // Advance the ray and ignore the hit
                 ray.o = si.p + ray.d * EPSILON;
+                // Decrement to negate the loop's i++
+                i--;
                 continue;
             }
         }
@@ -165,6 +167,8 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             if (Pcg3d(rng).x > mat.alpha) {
                 // Advance the ray and ignore the hit
                 ray.o = si.p + ray.d * EPSILON;
+                // Decrement to negate the loop's i++
+                i--;
                 continue;
             }
         }
