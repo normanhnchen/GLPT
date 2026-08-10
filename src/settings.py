@@ -103,8 +103,12 @@ class PostProcessSettings:
 class ShaderGroup:
     def __init__(self, config):
         for attr, rel_dir in config.items():
-            root_dir = ROOT_DIR / rel_dir
-            setattr(self, attr, root_dir)
+            if isinstance(rel_dir, dict):
+                # Parse nested shader groups
+                setattr(self, attr, ShaderGroup(rel_dir))
+            else:
+                root_dir = ROOT_DIR / rel_dir
+                setattr(self, attr, root_dir)
 
 class FilePaths:
     def __init__(self, json_settings):

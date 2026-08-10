@@ -49,6 +49,10 @@ layout(std430, binding = 7) buffer FiniteLightsBuffer {
     FiniteLight finiteLights[];
 };
 
+layout(std430, binding = 8) buffer BvhNodeDepthsBuffer {
+    int bvhNodeDepths[];
+};
+
 layout(binding = 0) uniform sampler2DArray baseColorTextures;
 layout(binding = 1) uniform sampler2DArray emissiveTextures;
 layout(binding = 2) uniform sampler2DArray roughnessTextures;

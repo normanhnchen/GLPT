@@ -494,7 +494,7 @@ class BVHState:
         self.scene.build_bvh()
         self.bvh_built = True
 
-    def update(self, bvh_node_loc, tri_indices_loc):
+    def update(self, bvh_node_loc, tri_indices_loc, bvh_depths_loc):
         if self.ready:
             return
 
@@ -507,9 +507,11 @@ class BVHState:
 
             bvh_node_buffer = BVHNodeBuffer(self.scene)
             tri_indices_buffer = TriangleIndicesBuffer(self.scene)
+            bvh_depths_buffer = BVHDepthsBuffer(self.scene)
 
             bvh_node_buffer.bind(self.ctx, bvh_node_loc)
             tri_indices_buffer.bind(self.ctx, tri_indices_loc)
+            bvh_depths_buffer.bind(self.ctx, bvh_depths_loc)
 
             self.ready = True
 

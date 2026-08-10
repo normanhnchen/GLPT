@@ -2,7 +2,7 @@ import numpy as np
 from src.dtypes import *
 
 
-class DepthDebugPass:
+class BVHDepthDebugPass:
     def __init__(self, pt_state):
         self.pt_state = pt_state
 

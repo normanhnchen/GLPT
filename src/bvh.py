@@ -18,6 +18,7 @@ class BVH:
         max_nodes = 2 * scene.num_triangles
 
         # Preallocate all lists
+        # ---------------------
         self.aabb_mins = np.zeros((max_nodes, 3), dtype=np.float32)
         self.aabb_maxs = np.zeros((max_nodes, 3), dtype=np.float32)
         self.left_child_indices = np.full(max_nodes, -1, dtype=np.int32)
@@ -25,14 +26,17 @@ class BVH:
         self.first_tri_indices = np.zeros(max_nodes, dtype=np.int32)
         self.tri_counts = np.zeros(max_nodes, dtype=np.int32)
         self.is_leafs = np.zeros(max_nodes, dtype=np.int32)
+        self.depths = np.zeros(max_nodes, dtype=np.int32)
 
         self.nodes_used = 0
 
         # Build the root node
+        # -------------------
         self.aabb_mins[0] = np.min(scene.vertices, axis=0)
         self.aabb_maxs[0] = np.max(scene.vertices, axis=0)
         self.first_tri_indices[0] = 0
         self.tri_counts[0] = scene.num_triangles
+        self.depths[0] = 0
 
         self.nodes_used += 1
 
@@ -41,12 +45,16 @@ class BVH:
         self.subdivide(0)
 
         # Truncate to only the used parts of the list
+        # -------------------------------------------
         self.aabb_mins = self.aabb_mins[:self.nodes_used]
         self.aabb_maxs = self.aabb_maxs[:self.nodes_used]
         self.left_child_indices = self.left_child_indices[:self.nodes_used]
         self.first_tri_indices = self.first_tri_indices[:self.nodes_used]
         self.tri_counts = self.tri_counts[:self.nodes_used]
         self.is_leafs = self.is_leafs[:self.nodes_used]
+        self.depths = self.depths[:self.nodes_used]
+
+        self.max_depth = int(np.max(self.depths))
     
     def subdivide(self, node_idx):
         if self.tri_counts[node_idx] <= 4:
@@ -91,6 +99,7 @@ class BVH:
 
         self.first_tri_indices[left_child_idx] = self.first_tri_indices[node_idx]
         self.tri_counts[left_child_idx] = left_count
+        self.depths[left_child_idx] = self.depths[node_idx] + 1
         self.update_node_bounds(left_child_idx)
 
         self.nodes_used += 1
@@ -103,6 +112,7 @@ class BVH:
 
         self.first_tri_indices[right_child_idx] = i
         self.tri_counts[right_child_idx] = self.tri_counts[node_idx] - left_count
+        self.depths[right_child_idx] = self.depths[node_idx] + 1
         self.update_node_bounds(right_child_idx)
 
         self.nodes_used += 1
