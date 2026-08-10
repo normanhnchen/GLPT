@@ -181,7 +181,7 @@ class EmissiveTrianglesBuffer:
         self.emissive_triangles_buffer = ctx.buffer(self.emissive_triangles_data.tobytes())
         self.emissive_triangles_buffer.bind_to_storage_buffer(loc)
 
-class FiniteLightsbuffer:
+class FiniteLightsBuffer:
     def __init__(self, scene):
         # Ensure there is atleast a buffer size
         num_finite_lights = max(scene.num_finite_lights, 1)
@@ -199,3 +199,12 @@ class FiniteLightsbuffer:
     def bind(self, ctx, loc):
         self.finite_lights_buffer = ctx.buffer(self.finite_lights_data.tobytes())
         self.finite_lights_buffer.bind_to_storage_buffer(loc)
+
+
+class BVHDepthsBuffer:
+    def __init__(self, scene):
+        self.bvh_depths_data = scene.bvh.depths.astype(i4)
+    
+    def bind(self, ctx, loc):
+        self.bvh_depths_buffer = ctx.buffer(self.bvh_depths_data.tobytes())
+        self.bvh_depths_buffer.bind_to_storage_buffer(loc)

@@ -61,6 +61,13 @@ uniform bool Uncharted2;
 uniform bool Unreal;
 
 
+// --- bvh_bounds_debug.vs --- 
+
+// uniform int viewLayer;
+// uniform int viewDepth;
+uniform int bvhMaxDepth;
+
+
 /*
  * =============
  * Rasterization

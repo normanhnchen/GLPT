@@ -13,7 +13,11 @@
         "path_tracing": {
             "vert": "src/shaders/path_tracing/final.vs",
             "frag": "src/shaders/path_tracing/final.fs",
-            "comp": "src/shaders/path_tracing/path_trace.comp"
+            "comp": "src/shaders/path_tracing/path_trace.comp",
+            "bvh_bounds_debug": {
+                "vert": "src/shaders/path_tracing/bvh_bounds_debug.vs",
+                "frag": "src/shaders/path_tracing/bvh_bounds_debug.fs"
+            }
         },
         "rasterization": {
             "pbr": {

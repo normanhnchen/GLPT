@@ -58,7 +58,7 @@ def main():
     triangle_buffer = TriangleBuffer(scene)
     light_buffer = LightBuffer(scene)
     emissive_triangles_buffer = EmissiveTrianglesBuffer(scene)
-    finite_lights_buffer = FiniteLightsbuffer(scene)
+    finite_lights_buffer = FiniteLightsBuffer(scene)
 
     camera_buffer.bind(ctx, 0)
     triangle_buffer.bind(ctx, 1)
@@ -107,7 +107,7 @@ def main():
             glfwPollEvents()
             continue
 
-        bvh_state.update(4, 5)
+        bvh_state.update(4, 5, 8)
         
         if glfw_window.need_resize:
             pt_state.reset()
@@ -163,6 +163,11 @@ class PTShaders:
         self.pt = ComputeShader(
             ctx,
             file_paths.path_tracing.comp
+        )
+        self.bvh_bounds_debug = Shader(
+            ctx,
+            file_paths.path_tracing.bvh_bounds_debug.vert,
+            file_paths.path_tracing.bvh_bounds_debug.frag
         )
 
 

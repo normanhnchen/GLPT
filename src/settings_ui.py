@@ -639,6 +639,7 @@ class DebugUI:
             "Direct", # 4
             "Indirect", # 5
             "BVH Depth", # 6
+            "BVH Bounds", # 7
         ]
 
         def on_change(new_val):
