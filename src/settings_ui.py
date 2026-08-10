@@ -623,14 +623,21 @@ class ScreenUI:
         self.fps_slider.draw_label()
     
 
-# Currently broken
 class DebugUI:
-    def __init__(self, pt_state):
+    def __init__(self, scene, pt_state):
+        self.scene = scene
         self.pt_state = pt_state
 
         self.debug_off_button = Dropdown("Debug Mode")
 
         self.bvh_color_mode_cycle_button = CycleButton("BVH Color Mode")
+
+        # min/max are recomputed live each frame from self.scene.bvh.max_depth
+        # (see draw_bvh_view_layer_slider / draw_bvh_view_depth_slider), since
+        # the actual node depth can change whenever the active scene changes.
+        # The values passed here are just safe placeholders for construction.
+        self.bvh_view_layer_slider = IntSlider(-1, max(self.scene.bvh.max_depth - 1, -1), "View Layer")
+        self.bvh_view_depth_slider = IntSlider(-1, max(self.scene.bvh.max_depth - 1, -1), "View Depth")
     
     def draw_debug_mode_dropdown(self):
         options = [
@@ -657,10 +664,71 @@ class DebugUI:
         ]
 
         def on_change(new_val):
-            pt_settings.bvh_color_mode = new_val
+            debug_settings.bvh.color_mode = new_val
             self.pt_state.restart_render()
 
-        self.bvh_color_mode_cycle_button.button(options, pt_settings.bvh_color_mode, on_change)
+        self.bvh_color_mode_cycle_button.button(options, debug_settings.bvh.color_mode, on_change)
+
+    def _clamp_to_scene_max_depth(self):
+        # Clamps view layer/view depth back into range
+        # whenever the actual scene BVH depth shrinks
+
+        max_idx = max(self.scene.bvh.max_depth - 1, -1)
+
+        # Clamp view depth to the scene's max depth
+        if debug_settings.bvh.view_depth != -1 and debug_settings.bvh.view_depth > max_idx:
+            debug_settings.bvh.view_depth = max_idx
+
+        # Clamp view layer to the current view depth
+        if debug_settings.bvh.view_depth != -1 and debug_settings.bvh.view_layer > debug_settings.bvh.view_depth:
+            debug_settings.bvh.view_layer = debug_settings.bvh.view_depth
+
+        # Clamp view layer to the scene's max depth
+        if debug_settings.bvh.view_layer > max_idx:
+            debug_settings.bvh.view_layer = max_idx
+
+    def draw_bvh_view_layer_slider(self):
+        self._clamp_to_scene_max_depth()
+
+        # View layer can't go past view depth
+        max_idx = max(self.scene.bvh.max_depth - 1, -1)
+        if debug_settings.bvh.view_depth != -1:
+            max_idx = min(max_idx, debug_settings.bvh.view_depth)
+        self.bvh_view_layer_slider.max_val = max_idx
+
+        is_all = debug_settings.bvh.view_layer == -1
+        display_layer = -1 if is_all else debug_settings.bvh.view_layer
+        layer_format = "All" if is_all else "%d"
+
+        def on_change(new_val):
+            debug_settings.bvh.view_layer = -1 if new_val < 0 else new_val
+
+        self.bvh_view_layer_slider.slider(display_layer, val_format=layer_format)
+        self.bvh_view_layer_slider.dragging_logic(on_change)
+        self.bvh_view_layer_slider.minus_button(on_change)
+        self.bvh_view_layer_slider.plus_button(on_change)
+        self.bvh_view_layer_slider.draw_label()
+
+    def draw_bvh_view_depth_slider(self):
+        self._clamp_to_scene_max_depth()
+
+        # View depth can't go past actual scene node max depth
+        max_idx = max(self.scene.bvh.max_depth - 1, -1)
+        self.bvh_view_depth_slider.max_val = max_idx
+
+        is_max = debug_settings.bvh.view_depth == -1
+        display_depth = -1 if is_max else debug_settings.bvh.view_depth
+        depth_format = "Max" if is_max else "%d"
+
+        def on_change(new_val):
+            debug_settings.bvh.view_depth = -1 if new_val < 0 else new_val
+            self._clamp_to_scene_max_depth()
+        
+        self.bvh_view_depth_slider.slider(display_depth, val_format=depth_format)
+        self.bvh_view_depth_slider.dragging_logic(on_change)
+        self.bvh_view_depth_slider.minus_button(on_change)
+        self.bvh_view_depth_slider.plus_button(on_change)
+        self.bvh_view_depth_slider.draw_label()
 
 
 class SceneUI:
@@ -756,6 +824,7 @@ class ExportUI:
 
 class SettingsUI:
     def __init__(self,
+            scene,
             pt_state,
             scene_state,
             camera_capture_state,
@@ -778,7 +847,7 @@ class SettingsUI:
         self.camera_ui = CameraUI(pt_state, camera, camera_buffer)
         self.post_processing_ui = PostProcessingUI(pt_state)
         self.screen_ui = ScreenUI(pt_state)
-        self.debug_ui = DebugUI(pt_state)
+        self.debug_ui = DebugUI(scene, pt_state)
         self.scene_ui = SceneUI(scene_state)
         self.camera_capturing_ui = CameraCapturingUI(pt_state, scene_state, camera_capture_state)
         self.export_ui = ExportUI(export_state)
@@ -867,6 +936,8 @@ class SettingsUI:
         # BVH Bounds
         if self.pt_state.debug.mode == 7:
             self.debug_ui.draw_bvh_color_mode_cycle_button()
+            self.debug_ui.draw_bvh_view_layer_slider()
+            self.debug_ui.draw_bvh_view_depth_slider()
     
     def draw_scene_ui(self):
         self.scene_ui.draw_next_scene_button()
@@ -992,3 +1063,4 @@ class SettingsUI:
         imgui.end()
 
         return settings_window
+    

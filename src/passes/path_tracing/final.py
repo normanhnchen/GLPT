@@ -4,6 +4,8 @@ from src.fullscreen_quad import *
 
 def _compute_uniforms():
     return {
+        # Fragment Shader Uniforms
+        # ------------------------
         "exposure": post_process_settings.exposure
     }
 

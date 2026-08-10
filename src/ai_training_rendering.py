@@ -81,7 +81,7 @@ def main():
         triangle_buffer = TriangleBuffer(scene)
         light_buffer = LightBuffer(scene)
         emissive_triangles_buffer = EmissiveTrianglesBuffer(scene)
-        finite_lights_buffer = FiniteLightsbuffer(scene)
+        finite_lights_buffer = FiniteLightsBuffer(scene)
 
         if not ai_training_settings.camera_setup_mode:
             scene.build_bvh()
@@ -113,6 +113,7 @@ def main():
             ctx.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
 
         settings_ui = SettingsUI(
+            scene,
             pt_state,
             scene_state,
             camera_capture_state,
@@ -137,7 +138,7 @@ def main():
                 glfwPollEvents()
                 continue
 
-            bvh_state.update(4, 5)
+            bvh_state.update(4, 5, 8)
             
             if glfw_window.need_resize:
                 pt_state.reset()

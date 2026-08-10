@@ -6,9 +6,12 @@ from src.settings import *
 
 def _compute_uniforms(camera):
     return {
-        # Vertex shader uniforms
+        # Vertex Shader Uniforms
+        # ------------------------
         "view": camera.get_view().to_bytes(),
         "projection": camera.get_perspective().to_bytes(),
+        # Fragment Shader Uniforms
+        # ------------------------
         "hdriExposure": post_process_settings.hdri_exposure
     }
 

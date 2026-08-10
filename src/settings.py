@@ -71,8 +71,6 @@ class PTSettings:
 
         self.backface_culling = config["backface_culling"]
 
-        self.bvh_color_mode = config["bvh_color_mode"]
-
     def reset(self):
         self._load(self._default_config)
 
@@ -86,6 +84,28 @@ class BVHSettings:
     def _load(self, config):
         self.max_depth = config["max_depth"]
         self.sah_bins = config["sah_bins"]
+
+
+class DebugSettings:
+    def __init__(self, json_settings):
+        self._default_config = json_settings["debug"]
+
+        self._load(self._default_config)
+
+    def _load(self, config):
+        class BVH:
+            def __init__(self, debug_config):
+                self._default_config = debug_config["bvh"]
+
+                self._load(self._default_config)
+
+            def _load(self, config):
+                self.view_layer = config["view_layer"]
+                self.view_depth = config["view_depth"]
+                self.color_mode = config["color_mode"]
+
+        self.bvh = BVH(config)
+
 
 class PostProcessSettings:
     def __init__(self, json_settings):
@@ -184,6 +204,7 @@ screen = Screen(json_settings)
 camera_settings = CameraSettings(json_settings)
 pt_settings = PTSettings(json_settings)
 bvh_settings = BVHSettings(json_settings)
+debug_settings = DebugSettings(json_settings)
 post_process_settings = PostProcessSettings(json_settings)
 file_paths = FilePaths(json_settings)
 render_settings = RenderSettings(json_settings)

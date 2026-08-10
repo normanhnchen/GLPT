@@ -81,6 +81,7 @@ def main():
         ctx.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
 
     settings_ui = SettingsUI(
+        scene,
         pt_state,
         scene_state,
         camera_capture_state,

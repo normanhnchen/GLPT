@@ -7,11 +7,16 @@ from src.dtypes import *
 
 def _compute_uniforms(scene, camera):
     return {
-        # Vertex shader uniforms
+        # Vertex Shader Uniforms
+        # ------------------------
         "view": camera.get_view().to_bytes(),
         "projection": camera.get_perspective().to_bytes(),
-        "bvhMaxDepth": scene.bvh.max_depth,
-        "bvhColorMode": pt_settings.bvh_color_mode
+        # Fragment Shader Uniforms
+        # ------------------------
+        "bvhViewLayer": debug_settings.bvh.view_layer,
+        "bvhViewDepth": debug_settings.bvh.view_depth,
+        "bvhMaxNodeDepth": scene.bvh.max_depth,
+        "bvhColorMode": debug_settings.bvh.color_mode
     }
 
 
