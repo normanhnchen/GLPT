@@ -1,6 +1,7 @@
 import numpy as np
 import moderngl
 
+from src.settings import *
 from src.dtypes import *
 
 
@@ -9,7 +10,8 @@ def _compute_uniforms(scene, camera):
         # Vertex shader uniforms
         "view": camera.get_view().to_bytes(),
         "projection": camera.get_perspective().to_bytes(),
-        "bvhMaxDepth": scene.bvh.max_depth
+        "bvhMaxDepth": scene.bvh.max_depth,
+        "bvhColorMode": pt_settings.bvh_color_mode
     }
 
 

@@ -96,5 +96,19 @@ vec3 GetBvhDepthColor(int currDepth, int maxDepth) {
     return col;
 }
 
+// HSB to RGB function from Iñigo Quiles
+// https://www.shadertoy.com/view/MsS3Wc
+vec3 HsbToRgb(in vec3 c){
+    vec3 rgb = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+    rgb = rgb * rgb * (3.0 - 2.0 * rgb);
+    return c.z * mix(vec3(1.0), rgb, c.y);
+}
+
+vec3 GetBvhRgbColor(int currDepth, int maxDepth) {
+    float t = clamp(float(currDepth) / float(maxDepth), 0.0, 1.0);
+    vec3 hsb = vec3(t, 1.0, 1.0);
+    return HsbToRgb(hsb);
+}
+
 
 #endif

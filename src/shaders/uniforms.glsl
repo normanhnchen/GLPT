@@ -61,11 +61,13 @@ uniform bool Uncharted2;
 uniform bool Unreal;
 
 
-// --- bvh_bounds_debug.vs --- 
+// --- bvh_bounds_debug.vs ---
+// --- bvh_bounds_debug.fs ---
 
 // uniform int viewLayer;
 // uniform int viewDepth;
 uniform int bvhMaxDepth;
+uniform int bvhColorMode;
 
 
 /*

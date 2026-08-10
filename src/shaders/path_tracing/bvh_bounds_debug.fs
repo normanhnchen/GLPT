@@ -10,5 +10,9 @@ out vec4 fragColor;
 
 
 void main() {
-    fragColor = vec4(GetBvhDepthColor(vDepth, bvhMaxDepth), 1.0);
+    if (bvhColorMode == 0) {
+        fragColor = vec4(GetBvhDepthColor(vDepth, bvhMaxDepth), 1.0);
+    } else if (bvhColorMode == 1) {
+        fragColor = vec4(GetBvhRgbColor(vDepth, bvhMaxDepth), 1.0);
+    }
 }

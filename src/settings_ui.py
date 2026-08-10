@@ -629,6 +629,8 @@ class DebugUI:
         self.pt_state = pt_state
 
         self.debug_off_button = Dropdown("Debug Mode")
+
+        self.bvh_color_mode_cycle_button = CycleButton("BVH Color Mode")
     
     def draw_debug_mode_dropdown(self):
         options = [
@@ -647,6 +649,18 @@ class DebugUI:
             self.pt_state.restart_render()
 
         self.debug_off_button.dropdown(options, options[self.pt_state.debug.mode], on_change)
+
+    def draw_bvh_color_mode_cycle_button(self):
+        options = [
+            "Depth-Based",
+            "Node-Based"
+        ]
+
+        def on_change(new_val):
+            pt_settings.bvh_color_mode = new_val
+            self.pt_state.restart_render()
+
+        self.bvh_color_mode_cycle_button.button(options, pt_settings.bvh_color_mode, on_change)
 
 
 class SceneUI:
@@ -849,6 +863,10 @@ class SettingsUI:
     
     def draw_debug_ui(self):
         self.debug_ui.draw_debug_mode_dropdown()
+
+        # BVH Bounds
+        if self.pt_state.debug.mode == 7:
+            self.debug_ui.draw_bvh_color_mode_cycle_button()
     
     def draw_scene_ui(self):
         self.scene_ui.draw_next_scene_button()

@@ -71,6 +71,8 @@ class PTSettings:
 
         self.backface_culling = config["backface_culling"]
 
+        self.bvh_color_mode = config["bvh_color_mode"]
+
     def reset(self):
         self._load(self._default_config)
 
