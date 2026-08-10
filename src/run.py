@@ -145,11 +145,17 @@ def main():
 
 
 def update_stats(glfw_window, pt_state, fps, samples, render_complete):
-    if render_settings.render_mode == "path_tracing":
+    # BVH Bounds
+    if pt_state.debug.mode == 7:
+        # This mode runs through a rasterizer so don't display samples
+        glfw_window.set_title(f"FPS: {fps:.2f}")
+
+    elif render_settings.render_mode == "path_tracing":
         if render_complete or pt_state.rendering.should_view_saved:
             glfw_window.set_title(f"FPS: {fps:.2f} | Render Complete")
         else:
             glfw_window.set_title(f"FPS: {fps:.2f} | Samples: {samples}")
+    
     else:
         glfw_window.set_title(f"FPS: {fps:.2f}")
 

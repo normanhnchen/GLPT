@@ -240,8 +240,6 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             } else if (debugMode == 6) { // BVH Depth
                 pathSample.combined = GetBvhDepthColor(si.nodesVisited, MAX_NODES_VISITED);
                 break;
-            } else if (debugMode == 7) { // BVH Bounds
-                break;
             }
         }
 

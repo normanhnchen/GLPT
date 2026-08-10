@@ -15,6 +15,13 @@ class PathTracingPipeline:
         self.final_pass = FinalPass(ctx, pt_shaders.final, pt_state, final_output_state)
 
     def render(self):
+        # BVH Bounds
+        if self.pt_state.debug.mode == 7:
+            # Don't render path tracing since this mode runs through a separate shader
+            self.bvh_bounds_debug_pass.render()
+            self.ctx.screen.use()
+            return
+        
         is_denoising = (
             self.pt_state.denoising.should_denoise and
             self.ai_denoiser is not None and
@@ -42,11 +49,5 @@ class PathTracingPipeline:
             # Depth
             if self.pt_state.debug.mode == 3:
                 self.bvh_depth_debug_pass.render()
-
-            # BVH Bounds
-            if self.pt_state.debug.mode == 7:
-                self.bvh_bounds_debug_pass.render()
-                self.ctx.screen.use()
-                return
 
         self.final_pass.render()
