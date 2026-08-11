@@ -2,6 +2,9 @@
 
 
 flat in int nodeDepth;
+flat in vec3 nodeMin;
+flat in vec3 nodeMax;
+
 out vec4 fragColor;
 
 
@@ -13,6 +16,6 @@ void main() {
     if (bvhColorMode == 0) {
         fragColor = vec4(GetBvhDepthColor(nodeDepth, bvhMaxNodeDepth), 1.0);
     } else if (bvhColorMode == 1) {
-        fragColor = vec4(GetBvhRgbColor(nodeDepth, bvhMaxNodeDepth), 1.0);
+        fragColor = vec4(GetBvhRgbColor(nodeMin, nodeMax), 1.0);
     }
 }

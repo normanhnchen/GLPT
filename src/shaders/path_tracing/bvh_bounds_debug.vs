@@ -3,6 +3,8 @@
 in vec3 aPos;
 
 flat out int nodeDepth;
+flat out vec3 nodeMin;
+flat out vec3 nodeMax;
 
 uniform mat4 projection;
 uniform mat4 view;
@@ -14,6 +16,9 @@ uniform mat4 view;
 void main() {
     BvhNode node = BvhNodes[gl_InstanceID];
     nodeDepth = bvhNodeDepths[gl_InstanceID];
+
+    nodeMin = node.aabbMin;
+    nodeMax = node.aabbMax;
 
     bool visible = true;
     if (bvhViewLayer != -1) {

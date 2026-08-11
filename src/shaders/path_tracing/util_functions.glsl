@@ -104,9 +104,15 @@ vec3 HsbToRgb(in vec3 c){
     return c.z * mix(vec3(1.0), rgb, c.y);
 }
 
-vec3 GetBvhRgbColor(int currDepth, int maxDepth) {
-    float t = clamp(float(currDepth) / float(maxDepth), 0.0, 1.0);
-    vec3 hsb = vec3(t, 1.0, 1.0);
+vec3 GetBvhRgbColor(vec3 aabbMin, vec3 aabbMax) {
+    vec3 center = (aabbMin + aabbMax) * 0.5;
+    
+    float theta = atan(center.z, center.x);
+    
+    // Map from [-π, π] to [0, 1]
+    float c = theta / (2.0 * PI) + 0.5;
+    
+    vec3 hsb = vec3(c, 1.0, 1.0);
     return HsbToRgb(hsb);
 }
 
