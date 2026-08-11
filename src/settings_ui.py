@@ -13,8 +13,11 @@ class IntSlider:
         self.label = label
         self.unique_code = label.lower().replace(" ", "_")
 
-    def slider(self, curr_val, val_format=None, enabled=True, reason=""):
+    def slider(self, curr_val, val_format=None, enabled=True, reason="", width=None):
         fmt = val_format if val_format is not None else "%d"
+
+        if width is not None:
+            imgui.push_item_width(width)
 
         if not enabled:
             imgui.begin_disabled()
@@ -32,6 +35,9 @@ class IntSlider:
             imgui.end_disabled()
             if reason and imgui.is_item_hovered(imgui.HoveredFlags_.allow_when_disabled):
                 imgui.set_tooltip(reason)
+
+        if width is not None:
+            imgui.pop_item_width()
 
     def dragging_logic(self, on_change):
         if imgui.is_item_active() and self.changed:
@@ -76,8 +82,11 @@ class FloatSlider:
         self.label = label
         self.unique_code = label.lower().replace(" ", "_")
 
-    def slider(self, curr_val, val_format=None, enabled=True, reason=""):
+    def slider(self, curr_val, val_format=None, enabled=True, reason="", width=None):
         fmt = val_format if val_format is not None else "%.1f"
+
+        if width is not None:
+            imgui.push_item_width(width)
 
         if not enabled:
             imgui.begin_disabled()
@@ -95,6 +104,9 @@ class FloatSlider:
             imgui.end_disabled()
             if reason and imgui.is_item_hovered(imgui.HoveredFlags_.allow_when_disabled):
                 imgui.set_tooltip(reason)
+
+        if width is not None:
+            imgui.pop_item_width()
 
     def dragging_logic(self, on_change):
         if imgui.is_item_active() and self.changed:
@@ -275,7 +287,9 @@ class RenderingUI:
             self.camera_buffer.update_data()
             self.pt_state.start_render()
 
-        self.start_button.button(on_change)
+        bvh_ready = self.bvh_state.ready
+
+        self.start_button.button(on_change, enabled=bvh_ready, reason="BVH is still building...")
     
     def draw_start_new_button(self):
         def on_change():
@@ -283,9 +297,7 @@ class RenderingUI:
             self.camera_buffer.update_data()
             self.pt_state.start_render()
 
-        bvh_ready = self.bvh_state.ready
-
-        self.start_new_button.button(on_change, enabled=bvh_ready, reason="BVH is still building...")
+        self.start_new_button.button(on_change)
         
     def draw_denoise_button(self):
         def on_change():
@@ -494,6 +506,10 @@ class CameraUI:
         self.aperture_slider = FloatSlider(0, 1, "Aperture", slider_speed=0.01, increment=0.01)
         self.focus_dist_slider = FloatSlider(0.1, 1000, "Focus Distance", slider_speed=0.1, increment=0.1)
 
+        self.pos_x_slider = FloatSlider(-10000, 10000, "X", slider_speed=0.1, increment=0.1)
+        self.pos_y_slider = FloatSlider(-10000, 10000, "Y", slider_speed=0.1, increment=0.1)
+        self.pos_z_slider = FloatSlider(-10000, 10000, "Z", slider_speed=0.1, increment=0.1)
+
         self.dof_checkbox = Checkbox("Depth of Field")
 
     def draw_movement_speed_slider(self):
@@ -588,6 +604,48 @@ class CameraUI:
         self.focus_dist_slider.minus_button(on_change)
         self.focus_dist_slider.plus_button(on_change)
         self.focus_dist_slider.draw_label()
+
+    def draw_pos_sliders(self):
+        def on_change_x(new_val):
+            self.camera.pos.x = new_val
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+
+        def on_change_y(new_val):
+            self.camera.pos.y = new_val
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+
+        def on_change_z(new_val):
+            self.camera.pos.z = new_val
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+
+        avail_width = imgui.get_content_region_avail().x
+        slot_width = avail_width / 5
+
+        imgui.text("Pos:")
+
+        # X
+        imgui.same_line()
+        self.pos_x_slider.draw_label()
+        imgui.same_line()
+        self.pos_x_slider.slider(self.camera.pos.x, val_format="%.2f", width=slot_width)
+        self.pos_x_slider.dragging_logic(on_change_x)
+
+        # Y
+        imgui.same_line()
+        self.pos_y_slider.draw_label()
+        imgui.same_line()
+        self.pos_y_slider.slider(self.camera.pos.y, val_format="%.2f", width=slot_width)
+        self.pos_y_slider.dragging_logic(on_change_y)
+
+        # Z
+        imgui.same_line()
+        self.pos_z_slider.draw_label()
+        imgui.same_line()
+        self.pos_z_slider.slider(self.camera.pos.z, val_format="%.2f", width=slot_width)
+        self.pos_z_slider.dragging_logic(on_change_z)
 
 
 class PostProcessingUI:
@@ -722,7 +780,7 @@ class DebugUI:
             debug_settings.bvh.color_mode = new_val
             self.pt_state.restart_render()
 
-        bvh_ready = self.debug_ui.scene.bvh is not None
+        bvh_ready = self.scene.bvh is not None
 
         self.bvh_color_mode_cycle_button.button(options, debug_settings.bvh.color_mode, on_change, enabled=bvh_ready, reason="BVH is still building...")
 
@@ -755,7 +813,7 @@ class DebugUI:
         def on_change(new_val):
             debug_settings.bvh.view_layer = -1 if new_val < 0 else new_val
 
-        bvh_ready = self.debug_ui.scene.bvh is not None
+        bvh_ready = self.scene.bvh is not None
 
         self.bvh_view_layer_slider.slider(display_layer, val_format=layer_format, enabled=bvh_ready, reason="BVH is still building...")
         self.bvh_view_layer_slider.dragging_logic(on_change)
@@ -775,7 +833,7 @@ class DebugUI:
             debug_settings.bvh.view_depth = -1 if new_val < 0 else new_val
             self._clamp_to_scene_max_depth()
 
-        bvh_ready = self.debug_ui.scene.bvh is not None
+        bvh_ready = self.scene.bvh is not None
         
         self.bvh_view_depth_slider.slider(display_depth, val_format=depth_format, enabled=bvh_ready, reason="BVH is still building...")
         self.bvh_view_depth_slider.dragging_logic(on_change)
@@ -969,6 +1027,11 @@ class SettingsUI:
         self.camera_ui.draw_dof_checkbox()
         self.camera_ui.draw_aperture_slider()
         self.camera_ui.draw_focus_dist_slider()
+
+        if imgui.tree_node("More"):
+            self.camera_ui.draw_pos_sliders()
+
+            imgui.tree_pop()
     
     def draw_post_processing_ui(self):
         self.post_processing_ui.draw_exposure_slider()
