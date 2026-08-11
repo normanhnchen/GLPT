@@ -632,12 +632,20 @@ class DebugUI:
 
         self.bvh_color_mode_cycle_button = CycleButton("BVH Color Mode")
 
-        # min/max are recomputed live each frame from self.scene.bvh.max_depth
-        # (see draw_bvh_view_layer_slider / draw_bvh_view_depth_slider), since
-        # the actual node depth can change whenever the active scene changes.
-        # The values passed here are just safe placeholders for construction.
-        self.bvh_view_layer_slider = IntSlider(-1, max(self.scene.bvh.max_depth - 1, -1), "View Layer")
-        self.bvh_view_depth_slider = IntSlider(-1, max(self.scene.bvh.max_depth - 1, -1), "View Depth")
+        self.bvh_view_layer_slider = IntSlider(-1, self._get_max_idx(), "View Layer")
+        self.bvh_view_depth_slider = IntSlider(-1, self._get_max_idx(), "View Depth")
+
+    def _get_max_idx(self):
+        """
+        BVH is initiated as a NoneType object,
+        so calling bvh.max_depth returns an error.
+        Use -1 as a placeholder.
+        """
+
+        bvh = self.scene.bvh
+        if bvh is None:
+            return -1
+        return max(bvh.max_depth - 1, -1)
     
     def draw_debug_mode_dropdown(self):
         options = [
@@ -673,7 +681,7 @@ class DebugUI:
         # Clamps view layer/view depth back into range
         # whenever the actual scene BVH depth shrinks
 
-        max_idx = max(self.scene.bvh.max_depth - 1, -1)
+        max_idx = self._get_max_idx()
 
         # Clamp view depth to the scene's max depth
         if debug_settings.bvh.view_depth != -1 and debug_settings.bvh.view_depth > max_idx:
@@ -688,6 +696,7 @@ class DebugUI:
             debug_settings.bvh.view_layer = max_idx
 
     def draw_bvh_view_layer_slider(self):
+        self.bvh_view_layer_slider.max_val = self._get_max_idx()
         self._clamp_to_scene_max_depth()
 
         is_all = debug_settings.bvh.view_layer == -1
@@ -704,8 +713,9 @@ class DebugUI:
         self.bvh_view_layer_slider.draw_label()
 
     def draw_bvh_view_depth_slider(self):
+        self.bvh_view_depth_slider.max_val = self._get_max_idx()
         self._clamp_to_scene_max_depth()
-        
+
         is_max = debug_settings.bvh.view_depth == -1
         display_depth = -1 if is_max else debug_settings.bvh.view_depth
         depth_format = "Max" if is_max else "%d"
@@ -925,9 +935,12 @@ class SettingsUI:
 
         # BVH Bounds
         if self.pt_state.debug.mode == 7:
-            self.debug_ui.draw_bvh_color_mode_cycle_button()
-            self.debug_ui.draw_bvh_view_layer_slider()
-            self.debug_ui.draw_bvh_view_depth_slider()
+            if self.debug_ui.scene.bvh is None:
+                imgui.text_disabled("BVH is still building...")
+            else:
+                self.debug_ui.draw_bvh_color_mode_cycle_button()
+                self.debug_ui.draw_bvh_view_layer_slider()
+                self.debug_ui.draw_bvh_view_depth_slider()
     
     def draw_scene_ui(self):
         self.scene_ui.draw_next_scene_button()
