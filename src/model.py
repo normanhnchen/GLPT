@@ -4,7 +4,6 @@ import cv2
 import pygltflib
 import glm
 import time
-import pickle
 from pathlib import Path
 
 from src.settings import *
@@ -23,7 +22,7 @@ def get_cache_path(path, cache_dir, type):
     if type == "scene":
         return abs_cache_dir / f"{type}_{cache_name}"
     elif type == "bvh":
-        return abs_cache_dir / f"{type}_{cache_name}.pkl"
+        return abs_cache_dir / f"{type}_{cache_name}"
 
 
 class Texture:
@@ -478,9 +477,10 @@ class Scene:
     
     def build_bvh(self):
         try:
-            with open(self.bvh_cache_path, "rb") as f:
-                self.bvh = pickle.load(f)
-            
+            # Note: numpy adds the file suffix automatically
+            cache_path = get_cache_path(self.scene_path, file_paths.bvh_cache, "bvh").with_suffix(".npz")
+
+            self.bvh = load_bvh_data(cache_path)
             self.num_bvh_nodes = self.bvh.nodes_used
 
             print("Loaded BVH from cache")
@@ -495,8 +495,7 @@ class Scene:
             end_time = time.perf_counter()
             print(f"BVH built in {end_time - start_time:.4f}s")
 
-            with open(self.bvh_cache_path, "wb") as f:
-                pickle.dump(bvh, f)
+            save_bvh_data(bvh, self.bvh_cache_path)
             
             print("BVH saved to cache")
     
@@ -684,6 +683,44 @@ class Scene:
             self.texture_arrays[tex_array].release()
         if self.hdri is not None:
             self.hdri.release()
+
+
+def save_bvh_data(bvh, cache_path):
+    np.savez_compressed(
+        cache_path,
+        aabb_mins=bvh.aabb_mins,
+        aabb_maxs=bvh.aabb_maxs,
+        left_child_indices=bvh.left_child_indices,
+        right_child_indices=bvh.right_child_indices,
+        first_tri_indices=bvh.first_tri_indices,
+        tri_counts=bvh.tri_counts,
+        is_leafs=bvh.is_leafs,
+        depths=bvh.depths,
+        tri_indices=bvh.tri_indices,
+        nodes_used=bvh.nodes_used,
+        max_depth=bvh.max_depth,
+    )
+
+
+def load_bvh_data(cache_path):
+    data = np.load(cache_path)
+
+    # Skip __init__ since it excepts a Scene object to build from
+    bvh = BVH.__new__(BVH)
+
+    bvh.aabb_mins = data["aabb_mins"]
+    bvh.aabb_maxs = data["aabb_maxs"]
+    bvh.left_child_indices = data["left_child_indices"]
+    bvh.right_child_indices = data["right_child_indices"]
+    bvh.first_tri_indices = data["first_tri_indices"]
+    bvh.tri_counts = data["tri_counts"]
+    bvh.is_leafs = data["is_leafs"]
+    bvh.depths = data["depths"]
+    bvh.tri_indices = data["tri_indices"]
+    bvh.nodes_used = int(data["nodes_used"])
+    bvh.max_depth = int(data["max_depth"])
+
+    return bvh
 
 
 def save_scene_data(scene, cache_path):
