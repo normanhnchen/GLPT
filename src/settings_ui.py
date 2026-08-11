@@ -13,9 +13,7 @@ class IntSlider:
         self.label = label
         self.unique_code = label.lower().replace(" ", "_")
 
-    def slider(self, curr_val, val_format=None, enabled=True, reason="", width=None):
-        fmt = val_format if val_format is not None else "%d"
-
+    def slider(self, curr_val, val_format="%d", enabled=True, reason="", width=None):
         if width is not None:
             imgui.push_item_width(width)
 
@@ -28,7 +26,7 @@ class IntSlider:
             self.slider_speed,
             self.min_val,
             self.max_val,
-            format=fmt
+            format=val_format
         )
 
         if not enabled:
@@ -73,17 +71,23 @@ class IntSlider:
 
 
 class FloatSlider:
-    def __init__(self, min_val, max_val, label, slider_speed=0.5, increment=0.5):
+    def __init__(self, min_val, max_val, label, slider_speed=0.5, increment=0.5, wrap=False):
         self.window = glfwGetCurrentContext()
         self.slider_speed = slider_speed
         self.increment = increment
         self.min_val = min_val
         self.max_val = max_val
         self.label = label
+        self.wrap = wrap
         self.unique_code = label.lower().replace(" ", "_")
 
-    def slider(self, curr_val, val_format=None, enabled=True, reason="", width=None):
-        fmt = val_format if val_format is not None else "%.1f"
+    def _wrapped(self, val):
+        range_size = self.max_val - self.min_val
+        return self.min_val + (val - self.min_val) % range_size
+
+    def slider(self, curr_val, val_format="%.1f", enabled=True, reason="", width=None):
+        if self.wrap:
+            val_format = val_format
 
         if width is not None:
             imgui.push_item_width(width)
@@ -91,14 +95,25 @@ class FloatSlider:
         if not enabled:
             imgui.begin_disabled()
 
+        if self.wrap:
+            # Tell ImGui to disable min max slider bounds
+            drag_min = 0
+            drag_max = 0
+        else:
+            drag_min = self.min_val
+            drag_max = self.max_val
+
         self.changed, self.val = imgui.drag_float(
             f"##{self.unique_code}",
             curr_val,
             self.slider_speed,
-            self.min_val,
-            self.max_val,
-            format=fmt
+            drag_min,
+            drag_max,
+            format=val_format
         )
+
+        if self.wrap and self.changed:
+            self.val = self._wrapped(self.val)
 
         if not enabled:
             imgui.end_disabled()
@@ -510,6 +525,9 @@ class CameraUI:
         self.pos_y_slider = FloatSlider(-10000, 10000, "Y", slider_speed=0.1, increment=0.1)
         self.pos_z_slider = FloatSlider(-10000, 10000, "Z", slider_speed=0.1, increment=0.1)
 
+        self.yaw_slider = FloatSlider(0, 360, "Yaw", slider_speed=0.1, increment=0.1, wrap=True)
+        self.pitch_slider = FloatSlider(-89.99, 89.99, "Pitch", slider_speed=0.1, increment=0.1)
+
         self.dof_checkbox = Checkbox("Depth of Field")
 
     def draw_movement_speed_slider(self):
@@ -630,22 +648,52 @@ class CameraUI:
         imgui.same_line()
         self.pos_x_slider.draw_label()
         imgui.same_line()
-        self.pos_x_slider.slider(self.camera.pos.x, val_format="%.2f", width=slot_width)
+        self.pos_x_slider.slider(self.camera.pos.x, val_format="%.3f", width=slot_width)
         self.pos_x_slider.dragging_logic(on_change_x)
 
         # Y
         imgui.same_line()
         self.pos_y_slider.draw_label()
         imgui.same_line()
-        self.pos_y_slider.slider(self.camera.pos.y, val_format="%.2f", width=slot_width)
+        self.pos_y_slider.slider(self.camera.pos.y, val_format="%.3f", width=slot_width)
         self.pos_y_slider.dragging_logic(on_change_y)
 
         # Z
         imgui.same_line()
         self.pos_z_slider.draw_label()
         imgui.same_line()
-        self.pos_z_slider.slider(self.camera.pos.z, val_format="%.2f", width=slot_width)
+        self.pos_z_slider.slider(self.camera.pos.z, val_format="%.3f", width=slot_width)
         self.pos_z_slider.dragging_logic(on_change_z)
+
+    def draw_yaw_pitch_sliders(self):
+        def on_change_yaw(new_val):
+            self.camera.set_orientation(yaw=new_val)
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+
+        def on_change_pitch(new_val):
+            self.camera.set_orientation(pitch=new_val)
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+
+        avail_width = imgui.get_content_region_avail().x
+        slot_width = avail_width / 3
+
+        # Create new line since draw_label() doesn't create one
+        imgui.new_line()
+
+        # Yaw
+        self.yaw_slider.draw_label()
+        imgui.same_line()
+        self.yaw_slider.slider(self.camera.yaw, val_format="%.1f", width=slot_width)
+        self.yaw_slider.dragging_logic(on_change_yaw)
+
+        # Pitch
+        imgui.same_line()
+        self.pitch_slider.draw_label()
+        imgui.same_line()
+        self.pitch_slider.slider(self.camera.pitch, val_format="%.1f", width=slot_width)
+        self.pitch_slider.dragging_logic(on_change_pitch)
 
 
 class PostProcessingUI:
@@ -1030,6 +1078,7 @@ class SettingsUI:
 
         if imgui.tree_node("More"):
             self.camera_ui.draw_pos_sliders()
+            self.camera_ui.draw_yaw_pitch_sliders()
 
             imgui.tree_pop()
     

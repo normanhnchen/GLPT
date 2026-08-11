@@ -98,6 +98,22 @@ class Camera:
         elif self.fov > 135:
             self.fov = 135
 
+    def set_orientation(self, yaw=None, pitch=None, constrain_pitch=True):
+        if yaw is not None:
+            self.yaw = yaw
+        if pitch is not None:
+            self.pitch = pitch
+        
+            # Make sure that when pitch is out of bounds, screen doesn't get flipped
+            if constrain_pitch:
+                if self.pitch > 89.99:
+                    self.pitch = 89.99
+                elif self.pitch < -89.99:
+                    self.pitch = -89.99
+        
+        # Update front, right and up Vectors using the updated Euler angles
+        self._update_camera_vectors()
+
     def _update_camera_vectors(self):
         # Calculate the new front vector
         self.front = glm.vec3()
