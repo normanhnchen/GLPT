@@ -232,6 +232,11 @@ class PTShaders:
             ctx,
             file_paths.path_tracing.comp
         )
+        self.bvh_bounds_debug = Shader(
+            ctx,
+            file_paths.path_tracing.bvh_bounds_debug.vert,
+            file_paths.path_tracing.bvh_bounds_debug.frag
+        )
 
 
 class RasterShaders:
