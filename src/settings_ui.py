@@ -261,6 +261,8 @@ class RenderingUI:
         self.denoise_button = Button("Denoise")
         self.view_saved_button = Button("View Saved Render")
 
+        self.reset_rendering_button = Button("Reset Rendering Settings")
+
         self.tiles_x_slider = IntSlider(1, 1024, "Tiles X", render_settings.tiles_x)
         self.tiles_y_slider = IntSlider(1, 1024, "Tiles Y", render_settings.tiles_y)
     
@@ -353,6 +355,12 @@ class RenderingUI:
         if imgui.button("Export Render"):
             self.pt_state.export_render()
 
+    def draw_reset_rendering_button(self):
+        def on_change():
+            render_settings.reset()
+            self.pt_state.restart_render()
+
+        self.reset_rendering_button.button(on_change)
 
 class PathTracingUI:
     def __init__(self, pt_state):
@@ -476,13 +484,6 @@ class PathTracingUI:
             self.pt_state.restart_render()
 
         self.mis_cycle_button.button(mis_modes, pt_settings.mis_mode, on_change)
-    
-    def draw_reset_pt_button(self):
-        def on_change():
-            pt_settings.reset()
-            self.pt_state.restart_render()
-
-        self.reset_pt_button.button(on_change)
 
     def draw_bvh_depth_slider(self):
         def on_change(new_val):
@@ -507,12 +508,21 @@ class PathTracingUI:
 
         self.backface_culling_checkbox.checkbox(pt_settings.backface_culling, on_change, on_enable, on_disable)
 
+    def draw_reset_pt_button(self):
+        def on_change():
+            pt_settings.reset()
+            self.pt_state.restart_render()
+
+        self.reset_pt_button.button(on_change)
+
 
 class CameraUI:
     def __init__(self, pt_state, camera, camera_buffer):
         self.pt_state = pt_state
         self.camera = camera
         self.camera_buffer = camera_buffer
+
+        self.reset_camera_button = Button("Reset Camera Settings")
 
         self.movement_speed_slider = FloatSlider(0, 10000, "Movement Speed", increment=1)
         self.fov_slider = FloatSlider(1, 135, "Field Of View", slider_speed=1)
@@ -695,11 +705,22 @@ class CameraUI:
         self.pitch_slider.slider(self.camera.pitch, val_format="%.1f", width=slot_width)
         self.pitch_slider.dragging_logic(on_change_pitch)
 
+    def draw_reset_camera_button(self):
+        def on_change():
+            camera_settings.reset()
+            self.camera.reload_from_settings()
+            self.camera_buffer.update_data()
+            self.pt_state.restart_render()
+
+        self.reset_camera_button.button(on_change)
+
 
 class PostProcessingUI:
     def __init__(self, pt_state):
         self.pt_state = pt_state
         self.window = glfwGetCurrentContext()
+
+        self.reset_post_process_button = Button("Reset Post Processing Settings")
 
         self.exposure_slider = FloatSlider(0, 10, "Exposure", slider_speed=0.1, increment=0.1)
         self.hdri_exposure_slider = FloatSlider(0, 10, "HDRI Exposure", slider_speed=0.1, increment=0.1)
@@ -738,10 +759,19 @@ class PostProcessingUI:
         self.hdri_exposure_slider.plus_button(on_change)
         self.hdri_exposure_slider.draw_label()
 
+    def draw_reset_post_process_button(self):
+        def on_change():
+            post_process_settings.reset()
+            self.pt_state.restart_render()
+
+        self.reset_post_process_button.button(on_change)
+
 
 class ScreenUI:
     def __init__(self, pt_state):
         self.pt_state = pt_state
+
+        self.reset_screen_button = Button("Reset Screen Settings")
 
         self.fps_slider = IntSlider(30, 361, "FPS", slider_speed=1)
 
@@ -774,12 +804,21 @@ class ScreenUI:
         self.fps_slider.minus_button(on_change)
         self.fps_slider.plus_button(on_change)
         self.fps_slider.draw_label()
+
+    def draw_reset_screen_button(self):
+        def on_change():
+            screen.reset()
+            self.pt_state.restart_render()
+
+        self.reset_screen_button(on_change)
     
 
 class DebugUI:
     def __init__(self, scene, pt_state):
         self.scene = scene
         self.pt_state = pt_state
+
+        self.reset_debug_button = Button("Reset Debug Settings ")
 
         self.debug_off_button = Dropdown("Debug Mode")
 
@@ -888,6 +927,14 @@ class DebugUI:
         self.bvh_view_depth_slider.minus_button(on_change)
         self.bvh_view_depth_slider.plus_button(on_change)
         self.bvh_view_depth_slider.draw_label()
+
+    def draw_reset_debug_button(self):
+        def on_change():
+            debug_settings.reset()
+            self.bvh_view_depth_slider.max_val = self._get_max_idx()
+            self._clamp_to_scene_max_depth()
+
+        self.reset_debug_button(on_change)
 
 
 class SceneUI:
@@ -1046,6 +1093,8 @@ class SettingsUI:
         self.rendering_ui.draw_tiles_x_slider()
         self.rendering_ui.draw_tiles_y_slider()
 
+        self.rendering_ui.draw_reset_rendering_button()
+
     def draw_path_tracing_ui(self, allow_modes=True):
         self.path_tracing_ui.draw_total_bounces_slider()
         self.path_tracing_ui.draw_diffuse_bounces_slider()
@@ -1081,15 +1130,21 @@ class SettingsUI:
             self.camera_ui.draw_yaw_pitch_sliders()
 
             imgui.tree_pop()
+
+        self.camera_ui.draw_reset_camera_button()
     
     def draw_post_processing_ui(self):
         self.post_processing_ui.draw_exposure_slider()
         self.post_processing_ui.draw_hdri_exposure_slider()
         self.post_processing_ui.draw_tonemap_dropdown()
+
+        self.post_processing_ui.draw_reset_post_process_button()
     
     def draw_screen_ui(self):
         self.screen_ui.draw_vsync_checkbox()
         self.screen_ui.draw_fps_slider()
+
+        self.screen_ui.draw_reset_screen_button()
     
     def draw_debug_ui(self):
         self.debug_ui.draw_debug_mode_dropdown()
@@ -1102,6 +1157,8 @@ class SettingsUI:
                 self.debug_ui.draw_bvh_color_mode_cycle_button()
                 self.debug_ui.draw_bvh_view_layer_slider()
                 self.debug_ui.draw_bvh_view_depth_slider()
+
+        self.debug_ui.draw_reset_debug_button()
     
     def draw_scene_ui(self):
         self.scene_ui.draw_next_scene_button()

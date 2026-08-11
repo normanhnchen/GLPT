@@ -30,15 +30,15 @@ class CameraSettings:
         self._load(self._default_config)
 
     def _load(self, config):
-        self._yaw = config["_yaw"]
-        self._pitch = config["_pitch"]
+        self.yaw = config["yaw"]
+        self.pitch = config["pitch"]
         self.movement_speed = config["movement_speed"]
         self.mouse_sensitivity = config["mouse_sensitivity"]
         self.fov = config["fov"]
-        self.pos = glm.vec3(config["pos"])
-        self._front = glm.vec3(config["_front"])
-        self._up = glm.vec3(config["_up"])
-        self._world_up = glm.vec3(config["_world_up"])
+        self.pos = config["pos"]
+        self.front = config["front"]
+        self.up = config["up"]
+        self.world_up = config["world_up"]
         
         self.blur = config["blur"]
         self.dof_enabled = config["dof_enabled"]
@@ -85,6 +85,9 @@ class BVHSettings:
         self.max_depth = config["max_depth"]
         self.sah_bins = config["sah_bins"]
 
+    def reset(self):
+        self._load(self._default_config)
+
 
 class DebugSettings:
     def __init__(self, json_settings):
@@ -105,6 +108,9 @@ class DebugSettings:
                 self.color_mode = config["color_mode"]
 
         self.bvh = BVH(config)
+
+    def reset(self):
+        self._load(self._default_config)
 
 
 class PostProcessSettings:

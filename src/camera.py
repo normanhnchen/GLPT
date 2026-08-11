@@ -20,12 +20,12 @@ class Camera:
     def __init__(
             self,
             pos=camera_settings.pos,
-            front=camera_settings._front,
-            up=camera_settings._up,
+            front=camera_settings.front,
+            up=camera_settings.up,
             right=None,
-            world_up=camera_settings._world_up,
-            yaw=camera_settings._yaw,
-            pitch=camera_settings._pitch,
+            world_up=camera_settings.world_up,
+            yaw=camera_settings.yaw,
+            pitch=camera_settings.pitch,
             movement_speed=camera_settings.movement_speed,
             mouse_sensitivity=camera_settings.mouse_sensitivity,
             fov=camera_settings.fov,
@@ -34,11 +34,11 @@ class Camera:
             aperture=camera_settings.aperture,
             focus_dist=camera_settings.focus_dist
         ):
-        self.pos = pos
-        self.front = front
-        self.up = up
+        self.pos = glm.vec3(pos)
+        self.front = glm.vec3(front)
+        self.up = glm.vec3(up)
         self.right = right
-        self.world_up = world_up
+        self.world_up = glm.vec3(world_up)
         # Euler angles
         self.yaw = yaw
         self.pitch = pitch
@@ -74,7 +74,7 @@ class Camera:
         elif direction == CameraMovement.DOWN:
             self.pos -= self.world_up * velocity
     
-    def process_mouse_movement(self, xoffset, yoffset, constrain_pitch=True):
+    def process_mouse_movement(self, xoffset, yoffset, constrainpitch=True):
         xoffset *= self.mouse_sensitivity
         yoffset *= self.mouse_sensitivity
 
@@ -82,7 +82,7 @@ class Camera:
         self.pitch += yoffset
 
         # Make sure that when pitch is out of bounds, screen doesn't get flipped
-        if constrain_pitch:
+        if constrainpitch:
             if self.pitch > 89.99:
                 self.pitch = 89.99
             elif self.pitch < -89.99:
@@ -98,14 +98,14 @@ class Camera:
         elif self.fov > 135:
             self.fov = 135
 
-    def set_orientation(self, yaw=None, pitch=None, constrain_pitch=True):
+    def set_orientation(self, yaw=None, pitch=None, constrainpitch=True):
         if yaw is not None:
             self.yaw = yaw
         if pitch is not None:
             self.pitch = pitch
         
             # Make sure that when pitch is out of bounds, screen doesn't get flipped
-            if constrain_pitch:
+            if constrainpitch:
                 if self.pitch > 89.99:
                     self.pitch = 89.99
                 elif self.pitch < -89.99:
@@ -163,3 +163,21 @@ class Camera:
 
     def get_view(self):
         return glm.lookAt(self.pos, self.pos + self.front, self.up)
+
+    def reload_from_settings(self):
+        self.pos = glm.vec3(camera_settings.pos)
+        self.front = glm.vec3(camera_settings.front)
+        self.up = glm.vec3(camera_settings.up)
+        self.right = None
+        self.world_up = glm.vec3(camera_settings.world_up)
+        self.yaw = camera_settings.yaw
+        self.pitch = camera_settings.pitch
+        self.movement_speed = camera_settings.movement_speed
+        self.mouse_sensitivity = camera_settings.mouse_sensitivity
+        self.fov = camera_settings.fov
+        self.blur = camera_settings.blur
+        self.dof_enabled = camera_settings.dof_enabled
+        self.aperture = camera_settings.aperture
+        self.focus_dist = camera_settings.focus_dist
+
+        self._update_camera_vectors()

@@ -1,7 +1,7 @@
 {   
     "file_paths": {
         "ai_training_scenes": "src/assets/models/ai_training/",
-        "scene": "src/assets/models/ai_training/scene_5.glb",
+        "scene": "src/assets/models/ai_training/liminal_1.glb",
         "ai_training_hdris": "src/assets/hdris/ai_training/",
         "hdri": "src/assets/hdris/day_sky_hdri.exr",
         "ai_training_renders": "src/assets/renders/ai_training",
@@ -45,15 +45,15 @@
         "fps_cap": -1
     },
     "camera": {
-        "_yaw": 90,
-        "_pitch": 0,
+        "yaw": 90,
+        "pitch": 0,
         "movement_speed": 5,
         "mouse_sensitivity": 0.1,
         "fov": 45,
         "pos": [0, 0, 0],
-        "_front": [0, 0, -1],
-        "_up": [0, 1, 0],
-        "_world_up": [0, 1, 0],
+        "front": [0, 0, -1],
+        "up": [0, 1, 0],
+        "world_up": [0, 1, 0],
         "blur": 1.0,
         "dof_enabled": false,
         "aperture": 0.0,
