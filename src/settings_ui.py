@@ -13,8 +13,12 @@ class IntSlider:
         self.label = label
         self.unique_code = label.lower().replace(" ", "_")
 
-    def slider(self, curr_val, val_format=None):
+    def slider(self, curr_val, val_format=None, enabled=True, reason=""):
         fmt = val_format if val_format is not None else "%d"
+
+        if not enabled:
+            imgui.begin_disabled()
+        
         self.changed, self.val = imgui.drag_int(
             f"##{self.unique_code}",
             curr_val,
@@ -23,6 +27,11 @@ class IntSlider:
             self.max_val,
             format=fmt
         )
+
+        if not enabled:
+            imgui.end_disabled()
+            if reason and imgui.is_item_hovered(imgui.HoveredFlags_.allow_when_disabled):
+                imgui.set_tooltip(reason)
 
     def dragging_logic(self, on_change):
         if imgui.is_item_active() and self.changed:
@@ -67,8 +76,12 @@ class FloatSlider:
         self.label = label
         self.unique_code = label.lower().replace(" ", "_")
 
-    def slider(self, curr_val, val_format=None):
+    def slider(self, curr_val, val_format=None, enabled=True, reason=""):
         fmt = val_format if val_format is not None else "%.1f"
+
+        if not enabled:
+            imgui.begin_disabled()
+
         self.changed, self.val = imgui.drag_float(
             f"##{self.unique_code}",
             curr_val,
@@ -77,6 +90,11 @@ class FloatSlider:
             self.max_val,
             format=fmt
         )
+
+        if not enabled:
+            imgui.end_disabled()
+            if reason and imgui.is_item_hovered(imgui.HoveredFlags_.allow_when_disabled):
+                imgui.set_tooltip(reason)
 
     def dragging_logic(self, on_change):
         if imgui.is_item_active() and self.changed:
@@ -115,34 +133,46 @@ class Button:
     def __init__(self, label):
         self.label = label
 
-    def button(self, on_change, enabled=True):
-        if enabled:
-            if imgui.button(self.label):
-                on_change()
-        else:
+    def button(self, on_change, enabled=True, reason=""):
+        if not enabled:
             imgui.begin_disabled()
-
-            imgui.button(self.label)
-
+        
+        if imgui.button(self.label):
+            on_change()
+        
+        if not enabled:
             imgui.end_disabled()
+            if reason and imgui.is_item_hovered(imgui.HoveredFlags_.allow_when_disabled):
+                imgui.set_tooltip(reason)
 
 
 class CycleButton:
     def __init__(self, label):
         self.label = label
 
-    def button(self, options, curr_idx, on_change):
+    def button(self, options, curr_idx, on_change, enabled=True, reason=""):
+        if not enabled:
+            imgui.begin_disabled()
+        
         if imgui.button(f"{self.label}: {options[curr_idx]}"):
             curr_idx = (curr_idx + 1) % len(options)
 
             on_change(curr_idx)
+
+        if not enabled:
+            imgui.end_disabled()
+            if reason and imgui.is_item_hovered(imgui.HoveredFlags_.allow_when_disabled):
+                imgui.set_tooltip(reason)
 
 
 class Dropdown:
     def __init__(self, label):
         self.label = label
 
-    def dropdown(self, options, curr_selection, on_change):
+    def dropdown(self, options, curr_selection, on_change, enabled=True, reason=""):
+        if not enabled:
+            imgui.begin_disabled()
+        
         if imgui.begin_combo(self.label, curr_selection):
             for option in options:
                 is_selected = curr_selection == option
@@ -159,24 +189,39 @@ class Dropdown:
             
             imgui.end_combo()
 
+        if not enabled:
+            imgui.end_disabled()
+            if reason and imgui.is_item_hovered(imgui.HoveredFlags_.allow_when_disabled):
+                imgui.set_tooltip(reason)
+
 
 class Checkbox:
     def __init__(self, label):
         self.label = label
 
-    def checkbox(self, already_enabled, on_change, on_enable, on_disable):
-        changed, enabled = imgui.checkbox(self.label, already_enabled)
+    def checkbox(self, already_enabled, on_change, on_enable, on_disable, enabled=True, reason=""):
+        if not enabled:
+            imgui.begin_disabled()
+        
+        changed, value = imgui.checkbox(self.label, already_enabled)
+
+        if not enabled:
+            imgui.end_disabled()
+            if reason and imgui.is_item_hovered(imgui.HoveredFlags_.allow_when_disabled):
+                imgui.set_tooltip(reason)
+
         if changed:
-            on_change(enabled)
-            if enabled:
+            on_change(value)
+            if value:
                 on_enable()
             else:
                 on_disable()
 
 
 class RenderingUI:
-    def __init__(self, pt_state, camera_buffer):
+    def __init__(self, pt_state, bvh_state, camera_buffer):
         self.pt_state = pt_state
+        self.bvh_state = bvh_state
         self.camera_buffer = camera_buffer
 
         self.stop_button = Button("Stop")
@@ -238,7 +283,9 @@ class RenderingUI:
             self.camera_buffer.update_data()
             self.pt_state.start_render()
 
-        self.start_new_button.button(on_change)
+        bvh_ready = self.bvh_state.ready
+
+        self.start_new_button.button(on_change, enabled=bvh_ready, reason="BVH is still building...")
         
     def draw_denoise_button(self):
         def on_change():
@@ -675,7 +722,9 @@ class DebugUI:
             debug_settings.bvh.color_mode = new_val
             self.pt_state.restart_render()
 
-        self.bvh_color_mode_cycle_button.button(options, debug_settings.bvh.color_mode, on_change)
+        bvh_ready = self.debug_ui.scene.bvh is not None
+
+        self.bvh_color_mode_cycle_button.button(options, debug_settings.bvh.color_mode, on_change, enabled=bvh_ready, reason="BVH is still building...")
 
     def _clamp_to_scene_max_depth(self):
         # Clamps view layer/view depth back into range
@@ -706,7 +755,9 @@ class DebugUI:
         def on_change(new_val):
             debug_settings.bvh.view_layer = -1 if new_val < 0 else new_val
 
-        self.bvh_view_layer_slider.slider(display_layer, val_format=layer_format)
+        bvh_ready = self.debug_ui.scene.bvh is not None
+
+        self.bvh_view_layer_slider.slider(display_layer, val_format=layer_format, enabled=bvh_ready, reason="BVH is still building...")
         self.bvh_view_layer_slider.dragging_logic(on_change)
         self.bvh_view_layer_slider.minus_button(on_change)
         self.bvh_view_layer_slider.plus_button(on_change)
@@ -723,8 +774,10 @@ class DebugUI:
         def on_change(new_val):
             debug_settings.bvh.view_depth = -1 if new_val < 0 else new_val
             self._clamp_to_scene_max_depth()
+
+        bvh_ready = self.debug_ui.scene.bvh is not None
         
-        self.bvh_view_depth_slider.slider(display_depth, val_format=depth_format)
+        self.bvh_view_depth_slider.slider(display_depth, val_format=depth_format, enabled=bvh_ready, reason="BVH is still building...")
         self.bvh_view_depth_slider.dragging_logic(on_change)
         self.bvh_view_depth_slider.minus_button(on_change)
         self.bvh_view_depth_slider.plus_button(on_change)
@@ -744,7 +797,7 @@ class SceneUI:
         def on_change():
             self.scene_state.next_scene()
 
-        self.next_scene_button.button(on_change, enabled)
+        self.next_scene_button.button(on_change, enabled, reason="Already at the last scene")
     
     def draw_previous_scene_button(self):
         enabled = self.scene_state.curr_scene_idx > 0
@@ -752,7 +805,7 @@ class SceneUI:
         def on_change():
             self.scene_state.previous_scene()
         
-        self.previous_scene_button.button(on_change, enabled)
+        self.previous_scene_button.button(on_change, enabled, reason="Already at the first scene")
 
 
 class CameraCapturingUI:
@@ -842,7 +895,7 @@ class SettingsUI:
         self.camera_buffer = camera_buffer
         self.camera = camera
 
-        self.rendering_ui = RenderingUI(pt_state, camera_buffer)
+        self.rendering_ui = RenderingUI(pt_state, bvh_state, camera_buffer)
         self.path_tracing_ui = PathTracingUI(pt_state)
         self.camera_ui = CameraUI(pt_state, camera, camera_buffer)
         self.post_processing_ui = PostProcessingUI(pt_state)
@@ -859,10 +912,6 @@ class SettingsUI:
             allow_denoise=True,
             allow_view_saved=True
         ):
-
-        if not self.bvh_state.ready:
-            imgui.text_disabled("Path tracing is disabled while the BVH is building...")
-            return
 
         if render_settings.render_mode == "path_tracing":
             if not self.pt_state.rendering.should_view_saved:
