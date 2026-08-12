@@ -73,6 +73,12 @@ def main():
         file_paths.hdri = scene_state.curr_hdri_file
         scene = load_scene(file_paths.scene)
         scene.hdri = HDRI(file_paths.hdri)
+
+        scene.snapshot_original_materials()
+        scene.hdri.snapshot_original()
+
+        scene.scramble_materials()
+        scene.hdri.scramble()
         
         if not ai_training_settings.camera_setup_mode:
             camera_capture_state.load_next_state()
@@ -181,6 +187,15 @@ def main():
 
                     if pt_state.rendering.render_complete:
                         camera_capture_state.load_next_state()
+
+                        scene.scramble_materials()
+                        scene.hdri.scramble()
+
+                        scene.hdri.update_img()
+                        scene.hdri.update_cdfs()
+                        material_buffer.update_data()
+                        emissive_triangles_buffer.update_data()
+                        triangle_buffer.update_data()
                         
                         if scene_state.changed_scene:
                             imgui_state.end_frame()

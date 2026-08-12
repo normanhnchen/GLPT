@@ -143,13 +143,13 @@ class Material:
         if KHR_materials_emissive_strength:
             self.emissive_strength = KHR_materials_emissive_strength["emissiveStrength"]
         else:
-            self.emissive_strength = 0.0
+            self.emissive_strength = set_f4(0)
 
         KHR_materials_transmission = extensions.get("KHR_materials_transmission")
         if KHR_materials_transmission:
             self.transmission = KHR_materials_transmission["transmissionFactor"]
         else:
-            self.transmission = set_f4(0.0)
+            self.transmission = set_f4(0)
 
         KHR_materials_ior = extensions.get("KHR_materials_ior")
         if KHR_materials_ior:
@@ -163,6 +163,62 @@ class Material:
             # Convert to float RGB
             return color / 255
         return color
+
+    def snapshot_original(self):
+        """
+        Create a snapshot of the original material before scrambling.
+        Only used for AI training.
+        """
+
+        self._original_base_color = self.base_color.copy()
+        self._original_roughness = float(self.roughness)
+        self._original_metallic = float(self.metallic)
+        self._original_emissive_color = self.emissive_color.copy()
+        self._original_emissive_strength = float(self.emissive_strength)
+        self._original_has_emission = bool(self.has_emission)
+        self._original_transmission = float(self.transmission)
+        self._original_ior = float(self.ior)
+        self._original_alpha_mode = int(self.alpha_mode)
+
+    def _reset(self):
+        """
+        Restore this material to its original (un-scrambled) values.
+        Only used for AI training.
+        """
+
+        self.base_color = self._original_base_color.copy()
+        self.roughness = set_f4(self._original_roughness)
+        self.metallic = set_f4(self._original_metallic)
+        self.emissive_color = self._original_emissive_color.copy()
+        self.emissive_strength = self._original_emissive_strength
+        self.has_emission = set_i4(1 if self._original_has_emission else 0)
+        self.transmission = set_f4(self._original_transmission)
+        self.ior = set_f4(self._original_ior)
+        self.alpha_mode = set_f4(self._original_alpha_mode)
+
+    def scramble(self):
+        """
+        Randomize material properties.
+        Only used for AI training.
+        """
+
+        self._reset()
+
+        self.base_color[:3] = np.random.uniform(0, 1, 3).astype(f4)
+        if np.random.rand() < 0.1:
+            self.base_color[-1] = set_f4(np.random.uniform(0.1, 0.9))
+            self.alpha_mode = 2 # BLEND
+        
+        self.roughness = set_f4(np.random.uniform(0, 1))
+        self.metallic = set_f4(np.random.uniform(0, 1))
+
+        if self._original_has_emission:
+            self.emissive_color = np.random.uniform(0, 1, 3).astype(f4)
+            self.emissive_strength *= set_f4(np.random.uniform(0.1, 10))
+
+        if np.random.rand() < 0.3:
+            self.transmission = set_f4(np.random.uniform(0, 1))
+            self.ior = set_f4(np.random.uniform(1, 2.4))
 
 
 class HDRI:
@@ -234,6 +290,142 @@ class HDRI:
     def release(self):
         if self.hdri_tex is not None:
             self.hdri_tex.release()
+
+    def snapshot_original(self):
+        """
+        Create a snapshot of the original image before scrambling.
+        Only used for AI training.
+        """
+        
+        self._original_img = self.img.copy()
+
+    def _reset(self):
+        """
+        Restore this HDRI to its original (un-scrambled) image.
+        Only used for AI training.
+        """
+
+        self.img = self._original_img.copy()
+        self.img_bytes = self.img.tobytes()
+
+    def scramble(self):
+        """
+        Randomize HDRI rotation, emissive strength, and color.
+        Only used for AI training.
+        """
+
+        self._reset()
+
+        random_rot = np.random.uniform(0, 2 * np.pi, 3).astype(f4)
+        random_exposure_factor = set_f4(np.random.uniform(0.1, 10))
+        random_color_factor = np.random.uniform(0, 2, 3).astype(f4)
+
+        u = (np.arange(self.width) + 0.5) / self.width
+        v = (np.arange(self.height) + 0.5) / self.height
+
+        theta, phi = self._uv_to_spherical(u, v)
+        x, y, z = self._spherical_to_cartesian(theta, phi)
+
+        rot_mat = self._rotation_matrix(*random_rot)
+        # Transform the matrix since numpy is row-major, the matrix is column-major
+        rotated = np.stack([x, y, z], axis=-1) @ rot_mat.T
+
+        x = rotated[..., 0]
+        y = rotated[..., 1]
+        z = rotated[..., 2]
+
+        theta, phi = self._cartesian_to_spherical(x, y, z)
+
+        u, v = self._spherical_to_uv(theta, phi)
+        x_map = (u * self.width).astype(f4)
+        y_map = (v * self.height).astype(f4)
+
+        rotated_img = cv2.remap(
+            self._original_img,
+            x_map, y_map,
+            interpolation=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_WRAP,
+        )
+
+        self.img = rotated_img * random_exposure_factor * random_color_factor
+        self.img_bytes = self.img.tobytes()
+
+        # Rebuild alias tables based on the new HDRI
+        self._build_hdri_distribution()
+
+    def _uv_to_spherical(self, u, v):
+        # Azimuthal [-π, π]
+        phi = (u - 0.5) * 2 * np.pi
+        # Zenith [0, π]
+        theta = v * np.pi
+
+        return theta, phi
+
+    def _spherical_to_cartesian(self, theta, phi):
+        theta_grid, phi_grid = np.meshgrid(theta, phi, indexing="ij")
+
+        x = np.sin(theta_grid) * np.cos(phi_grid)
+        y = np.cos(theta_grid)
+        z = np.sin(theta_grid) * np.sin(phi_grid)
+
+        return x, y, z
+
+    def _cartesian_to_spherical(self, x, y, z):
+        # Prevent floating point error
+        y = np.clip(y, -1, 1)
+
+        theta = np.arccos(y)
+        phi = np.arctan2(z, x)
+
+        return theta, phi
+
+    def _rotation_matrix(self, pitch_rad, yaw_rad, roll_rad):
+        p = pitch_rad
+        y = yaw_rad
+        r = roll_rad
+
+        R_pitch = np.array([
+            [1, 0, 0],
+            [0, np.cos(p), -np.sin(p)],
+            [0, np.sin(p), np.cos(p)]
+        ])
+
+        R_roll = np.array([
+            [np.cos(r), -np.sin(r), 0],
+            [np.sin(r), np.cos(r), 0],
+            [0, 0, 1]
+        ])
+
+        R_yaw = np.array([
+            [np.cos(y), 0, np.sin(y)],
+            [0, 1, 0],
+            [-np.sin(y), 0, np.cos(y)]
+        ])
+
+        return R_yaw @ R_pitch @ R_roll
+
+    def _spherical_to_uv(self, theta, phi):
+        u = phi / (2 * np.pi) + 0.5
+        v = theta / np.pi
+
+        return u, v
+
+    def update_img(self):
+        """
+        Update the HDRI image buffer after scrambling.
+        Only used for AI training.
+        """
+
+        self.hdri_tex.write(self.img_bytes)
+
+    def update_cdfs(self):
+        """
+        Update the CDF buffers after scrambling.
+        Only used for AI training.
+        """
+        
+        self.row_cdf_tex.write(self.row_cdf.tobytes())
+        self.col_cdf_tex.write(self.col_cdf.tobytes())
 
 
 class Scene:
@@ -684,6 +876,68 @@ class Scene:
         if self.hdri is not None:
             self.hdri.release()
 
+    def snapshot_original_materials(self):
+        """
+        Create a snapshot of the original materials before scrambling.
+        Only used for AI training.
+        """
+        
+        for mat in self.materials:
+            mat.snapshot_original()
+
+    def scramble_materials(self):
+        """
+        Randomize all scene material properties and textures.
+        Only used for AI training.
+        """
+
+        num_base_color = len(self.base_color_textures)
+        num_roughness = len(self.roughness_textures)
+        num_metallic = len(self.metallic_textures)
+        num_normal = len(self.normal_textures)
+
+        for mat in self.materials:
+            mat.scramble()
+
+            # Base color texture randomization
+            if num_base_color > 0:
+                if np.random.rand() < 0.5:
+                    mat.base_color_tex_id = set_i4(np.random.randint(0, num_base_color))
+                    mat.has_base_color_tex = set_i4(1)
+                else:
+                    mat.base_color_tex_id = set_i4(-1)
+                    mat.has_base_color_tex = set_i4(0)
+
+            # Roughness texture randomization
+            if num_roughness > 0:
+                if np.random.rand() < 0.5: 
+                    mat.roughness_tex_id = set_i4(np.random.randint(0, num_roughness))
+                    mat.has_roughness_tex = set_i4(1)
+                else:
+                    mat.roughness_tex_id = set_i4(-1)
+                    mat.has_roughness_tex = set_i4(0)
+
+            # Metallic texture randomization
+            if num_metallic > 0:
+                if np.random.rand() < 0.5: 
+                    mat.metallic_tex_id = set_i4(np.random.randint(0, num_metallic))
+                    mat.has_metallic_tex = set_i4(1)
+                else:
+                    mat.metallic_tex_id = set_i4(-1)
+                    mat.has_metallic_tex = set_i4(0)
+
+            # Normal map randomization
+            if num_normal > 0:
+                if np.random.rand() < 0.5:
+                    mat.normal_tex_id = set_i4(np.random.randint(0, num_normal))
+                    mat.has_normal_tex = set_i4(1)
+                else:
+                    mat.normal_tex_id = set_i4(-1)
+                    mat.has_normal_tex = set_i4(0)
+
+        # Rebuild alias tables for light sampling based on newly scrambled emission values
+        self._find_emissive_triangles()
+    
 
 def save_bvh_data(bvh, cache_path):
     np.savez_compressed(
