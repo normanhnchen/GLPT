@@ -542,9 +542,15 @@ class CameraCaptureState:
     def _load_states(self):
         try:
             with open(file_paths.camera_capture_states) as f:
-                self.states = json.load(f)
+                loaded = json.load(f)
         except:
             pass
+
+        # Rebuild to add new scenes and remove stale keys
+        self.states = {
+            self._key(f): loaded.get(self._key(f), [])
+            for f in self.scene_state.scene_files
+        }
 
     def _get_scene_captures(self):
         return self.states[self._get_key()]
