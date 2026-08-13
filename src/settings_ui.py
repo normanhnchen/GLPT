@@ -810,7 +810,7 @@ class ScreenUI:
             screen.reset()
             self.pt_state.restart_render()
 
-        self.reset_screen_button(on_change)
+        self.reset_screen_button.button(on_change)
     
 
 class DebugUI:
@@ -934,7 +934,7 @@ class DebugUI:
             self.bvh_view_depth_slider.max_val = self._get_max_idx()
             self._clamp_to_scene_max_depth()
 
-        self.reset_debug_button(on_change)
+        self.reset_debug_button.button(on_change)
 
 
 class SceneUI:
