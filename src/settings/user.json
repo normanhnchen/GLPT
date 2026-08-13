@@ -1,0 +1,66 @@
+{   
+    "file_paths": {
+        "scenes": "src/assets/models/",
+        "scene": "src/assets/models/cornell_box.glb",
+        "hdri": "src/assets/hdris/day_sky_hdri.exr",
+        "renders": "src/assets/renders/images",
+        "ai_training_scenes": "src/assets/models/ai_training/",
+        "ai_training_hdris": "src/assets/hdris/ai_training/",
+        "ai_training_renders": "src/assets/renders/ai_training"
+    },
+    "screen": {
+        "width": 1024,
+        "height": 1024,
+        "vsync": false,
+        "fps_cap": -1
+    },
+    "camera": {
+        "yaw": 90,
+        "pitch": 0,
+        "movement_speed": 5,
+        "mouse_sensitivity": 0.1,
+        "fov": 45,
+        "pos": [0, 0, 0],
+        "blur": 1.0,
+        "dof_enabled": false,
+        "aperture": 0.0,
+        "focus_dist": 10
+    },
+    "path_tracing": {
+        "samples_per_pixel": 1,
+        "max_samples": 4096,
+        "total_bounces": 8,
+        "diffuse_bounces": 4,
+        "specular_bounces": 4,
+        "transmission_bounces": 8,
+        "specular_mode": 0,
+        "geometry_mode": 0,
+        "transmission_mode": 0,
+        "mis_mode": 0,
+        "backface_culling": false,
+        "max_direct_luminance": 10.0,
+        "max_indirect_luminance": 10.0
+    },
+    "bvh": {
+        "max_depth": 32,
+        "sah_bins": 16
+    },
+    "debug": {
+        "bvh": {
+            "view_layer": -1,
+            "view_depth": -1,
+            "color_mode": 0
+        }
+    },
+    "post_processing": {
+        "exposure": 3.0,
+        "tonemap": "AgX",
+        "hdri_exposure": 1.0
+    },
+    "render": {
+        "render_mode": "rasterization",
+        "texture_size": [1024, 1024],
+        "tiles_x": 4,
+        "tiles_y": 2
+    }
+}

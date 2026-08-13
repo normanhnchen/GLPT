@@ -5,7 +5,7 @@ import os
 import random
 
 from src.settings import *
-from src.network import *
+from src.ai.denoiser.network import *
 
 
 # https://dl.acm.org/doi/10.1145/3072959.3073708

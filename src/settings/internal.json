@@ -7,9 +7,9 @@
         "hdri": "src/assets/hdris/day_sky_hdri.exr",
         "ai_training_renders": "src/assets/renders/ai_training",
         "renders": "src/assets/renders/images",
-        "camera_capture_states": "src/camera_capture_states.json",
-        "denoiser_checkpoint": "src/denoiser/checkpoint.pt",
-        "denoiser_last_checkpoint": "src/denoiser/last_checkpoint.pt",
+        "camera_capture_states": "src/ai/training/camera_capture_states.json",
+        "denoiser_checkpoint": "src/ai/denoiser/checkpoint.pt",
+        "denoiser_last_checkpoint": "src/ai/denoiser/last_checkpoint.pt",
         
         "path_tracing": {
             "vert": "src/shaders/path_tracing/final.vs",

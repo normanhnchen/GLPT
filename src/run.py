@@ -15,7 +15,7 @@ from src.render_state import *
 from src.buffer_loading import *
 from src.bvh_builder import *
 from src.settings_ui import *
-from src.network import *
+from src.ai.denoiser.network import *
 from src.pipelines.path_tracing import *
 from src.pipelines.rasterization import *
 
@@ -96,7 +96,7 @@ def main():
 
     ai_denoiser = KPCN()
     # Load saved weights and biases
-    ai_denoiser.load_state_dict(torch.load("src/denoiser/checkpoint.pt")["model_state_dict"])
+    ai_denoiser.load_state_dict(torch.load(file_paths.denoise_checkpoint)["model_state_dict"])
 
     pt_pipeline = PathTracingPipeline(ctx, scene, camera, pt_state, final_output_state, pt_shaders, ai_denoiser)
     raster_pipeline = RasterizationPipeline(ctx, scene, camera, raster_state, raster_shaders)

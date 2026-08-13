@@ -15,7 +15,7 @@ from src.render_state import *
 from src.buffer_loading import *
 from src.bvh_builder import *
 from src.settings_ui import *
-from src.network import *
+from src.ai.denoiser.network import *
 from src.pipelines.path_tracing import *
 from src.pipelines.rasterization import *
 
