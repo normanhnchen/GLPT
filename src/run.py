@@ -116,11 +116,14 @@ def main():
         if glfw_window.need_resize:
             pt_state.reset()
             raster_state.resize()
+            final_output_state.resize()
 
             ctx.screen.use()
             ctx.viewport = (0, 0, screen.width, screen.height)
 
             glfw_window.need_resize = False
+
+            pt_state.start_render()
         
         update_stats(glfw_window, pt_state, frame_stats.avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
         

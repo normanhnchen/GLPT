@@ -117,7 +117,7 @@ class FramebufferState:
         return self._get_ndarray(self.depth)
 
 
-class RenderState:
+class TileState:
     def __init__(self):
         # Current tile position in pixels
         self.curr_tile_x = 0
@@ -152,7 +152,7 @@ class RenderState:
             self.frame_finished = False
 
 
-class RenderProgressState:
+class RenderState:
     def __init__(self):
         self.total_samples = 0
         self.render_complete = False
@@ -212,8 +212,8 @@ class PTState:
     def __init__(self, ctx):
         self.ctx = ctx
         self.framebuffers = FramebufferState(ctx)
-        self.tiles = RenderState()
-        self.rendering = RenderProgressState()
+        self.tiles = TileState()
+        self.rendering = RenderState()
         self.denoising = DenoiseState(ctx)
         self.debug = DebugState()
     
@@ -714,7 +714,7 @@ class GlfwWindow:
         screen.width = width
         screen.height = height
         screen.resolution = [width, height]
-        self.aspect_ratio = screen.width / max(screen.height, 1)
+        screen.aspect_ratio = screen.width / max(screen.height, 1)
 
         self.need_resize = True
 
@@ -855,7 +855,7 @@ class GlfwCallbackState:
         glfwSetMouseButtonCallback(window, self._mouse_button_callback)
         glfwSetKeyCallback(window, self._key_callback)
         glfwSetFramebufferSizeCallback(window, self._framebuffer_size_callback)
-        glfwSetWindowSizeLimits(window, 400, 300, GLFW_DONT_CARE, GLFW_DONT_CARE)
+        glfwSetWindowSizeLimits(window, screen.min_width, screen.min_height, GLFW_DONT_CARE, GLFW_DONT_CARE)
 
     def _framebuffer_size_callback(self, window, width, height):
         self.glfw_window.resize(width, height)

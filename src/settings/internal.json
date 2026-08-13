@@ -43,7 +43,9 @@
         "width": 1024,
         "height": 1024,
         "vsync": false,
-        "fps_cap": -1
+        "fps_cap": -1,
+        "min_width": 400,
+        "min_height": 300
     },
     "camera": {
         "yaw": 90,

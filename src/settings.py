@@ -20,6 +20,8 @@ class Screen:
         self.aspect_ratio = self.width / max(self.height, 1)
         self.vsync = config["vsync"]
         self.fps_cap = config["fps_cap"]
+        self.min_width = config["min_width"]
+        self.min_height = config["min_height"]
 
     def _load_user(self, config):
         self.width = config["width"]
