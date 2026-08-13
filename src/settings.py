@@ -146,6 +146,7 @@ class FilePaths:
 
     def _load(self, config):
         self.ai_training_scenes = ROOT_DIR / config["ai_training_scenes"]
+        self.scenes = ROOT_DIR / config["scenes"]
         self.scene = ROOT_DIR / config["scene"]
         self.ai_training_hdris = ROOT_DIR / config["ai_training_hdris"]
         self.hdri = ROOT_DIR / config["hdri"]

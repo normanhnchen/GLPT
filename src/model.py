@@ -5,11 +5,63 @@ import pygltflib
 import glm
 import time
 from pathlib import Path
+import hashlib
+import os
 
 from src.settings import *
 from src.dtypes import *
 from src.bvh import *
 from src.buffers import *
+
+
+def _get_file_fingerprint(path, chunk_size=65536, max_chunks=32):
+    size = os.path.getsize(path)
+    h = hashlib.blake2b()
+    h.update(str(size).encode())
+
+    # Apply ceiling division
+    num_chunks = min(max_chunks, -(-size // chunk_size))
+
+    with open(path, "rb") as f:
+        if num_chunks * chunk_size >= size:
+            # File is small enough; read
+            h.update(f.read())
+        else:
+            stride = (size - chunk_size) / (num_chunks - 1) if num_chunks > 1 else 0
+            for i in range(num_chunks):
+                offset = int(i * stride)
+                f.seek(offset)
+                h.update(f.read(chunk_size))
+
+    return h.hexdigest()
+
+
+def remove_stale_cache(scenes_dir, cache_dir):
+    scenes_dir = Path(scenes_dir).resolve()
+    cache_dir = Path(cache_dir).resolve()
+
+    valid_codes = []
+    for scene_file in scenes_dir.rglob("*"):
+        if scene_file.is_file():
+            rel_path = scene_file.relative_to(ROOT_DIR)
+            
+            name = str(rel_path.parent / rel_path.stem).replace("/", "_").replace("\\", "_")
+            fingerprint = _get_file_fingerprint(scene_file)
+
+            valid_codes.append(f"{name}_{fingerprint}")
+
+    for cache_file in cache_dir.glob("*"):
+        stem = cache_file.stem
+        for prefix in ("scene_", "bvh_"):
+            if stem.startswith(prefix):
+                code = stem[len(prefix):]
+                break
+
+        else:
+            continue
+
+        if code not in valid_codes:
+            cache_file.unlink()
 
 
 def get_cache_path(path, cache_dir, type):
@@ -19,10 +71,12 @@ def get_cache_path(path, cache_dir, type):
     rel_path = abs_path.relative_to(ROOT_DIR)
 
     cache_name = str(rel_path.parent / rel_path.stem).replace("/", "_").replace("\\", "_")
+    fingerprint = _get_file_fingerprint(abs_path)
+
     if type == "scene":
-        return abs_cache_dir / f"{type}_{cache_name}"
+        return abs_cache_dir / f"{type}_{cache_name}_{fingerprint}"
     elif type == "bvh":
-        return abs_cache_dir / f"{type}_{cache_name}"
+        return abs_cache_dir / f"{type}_{cache_name}_{fingerprint}"
 
 
 class Texture:

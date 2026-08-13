@@ -32,6 +32,9 @@ need_resize = False
 
 
 def main():
+    remove_stale_cache(file_paths.scenes, file_paths.scene_cache)
+    remove_stale_cache(file_paths.scenes, file_paths.bvh_cache)
+    
     glfw_window = GlfwWindow()
     imgui_state = ImguiState()
     input_state = InputState(glfw_window, imgui_state)
