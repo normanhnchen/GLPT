@@ -14,9 +14,9 @@ from src.bvh import *
 from src.buffers import *
 
 
-def _get_file_fingerprint(path, chunk_size=65536, max_chunks=32):
+def _get_file_fingerprint(path, chunk_size=65536, max_chunks=32, digest_size=16):
     size = os.path.getsize(path)
-    h = hashlib.blake2b()
+    h = hashlib.blake2b(digest_size=digest_size)
     h.update(str(size).encode())
 
     # Apply ceiling division
