@@ -4,28 +4,40 @@ from src.settings import *
 
 
 class IntSlider:
-    def __init__(self, min_val, max_val, label, slider_speed=0.5, increment=1):
+    def __init__(self, min_val, max_val, label, slider_speed=0.5, increment=1, wrap=False):
         self.window = glfwGetCurrentContext()
         self.slider_speed = slider_speed
         self.increment = increment
         self.min_val = min_val
         self.max_val = max_val
         self.label = label
+        self.wrap = wrap
         self.unique_code = label.lower().replace(" ", "_")
 
     def slider(self, curr_val, val_format="%d", enabled=True, reason="", width=None):
+        if self.wrap:
+            val_format = val_format
+        
         if width is not None:
             imgui.push_item_width(width)
 
         if not enabled:
             imgui.begin_disabled()
+
+        if self.wrap:
+            # Tell ImGui to disable min max slider bounds
+            drag_min = 0
+            drag_max = 0
+        else:
+            drag_min = self.min_val
+            drag_max = self.max_val
         
         self.changed, self.val = imgui.drag_int(
             f"##{self.unique_code}",
             curr_val,
             self.slider_speed,
-            self.min_val,
-            self.max_val,
+            drag_min,
+            drag_max,
             format=val_format
         )
 
@@ -773,9 +785,12 @@ class ScreenUI:
 
         self.reset_screen_button = Button("Reset Screen Settings")
 
+        self.vsync_checkbox = Checkbox("VSync")
+
         self.fps_slider = IntSlider(30, 361, "FPS", slider_speed=1)
 
-        self.vsync_checkbox = Checkbox("VSync")
+        self.window_resize_width_slider = IntSlider(screen.min_width, 999999, "Width")
+        self.window_resize_height_slider = IntSlider(screen.min_height, 999999, "Height")
     
     def draw_vsync_checkbox(self):
         def on_change(enabled):
@@ -804,6 +819,36 @@ class ScreenUI:
         self.fps_slider.minus_button(on_change)
         self.fps_slider.plus_button(on_change)
         self.fps_slider.draw_label()
+
+    def draw_window_resize_sliders(self):
+        current_window = glfwGetCurrentContext()
+
+        def on_change_width(new_val):
+            glfwSetWindowSize(current_window, new_val, screen.height)
+            self.pt_state.restart_render()
+
+        def on_change_height(new_val):
+            glfwSetWindowSize(current_window, screen.width, new_val)
+            self.pt_state.restart_render()
+
+        avail_width = imgui.get_content_region_avail().x
+        slot_width = avail_width / 3
+
+        # Create new line since draw_label() doesn't create one
+        imgui.new_line()
+
+        # Width
+        self.window_resize_width_slider.draw_label()
+        imgui.same_line()
+        self.window_resize_width_slider.slider(screen.width, width=slot_width)
+        self.window_resize_width_slider.dragging_logic(on_change_width)
+
+        # Height
+        imgui.same_line()
+        self.window_resize_height_slider.draw_label()
+        imgui.same_line()
+        self.window_resize_height_slider.slider(screen.height, width=slot_width)
+        self.window_resize_height_slider.dragging_logic(on_change_height)
 
     def draw_reset_screen_button(self):
         def on_change():
@@ -1168,6 +1213,11 @@ class SettingsUI:
     def draw_screen_ui(self):
         self.screen_ui.draw_vsync_checkbox()
         self.screen_ui.draw_fps_slider()
+
+        if imgui.tree_node("More"):
+            self.screen_ui.draw_window_resize_sliders()
+
+            imgui.tree_pop()
 
         self.screen_ui.draw_reset_screen_button()
     
