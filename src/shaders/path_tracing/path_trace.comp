@@ -188,7 +188,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                     float areaLightPdf = AreaLightPdf(si, ray, prevPoint);
                     float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, areaLightPdf);
                     vec3 indirect = mat.emissive * mat.emissiveStrength * misWeight;
-                    indirect = ClampLuminance(indirect, MAX_INDIRECT_LUMINANCE);
+                    indirect = ClampLuminance(indirect, maxIndirectLuminance);
                     indirectRadiance += throughput * indirect;
                 }
             } else if (misMode == 1) {
@@ -211,7 +211,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             direct += SampleAreaLight(si, ray, rng);
             direct += SampleHdriLight(si, ray, rng);
 
-            direct = ClampLuminance(direct, MAX_DIRECT_LUMINANCE);
+            direct = ClampLuminance(direct, maxDirectLuminance);
 
             if (i == 0) {
                 directRadiance += throughput * direct;
@@ -254,7 +254,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         throughput *= transmittance;
         throughput *= bsdfSample.f;
 
-        throughput = ClampLuminance(throughput, MAX_INDIRECT_LUMINANCE);
+        throughput = ClampLuminance(throughput, maxIndirectLuminance);
 
         ray.d = bsdfSample.wi;
 

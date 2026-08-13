@@ -71,6 +71,9 @@ class PTSettings:
 
         self.backface_culling = config["backface_culling"]
 
+        self.max_direct_luminance = config["max_direct_luminance"]
+        self.max_indirect_luminance = config["max_indirect_luminance"]
+
     def reset(self):
         self._load(self._default_config)
 

@@ -827,6 +827,9 @@ class DebugUI:
         self.bvh_view_layer_slider = IntSlider(-1, self._get_max_idx(), "View Layer")
         self.bvh_view_depth_slider = IntSlider(-1, self._get_max_idx(), "View Depth")
 
+        self.max_direct_luminance_slider = FloatSlider(0, 1000, "Max Direct Luminance", slider_speed=0.1, increment=0.1)
+        self.max_indirect_luminance_slider = FloatSlider(0, 1000, "Max Indirect Luminance", slider_speed=0.1, increment=0.1)
+
     def _get_max_idx(self):
         """
         BVH is initiated as a NoneType object,
@@ -927,6 +930,28 @@ class DebugUI:
         self.bvh_view_depth_slider.minus_button(on_change)
         self.bvh_view_depth_slider.plus_button(on_change)
         self.bvh_view_depth_slider.draw_label()
+
+    def draw_max_direct_luminance_slider(self):
+        def on_change(new_val):
+            pt_settings.max_direct_luminance = new_val
+            self.pt_state.restart_render()
+
+        self.max_direct_luminance_slider.slider(pt_settings.max_direct_luminance)
+        self.max_direct_luminance_slider.dragging_logic(on_change)
+        self.max_direct_luminance_slider.minus_button(on_change)
+        self.max_direct_luminance_slider.plus_button(on_change)
+        self.max_direct_luminance_slider.draw_label()
+
+    def draw_max_indirect_luminance_slider(self):
+        def on_change(new_val):
+            pt_settings.max_indirect_luminance = new_val
+            self.pt_state.restart_render()
+
+        self.max_indirect_luminance_slider.slider(pt_settings.max_indirect_luminance)
+        self.max_indirect_luminance_slider.dragging_logic(on_change)
+        self.max_indirect_luminance_slider.minus_button(on_change)
+        self.max_indirect_luminance_slider.plus_button(on_change)
+        self.max_indirect_luminance_slider.draw_label()
 
     def draw_reset_debug_button(self):
         def on_change():
@@ -1157,6 +1182,9 @@ class SettingsUI:
                 self.debug_ui.draw_bvh_color_mode_cycle_button()
                 self.debug_ui.draw_bvh_view_layer_slider()
                 self.debug_ui.draw_bvh_view_depth_slider()
+
+        self.debug_ui.draw_max_direct_luminance_slider()
+        self.debug_ui.draw_max_indirect_luminance_slider()
 
         self.debug_ui.draw_reset_debug_button()
     

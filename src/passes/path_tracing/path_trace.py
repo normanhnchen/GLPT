@@ -36,7 +36,10 @@ def _compute_uniforms(scene, camera, pt_state):
 
         "maxBvhDepth": bvh_settings.max_depth,
 
-        "backfaceCulling": set_i4(1) if pt_settings.backface_culling else set_i4(0)
+        "backfaceCulling": set_i4(1) if pt_settings.backface_culling else set_i4(0),
+
+        "maxDirectLuminance": set_f4(pt_settings.max_direct_luminance),
+        "maxIndirectLuminance": set_f4(pt_settings.max_indirect_luminance)
     }
 
 

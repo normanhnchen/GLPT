@@ -39,6 +39,9 @@ uniform int maxBvhDepth;
 
 uniform int backfaceCulling;
 
+uniform float maxDirectLuminance;
+uniform float maxIndirectLuminance;
+
 
 // --- final.fs ---
 
