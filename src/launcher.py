@@ -2,12 +2,14 @@ import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QGroupBox,
     QHBoxLayout, QLabel, QPushButton, QSlider, QCheckBox, QStackedWidget,
-    QDialog,
+    QDialog, QListWidget, QListWidgetItem
 )
 from PySide6.QtCore import Qt
 
+from src.settings import *
 
-STYLESHEET = """
+
+APP_STYLESHEET = """
 QWidget {
     background-color: #1e1f22;
     color: #ffffff;
@@ -30,6 +32,14 @@ QPushButton:hover {
 }
 """
 
+SETTINGS_STYLESHEET = """
+QWidget {
+    background-color: #1e1f22;
+    color: #ffffff;
+    font-weight: bold;
+}
+"""
+
 
 class SettingsDialog(QDialog):
     def __init__(self):
@@ -40,7 +50,35 @@ class SettingsDialog(QDialog):
         self.init_settings()
 
     def init_settings(self):
-        pass
+        settings_layout = QHBoxLayout(self)
+        settings_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.sidebar = QListWidget()
+        self.sidebar.setFixedWidth(150)
+
+        self.pages = QStackedWidget()
+
+        settings_layout.addWidget(self.sidebar)
+        settings_layout.addWidget(self.pages)
+
+        self.sidebar.currentRowChanged.connect(self.pages.setCurrentIndex)
+        
+        self.init_general()
+
+        # Select the first item by default
+        self.sidebar.setCurrentRow(0)
+
+    def init_general(self):
+        self.sidebar.addItem("General")
+
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        title = QLabel("General Settings")
+        layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.pages.addWidget(page)
 
 
 class Launcher(QMainWindow):
@@ -90,6 +128,8 @@ class Launcher(QMainWindow):
         if not self.settings_dialog:
             self.settings_dialog = SettingsDialog()
 
+        self.settings_dialog.setStyleSheet(SETTINGS_STYLESHEET)
+
         self.settings_dialog.show()
         # Bring settings dialog to the front
         self.settings_dialog.raise_()
@@ -99,7 +139,7 @@ class Launcher(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    app.setStyleSheet(STYLESHEET)
+    app.setStyleSheet(APP_STYLESHEET)
 
     launcher = Launcher()
     launcher.show()
