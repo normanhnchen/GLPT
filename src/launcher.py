@@ -1,8 +1,8 @@
 import sys
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QGroupBox,
-    QHBoxLayout, QLabel, QPushButton, QSlider, QCheckBox, QStackedWidget,
-    QDialog, QListWidget, QListWidgetItem, QFileDialog, QLineEdit
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QGroupBox, QScrollArea,
+    QHBoxLayout, QLabel, QPushButton, QSlider, QCheckBox, QStackedWidget, QSpinBox,
+    QDialog, QListWidget, QListWidgetItem, QFileDialog, QLineEdit, QToolButton
 )
 from PySide6.QtCore import Qt
 from pathlib import Path
@@ -56,10 +56,79 @@ QPushButton:hover {
 }
 """
 
+COLLAPSIBLE_SECTION_STYLESHEET = """
+QToolButton {
+    border: none;
+    font-size: 16px;
+}
+
+QScrollArea {
+    border: none;
+}
+"""
+
+
+class CollapsibleSection(QWidget):
+    def __init__(self, title, width):
+        super().__init__()
+
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.toggle_button = QToolButton(self)
+        self.toggle_button.setText(title)
+        self.toggle_button.setFixedWidth(width)
+        self.toggle_button.setCheckable(True)
+        self.toggle_button.setChecked(False)
+        self.toggle_button.setArrowType(Qt.ArrowType.RightArrow)
+        self.toggle_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.toggle_button.clicked.connect(self.toggle)
+
+        self.content_area = QScrollArea(self)
+        self.content_area.setWidgetResizable(True)
+        self.content_area.setVisible(False)
+
+        self.content_widget = QWidget()
+        self.content_layout = QVBoxLayout(self.content_widget)
+        self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.content_area.setWidget(self.content_widget)
+
+        self.main_layout.addWidget(self.toggle_button, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.main_layout.addWidget(self.content_area)
+
+    def toggle(self, checked):
+        if checked:
+            self.toggle_button.setArrowType(Qt.ArrowType.DownArrow)
+        else:
+            self.toggle_button.setArrowType(Qt.ArrowType.RightArrow)
+
+        self.content_area.setVisible(checked)
+
+    def add_content_widget(self, widget):
+        self.content_layout.addWidget(widget)
+
+
+class IntSpinBox(QWidget):
+    def __init__(self, label, min, max):
+        super().__init__()
+
+        self.box_layout = QHBoxLayout(self)
+
+        self.label = QLabel(label)
+
+        self.spin_box = QSpinBox()
+        self.spin_box.setRange(min, max)
+
+        self.label.setBuddy(self.spin_box)
+
+        self.box_layout.addWidget(self.label)
+        self.box_layout.addWidget(self.spin_box)
+
 
 class SettingsDialog(QDialog):
     def __init__(self):
         super().__init__()
+
         self.setWindowTitle("Settings")
         self.resize(600, 400)
 
@@ -69,74 +138,84 @@ class SettingsDialog(QDialog):
         settings_layout = QHBoxLayout(self)
         settings_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        self.pages = QStackedWidget()
+
         self.sidebar = QListWidget()
         self.sidebar.setFixedWidth(150)
-
-        self.pages = QStackedWidget()
+        self.sidebar.currentRowChanged.connect(self.pages.setCurrentIndex)
+        # Select the first item by default
+        self.sidebar.setCurrentRow(0)
 
         settings_layout.addWidget(self.sidebar)
         settings_layout.addWidget(self.pages)
-
-        self.sidebar.currentRowChanged.connect(self.pages.setCurrentIndex)
         
         self.init_general()
         self.init_scene()
         self.init_video()
 
-        # Select the first item by default
-        self.sidebar.setCurrentRow(0)
-
     def init_general(self):
         self.sidebar.addItem("General")
 
         page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        box_layout = QVBoxLayout(page)
+        box_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         title = QLabel("General Settings")
         title.setObjectName("titleLabel")
-        layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
 
+        box_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
         self.pages.addWidget(page)
 
     def init_scene(self):
         self.sidebar.addItem("Scene Settings")
 
         page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        box_layout = QVBoxLayout(page)
+        box_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         title = QLabel("Scene Settings")
         title.setObjectName("titleLabel")
-        layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        self.pages.addWidget(page)
 
         scene_path_edit = QLineEdit()
         scene_path_edit.setText(settings.file_paths.scene.name)
         scene_path_edit.setFixedWidth(200)
         scene_path_label = QLabel("Selected Scene:")
 
-        layout.addWidget(scene_path_label)
-        layout.addWidget(scene_path_edit)
-
         scene_file_button = QPushButton("Browse")
         scene_file_button.setFixedWidth(200)
         scene_file_button.clicked.connect(self.browse_scene_file)
 
-        layout.addWidget(scene_file_button)
+        box_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.pages.addWidget(page)
+        box_layout.addWidget(scene_path_label, alignment=Qt.AlignmentFlag.AlignHCenter)
+        box_layout.addWidget(scene_path_edit, alignment=Qt.AlignmentFlag.AlignHCenter)
+        box_layout.addWidget(scene_file_button, alignment=Qt.AlignmentFlag.AlignHCenter)
+        box_layout.addSpacing(20)
+        box_layout.addWidget(self.init_bvh(), alignment=Qt.AlignmentFlag.AlignJustify)
+
+    def init_bvh(self):
+        section = CollapsibleSection("Advanced", 200)
+        section.setStyleSheet(COLLAPSIBLE_SECTION_STYLESHEET)
+
+        # BVH Settings
+        # ------------
+        sah_bins_spin_box = IntSpinBox("SAH Bins", 1, 64)
+
+        section.add_content_widget(sah_bins_spin_box)
+
+        return section
 
     def init_video(self):
         self.sidebar.addItem("Video Settings")
 
         page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        box_layout = QVBoxLayout(page)
+        box_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         title = QLabel("Video Settings")
         title.setObjectName("titleLabel")
-        layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
 
+        box_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
         self.pages.addWidget(page)
 
     def browse_scene_file(self):
@@ -146,6 +225,7 @@ class SettingsDialog(QDialog):
 class Launcher(QMainWindow):
     def __init__(self):
         super().__init__()
+
         self.setWindowTitle("GLPT")
         self.resize(1080, 720)
 
@@ -158,26 +238,26 @@ class Launcher(QMainWindow):
     
     def init_menu(self):
         self.menu_widget = QWidget()
-        layout = QVBoxLayout(self.menu_widget)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        box_layout = QVBoxLayout(self.menu_widget)
+        box_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.settings_dialog = None
 
         title = QLabel("GLPT")
         title.setObjectName("titleLabel")
-        layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        layout.addSpacing(50)
 
         run_button = QPushButton("Run")
         run_button.setFixedWidth(300)
         run_button.clicked.connect(self.run)
-        layout.addWidget(run_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
         settings_button = QPushButton("Settings")
         settings_button.setFixedWidth(300)
         settings_button.clicked.connect(self.open_settings)
-        layout.addWidget(settings_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        box_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
+        box_layout.addSpacing(50)
+        box_layout.addWidget(run_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        box_layout.addWidget(settings_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
     def run(self):
         print(0)
