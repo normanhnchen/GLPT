@@ -363,16 +363,25 @@ class FilePathSettings:
         self._load_internal()
 
     def user_settings_to_dict(self):
+        def rel(path):
+            path = Path(path)
+
+            try:
+                return str(path.relative_to(ROOT_DIR))
+            except:
+                # File lives outside of the project root
+                return str(path)
+        
         return {
             "file_paths": {
-                "scenes": str(self.scenes),
-                "scene": str(self.scene),
-                "hdri": str(self.hdri),
-                "renders": str(self.renders),
+                "scenes": rel(self.scenes),
+                "scene": rel(self.scene),
+                "hdri": rel(self.hdri),
+                "renders": rel(self.renders),
                 "ai_training": {
-                    "scenes": str(self.ai_training.scenes),
-                    "hdris": str(self.ai_training.hdris),
-                    "renders": str(self.ai_training.renders),
+                    "scenes": rel(self.ai_training.scenes),
+                    "hdris": rel(self.ai_training.hdris),
+                    "renders": rel(self.ai_training.renders),
                 }
             }
         }
