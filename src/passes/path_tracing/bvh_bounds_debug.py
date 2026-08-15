@@ -13,10 +13,10 @@ def _compute_uniforms(scene, camera):
         "projection": camera.get_perspective().to_bytes(),
         # Fragment Shader Uniforms
         # ------------------------
-        "bvhViewLayer": debug_settings.bvh.view_layer,
-        "bvhViewDepth": debug_settings.bvh.view_depth,
+        "bvhViewLayer": settings.debug.bvh.view_layer,
+        "bvhViewDepth": settings.debug.bvh.view_depth,
         "bvhMaxNodeDepth": scene.bvh.max_depth,
-        "bvhColorMode": debug_settings.bvh.color_mode
+        "bvhColorMode": settings.debug.bvh.color_mode
     }
 
 

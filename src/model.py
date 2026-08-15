@@ -144,7 +144,7 @@ class Material:
             self.occlusion_tex
         ]
 
-        width, height = render_settings.texture_size
+        width, height = settings.rendering.texture_size
         for tex in self.textures:
             tex.resize(width, height)
 
@@ -487,8 +487,8 @@ class Scene:
         self.scene_path = scene_path
         self.scene_name = Path(scene_path).stem
 
-        self.scene_cache_path = get_cache_path(scene_path, file_paths.scene_cache, "scene")
-        self.bvh_cache_path = get_cache_path(scene_path, file_paths.bvh_cache, "bvh")
+        self.scene_cache_path = get_cache_path(scene_path, settings.file_paths.cache.scene, "scene")
+        self.bvh_cache_path = get_cache_path(scene_path, settings.file_paths.cache.bvh, "bvh")
 
     def build(self):
         scene = trimesh.load(self.scene_path)
@@ -584,7 +584,7 @@ class Scene:
         self._compute_tangents()
 
         def to_array(tex_list):
-            width, height = render_settings.texture_size
+            width, height = settings.rendering.texture_size
             if not tex_list:
                 return np.zeros((0, height, width, 4), dtype=np.uint8)
             arr = np.zeros((len(tex_list), height, width, 4), dtype=np.uint8)
@@ -724,7 +724,7 @@ class Scene:
     def build_bvh(self):
         try:
             # Note: numpy adds the file suffix automatically
-            cache_path = get_cache_path(self.scene_path, file_paths.bvh_cache, "bvh").with_suffix(".npz")
+            cache_path = get_cache_path(self.scene_path, settings.file_paths.cache.bvh, "bvh").with_suffix(".npz")
 
             self.bvh = load_bvh_data(cache_path)
             self.num_bvh_nodes = self.bvh.nodes_used
@@ -881,7 +881,7 @@ class Scene:
             for img in tex_list:
                 data.extend(img.tobytes())
             
-            width, height = render_settings.texture_size
+            width, height = settings.rendering.texture_size
                 
             self.texture_arrays[name] = ctx.texture_array(
                 size=(width, height, len(tex_list)),
@@ -1108,7 +1108,7 @@ def load_scene_data(scene, cache_path):
 
 def load_scene(scene_path):
     # Note: numpy adds the file suffix automatically
-    scene_cache_path = get_cache_path(scene_path, file_paths.scene_cache, "scene").with_suffix(".npz")
+    scene_cache_path = get_cache_path(scene_path, settings.file_paths.cache.scene, "scene").with_suffix(".npz")
 
     scene = Scene(scene_path)
 

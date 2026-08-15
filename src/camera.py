@@ -1,6 +1,6 @@
 import glm
 
-from src.settings import camera_settings, screen
+from src.settings import *
 
 
 # Defines several possible options for camera movement
@@ -19,20 +19,20 @@ class CameraMovement:
 class Camera:
     def __init__(
             self,
-            pos=camera_settings.pos,
-            front=camera_settings.front,
-            up=camera_settings.up,
+            pos=settings.camera.pos,
+            front=settings.camera.front,
+            up=settings.camera.up,
             right=None,
-            world_up=camera_settings.world_up,
-            yaw=camera_settings.yaw,
-            pitch=camera_settings.pitch,
-            movement_speed=camera_settings.movement_speed,
-            mouse_sensitivity=camera_settings.mouse_sensitivity,
-            fov=camera_settings.fov,
-            blur=camera_settings.blur,
-            dof_enabled=camera_settings.dof_enabled,
-            aperture=camera_settings.aperture,
-            focus_dist=camera_settings.focus_dist
+            world_up=settings.camera.world_up,
+            yaw=settings.camera.yaw,
+            pitch=settings.camera.pitch,
+            movement_speed=settings.camera.movement_speed,
+            mouse_sensitivity=settings.camera.mouse_sensitivity,
+            fov=settings.camera.fov,
+            blur=settings.camera.blur,
+            dof_enabled=settings.camera.dof_enabled,
+            aperture=settings.camera.aperture,
+            focus_dist=settings.camera.focus_dist
         ):
         self.pos = glm.vec3(pos)
         self.front = glm.vec3(front)
@@ -159,25 +159,25 @@ class Camera:
     def get_perspective(self):
         near = 0.01
         far = 1000
-        return glm.perspective(glm.radians(self.fov), screen.width / screen.height, near, far)
+        return glm.perspective(glm.radians(self.fov), settings.screen.width / settings.screen.height, near, far)
 
     def get_view(self):
         return glm.lookAt(self.pos, self.pos + self.front, self.up)
 
     def reload_from_settings(self):
-        self.pos = glm.vec3(camera_settings.pos)
-        self.front = glm.vec3(camera_settings.front)
-        self.up = glm.vec3(camera_settings.up)
+        self.pos = glm.vec3(settings.camera.pos)
+        self.front = glm.vec3(settings.camera.front)
+        self.up = glm.vec3(settings.camera.up)
         self.right = None
-        self.world_up = glm.vec3(camera_settings.world_up)
-        self.yaw = camera_settings.yaw
-        self.pitch = camera_settings.pitch
-        self.movement_speed = camera_settings.movement_speed
-        self.mouse_sensitivity = camera_settings.mouse_sensitivity
-        self.fov = camera_settings.fov
-        self.blur = camera_settings.blur
-        self.dof_enabled = camera_settings.dof_enabled
-        self.aperture = camera_settings.aperture
-        self.focus_dist = camera_settings.focus_dist
+        self.world_up = glm.vec3(settings.camera.world_up)
+        self.yaw = settings.camera.yaw
+        self.pitch = settings.camera.pitch
+        self.movement_speed = settings.camera.movement_speed
+        self.mouse_sensitivity = settings.camera.mouse_sensitivity
+        self.fov = settings.camera.fov
+        self.blur = settings.camera.blur
+        self.dof_enabled = settings.camera.dof_enabled
+        self.aperture = settings.camera.aperture
+        self.focus_dist = settings.camera.focus_dist
 
         self._update_camera_vectors()

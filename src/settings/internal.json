@@ -1,16 +1,19 @@
 {   
     "file_paths": {
-        "ai_training_scenes": "src/assets/models/ai_training/",
         "scenes": "src/assets/models/",
         "scene": "src/assets/models/cornell_box.glb",
-        "ai_training_hdris": "src/assets/hdris/ai_training/",
         "hdri": "src/assets/hdris/day_sky_hdri.exr",
-        "ai_training_renders": "src/assets/renders/ai_training",
         "renders": "src/assets/renders/images",
-        "camera_capture_states": "src/ai/training/camera_capture_states.json",
-        "denoiser_checkpoint": "src/ai/denoiser/checkpoint.pt",
-        "denoiser_last_checkpoint": "src/ai/denoiser/last_checkpoint.pt",
-        
+        "ai_training": {
+            "scenes": "src/assets/models/ai_training/",
+            "hdris": "src/assets/hdris/ai_training/",
+            "renders": "src/assets/renders/ai_training",
+            "camera_capture_states": "src/ai/training/camera_capture_states.json"
+        },
+        "denoiser": {
+            "checkpoint": "src/ai/denoiser/checkpoint.pt",
+            "last_checkpoint": "src/ai/denoiser/last_checkpoint.pt"
+        },
         "path_tracing": {
             "vert": "src/shaders/path_tracing/final.vs",
             "frag": "src/shaders/path_tracing/final.fs",
@@ -93,14 +96,15 @@
         "tonemap": "AgX",
         "hdri_exposure": 1.0
     },
-    "render": {
-        "render_mode": "rasterization",
+    "rendering": {
+        "mode": "rasterization",
         "texture_size": [1024, 1024],
-        "tiles_x": 4,
-        "tiles_y": 2
+        "tiles": {
+            "x": 4,
+            "y": 2
+        }
     },
     "ai_training": {
-        "ai_training_mode": false,
-        "camera_setup_mode": false
+        "mode": "camera_setup"
     }
 }

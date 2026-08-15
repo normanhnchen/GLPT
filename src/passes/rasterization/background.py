@@ -12,7 +12,7 @@ def _compute_uniforms(camera):
         "projection": camera.get_perspective().to_bytes(),
         # Fragment Shader Uniforms
         # ------------------------
-        "hdriExposure": post_process_settings.hdri_exposure
+        "hdriExposure": settings.post_processing.hdri_exposure
     }
 
 

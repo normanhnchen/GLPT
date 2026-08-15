@@ -34,19 +34,19 @@ class FramebufferState:
         self.saved_depth = None
 
     def _create_active_buffers(self):
-        self.combined = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.albedo = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.normal = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.depth = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.combined = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
+        self.albedo = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
+        self.normal = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
+        self.depth = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
     
     def _create_saved_buffers(self):
-        self.saved_combined = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.saved_albedo = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.saved_normal = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.saved_depth = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.saved_combined = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
+        self.saved_albedo = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
+        self.saved_normal = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
+        self.saved_depth = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
 
     def _clear_active_buffers(self):
-        zeros = np.zeros((*screen.resolution, 4), dtype=f4)
+        zeros = np.zeros((*settings.screen.resolution, 4), dtype=f4)
         self.combined.write(zeros)
         self.albedo.write(zeros)
         self.normal.write(zeros)
@@ -125,8 +125,8 @@ class TileState:
         
         # Apply ceiling function
         # Allows the compute shader to reach the entire screen
-        self.tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
-        self.tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
+        self.tile_width = (settings.screen.width + settings.rendering.tiles.x - 1) // settings.rendering.tiles.x
+        self.tile_height = (settings.screen.height + settings.rendering.tiles.y - 1) // settings.rendering.tiles.y
 
         self.frame_finished = False
 
@@ -136,16 +136,16 @@ class TileState:
         self.curr_tile_y = 0
 
         # Recalculate tile sizes
-        self.tile_width = (screen.width + render_settings.tiles_x - 1) // render_settings.tiles_x
-        self.tile_height = (screen.height + render_settings.tiles_y - 1) // render_settings.tiles_y
+        self.tile_width = (settings.screen.width + settings.rendering.tiles.x - 1) // settings.rendering.tiles.x
+        self.tile_height = (settings.screen.height + settings.rendering.tiles.y - 1) // settings.rendering.tiles.y
 
     def advance(self):
         self.curr_tile_x += self.tile_width
-        if self.curr_tile_x > screen.width:
+        if self.curr_tile_x > settings.screen.width:
             self.curr_tile_x = 0
             self.curr_tile_y += self.tile_height
         
-        if self.curr_tile_y > screen.height:
+        if self.curr_tile_y > settings.screen.height:
             self.curr_tile_y = 0
             self.frame_finished = True
         else:
@@ -200,7 +200,7 @@ class DenoiseState:
 
     def denoise(self, ai_denoiser, combined, albedo, normal, depth):
         if self.saved_denoised is None:
-            self.saved_denoised = self.ctx.texture(screen.resolution, 3, dtype=f4)
+            self.saved_denoised = self.ctx.texture(settings.screen.resolution, 3, dtype=f4)
             ai_denoiser.denoise(combined, albedo, normal, depth, self.saved_denoised)
 
     def reset(self):
@@ -245,13 +245,13 @@ class PTState:
         if not self.tiles.frame_finished:
             return
 
-        samples_left = pt_settings.max_samples - self.rendering.total_samples
-        if samples_left < pt_settings.spp:
+        samples_left = settings.path_tracing.max_samples - self.rendering.total_samples
+        if samples_left < settings.path_tracing.spp:
             self.rendering.total_samples += samples_left
         else:
-            self.rendering.total_samples += pt_settings.spp
+            self.rendering.total_samples += settings.path_tracing.spp
 
-        if self.rendering.total_samples >= pt_settings.max_samples:
+        if self.rendering.total_samples >= settings.path_tracing.max_samples:
             self.framebuffers.save()
             self.rendering.complete()
 
@@ -272,8 +272,8 @@ class RasterState:
         self._create_active_buffers()
 
     def _create_active_buffers(self):
-        self.raster_color_tex = self.ctx.texture(screen.resolution, 4, dtype=f4)
-        self.raster_depth_texture = self.ctx.depth_texture(screen.resolution)
+        self.raster_color_tex = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
+        self.raster_depth_texture = self.ctx.depth_texture(settings.screen.resolution)
         self.raster_fbo = self.ctx.framebuffer(
             color_attachments=[self.raster_color_tex],
             depth_attachment=self.raster_depth_texture
@@ -296,7 +296,7 @@ class FinalOutputState:
         self._create_active_buffers()
 
     def _create_active_buffers(self):
-        self.output_tex = self.ctx.texture(screen.resolution, 4, dtype=f4)
+        self.output_tex = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.output_fbo = self.ctx.framebuffer(
             color_attachments=[self.output_tex]
         )
@@ -340,7 +340,7 @@ class ExportState:
                 "depth": self.pt_state.framebuffers.get_ndarray_depth(),
             }
         
-        if self.noisy is not None and total_samples >= pt_settings.max_samples:
+        if self.noisy is not None and total_samples >= settings.path_tracing.max_samples:
             self.target = self.pt_state.framebuffers.get_ndarray_combined()
         
         if self.noisy is not None and self.target is not None:
@@ -374,7 +374,7 @@ class ExportState:
         # OpenGL is bottom-up, image is top-down
         img_arr = np.flipud(img_arr)
         
-        renders_dir = Path(file_paths.renders)
+        renders_dir = Path(settings.file_paths.renders)
         export_path = self._get_next_png_path(renders_dir, "render")
 
         # Save to .png file
@@ -393,7 +393,7 @@ class ExportState:
         normal_array = np.flipud(normal_array)
         depth_array = np.flipud(depth_array)
         
-        renders_dir = Path(file_paths.ai_training_renders)
+        renders_dir = Path(settings.file_paths.ai_training.renders)
         combined_path = self._get_next_exr_path(renders_dir / "combined", "combined")
         albedo_path = self._get_next_exr_path(renders_dir / "albedo", "albedo")
         normal_path = self._get_next_exr_path(renders_dir / "normal", "normal")
@@ -412,7 +412,7 @@ class ExportState:
         # OpenGL is bottom-up, EXR is top-down
         target_array = np.flipud(target_array)
         
-        renders_dir = Path(file_paths.ai_training_renders)
+        renders_dir = Path(settings.file_paths.ai_training.renders)
         target_path = self._get_next_exr_path(renders_dir / "target", "target")
 
         # Save to .exr file
@@ -435,13 +435,13 @@ class ExportState:
 
 class SceneState:
     def __init__(self):
-        self.scenes_path = Path(file_paths.ai_training_scenes)
+        self.scenes_path = Path(settings.file_paths.ai_training.scenes)
         self.scene_files = [scene for scene in self.scenes_path.iterdir()]
         self.num_scenes = len(self.scene_files)
         self.curr_scene_idx = 0
         self.curr_scene_file = self.scene_files[self.curr_scene_idx]
 
-        self.hdris_path = Path(file_paths.ai_training_hdris)
+        self.hdris_path = Path(settings.file_paths.ai_training.hdris)
         self.hdri_files = [hdri for hdri in self.hdris_path.iterdir()]
         random.shuffle(self.hdri_files)
         self.num_hdris = len(self.hdri_files)
@@ -541,7 +541,7 @@ class CameraCaptureState:
     
     def _load_states(self):
         try:
-            with open(file_paths.camera_capture_states) as f:
+            with open(settings.file_paths.ai_training.camera_capture_states) as f:
                 loaded = json.load(f)
         except:
             pass
@@ -560,8 +560,8 @@ class CameraCaptureState:
         self.camera_buffer.update_data()
 
     def _write(self):
-        with open(file_paths.camera_capture_states, "w") as f:
-            json.dump(self.states, f, indent=2, sort_keys=True)
+        with open(settings.file_paths.ai_training.camera_capture_states, "w") as f:
+            json.dump(self.states, f, indent=4, sort_keys=True)
 
     def save_state(self):
         key = self._get_key()
@@ -691,7 +691,7 @@ class GlfwWindow:
         if sys.platform == "darwin":
             glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE)
         
-        window = glfwCreateWindow(screen.width, screen.height, title, None, None)
+        window = glfwCreateWindow(settings.screen.width, settings.screen.height, title, None, None)
     
         if not window:
             return "Failed to create GLFW window"
@@ -699,7 +699,7 @@ class GlfwWindow:
         self.window = window
         
         glfwMakeContextCurrent(window)
-        if screen.vsync == True:
+        if settings.screen.vsync == True:
             glfwSwapInterval(1)
         else:
             glfwSwapInterval(0)
@@ -711,10 +711,10 @@ class GlfwWindow:
         width = max(1, int(width))
         height = max(1, int(height))
 
-        screen.width = width
-        screen.height = height
-        screen.resolution = [width, height]
-        screen.aspect_ratio = screen.width / max(screen.height, 1)
+        settings.screen.width = width
+        settings.screen.height = height
+        settings.screen.resolution = [width, height]
+        settings.screen.aspect_ratio = settings.screen.width / max(settings.screen.height, 1)
 
         self.need_resize = True
 
@@ -743,8 +743,8 @@ class InputState:
         self.imgui_state = imgui_state
 
         self.first_mouse = True
-        self.last_x = screen.width / 2
-        self.last_y = screen.height / 2
+        self.last_x = settings.screen.width / 2
+        self.last_y = settings.screen.height / 2
         self.middle_mouse_down = False
 
     def begin_drag(self):
@@ -773,7 +773,7 @@ class InputState:
         if self.imgui_state.want_text_input():
             return
         
-        if render_settings.render_mode == "path_tracing":
+        if settings.rendering.mode == "path_tracing":
             return
         
         if self._pressed(GLFW_KEY_W):
@@ -855,7 +855,7 @@ class GlfwCallbackState:
         glfwSetMouseButtonCallback(window, self._mouse_button_callback)
         glfwSetKeyCallback(window, self._key_callback)
         glfwSetFramebufferSizeCallback(window, self._framebuffer_size_callback)
-        glfwSetWindowSizeLimits(window, screen.min_width, screen.min_height, GLFW_DONT_CARE, GLFW_DONT_CARE)
+        glfwSetWindowSizeLimits(window, settings.screen.min_width, settings.screen.min_height, GLFW_DONT_CARE, GLFW_DONT_CARE)
 
     def _framebuffer_size_callback(self, window, width, height):
         self.glfw_window.resize(width, height)
@@ -872,7 +872,7 @@ class GlfwCallbackState:
         if self.imgui_state.want_capture_mouse():
             return
 
-        if render_settings.render_mode == "path_tracing":
+        if settings.rendering.mode == "path_tracing":
             return
 
         if button == GLFW_MOUSE_BUTTON_MIDDLE:
@@ -890,7 +890,7 @@ class GlfwCallbackState:
         if self.imgui_state.want_capture_mouse():
             return
 
-        if render_settings.render_mode == "path_tracing":
+        if settings.rendering.mode == "path_tracing":
             return
 
         if self.input_state.middle_mouse_down:
@@ -904,7 +904,7 @@ class GlfwCallbackState:
         if self.imgui_state.want_capture_mouse():
             return
         
-        if render_settings.render_mode == "path_tracing":
+        if settings.rendering.mode == "path_tracing":
             return
 
         self.camera.process_mouse_scroll(yoffset)

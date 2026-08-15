@@ -23,8 +23,8 @@ from src.pipelines.rasterization import *
 camera = Camera()
 
 first_mouse = True
-last_x = screen.width / 2
-last_y = screen.height / 2
+last_x = settings.screen.width / 2
+last_y = settings.screen.height / 2
 
 middle_mouse_down = False
 
@@ -32,8 +32,8 @@ need_resize = False
 
 
 def main():
-    remove_stale_cache(file_paths.scenes, file_paths.scene_cache)
-    remove_stale_cache(file_paths.scenes, file_paths.bvh_cache)
+    remove_stale_cache(settings.file_paths.scenes, settings.file_paths.cache.scene)
+    remove_stale_cache(settings.file_paths.scenes, settings.file_paths.cache.bvh)
     
     glfw_window = GlfwWindow()
     imgui_state = ImguiState()
@@ -72,10 +72,10 @@ def main():
         if scene_state.ai_training_finished:
             break
 
-        file_paths.scene = scene_state.curr_scene_file
-        file_paths.hdri = scene_state.curr_hdri_file
-        scene = load_scene(file_paths.scene)
-        scene.hdri = HDRI(file_paths.hdri)
+        settings.file_paths.scene = scene_state.curr_scene_file
+        settings.file_paths.hdri = scene_state.curr_hdri_file
+        scene = load_scene(settings.file_paths.scene)
+        scene.hdri = HDRI(settings.file_paths.hdri)
 
         scene.snapshot_original_materials()
         scene.hdri.snapshot_original()
@@ -83,7 +83,7 @@ def main():
         scene.scramble_materials()
         scene.hdri.scramble()
         
-        if not ai_training_settings.camera_setup_mode:
+        if settings.ai_training.mode != "camera_setup":
             camera_capture_state.load_next_state()
         
         material_buffer = MaterialBuffer(scene)
@@ -92,7 +92,7 @@ def main():
         emissive_triangles_buffer = EmissiveTrianglesBuffer(scene)
         finite_lights_buffer = FiniteLightsBuffer(scene)
 
-        if not ai_training_settings.camera_setup_mode:
+        if settings.ai_training.mode != "camera_setup":
             scene.build_bvh()
             bvh_node_buffer = BVHNodeBuffer(scene)
             tri_indices_buffer = TriangleIndicesBuffer(scene)
@@ -114,9 +114,9 @@ def main():
         bvh_state = BVHState(ctx, scene)
         bvh_state.build()
 
-        if render_settings.render_mode == "path_tracing":
+        if settings.rendering.mode == "path_tracing":
             ctx.disable(moderngl.DEPTH_TEST)
-        elif render_settings.render_mode == "rasterization":
+        elif settings.rendering.mode == "rasterization":
             ctx.enable(moderngl.DEPTH_TEST)
             ctx.enable(moderngl.BLEND)
             ctx.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
@@ -143,7 +143,7 @@ def main():
         while not glfw_window.should_close():
             frame_stats.track()
 
-            if screen.width <= 0 or screen.height <= 0:
+            if settings.screen.width <= 0 or settings.screen.height <= 0:
                 glfwPollEvents()
                 continue
 
@@ -154,7 +154,7 @@ def main():
                 raster_state.resize()
 
                 ctx.screen.use()
-                ctx.viewport = (0, 0, screen.width, screen.height)
+                ctx.viewport = (0, 0, settings.screen.width, settings.screen.height)
 
                 glfw_window.need_resize = False
             
@@ -164,7 +164,7 @@ def main():
             update_stats(glfw_window, pt_state, frame_stats.avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
 
             ctx.screen.use()
-            ctx.viewport = (0, 0, screen.width, screen.height)
+            ctx.viewport = (0, 0, settings.screen.width, settings.screen.height)
 
             ctx.clear(0, 0, 0, 1)
 
@@ -172,20 +172,20 @@ def main():
             input_state.process_input(frame_stats.delta_time, camera)
             imgui_state.begin_frame()
             ui_state.settings_window = settings_ui.draw(ui_state.settings_window)
-            
-            if not ai_training_settings.camera_setup_mode:
+
+            if settings.ai_training.mode != "camera_setup":
                 if is_first_render and bvh_state.ready:
                     pt_state.start_render()
                     is_first_render = False
                 
-                render_settings.render_mode = "path_tracing"
+                settings.rendering.mode = "path_tracing"
                 pt_state.rendering.should_render = True
 
-            if render_settings.render_mode == "path_tracing":
+            if settings.rendering.mode == "path_tracing":
                 if bvh_state.ready:
                     pt_pipeline.render()
 
-                    if ai_training_settings.ai_training_mode and pt_state.rendering.should_render:
+                    if settings.ai_training.mode and pt_state.rendering.should_render:
                         export_state.auto_save_training_renders()
 
                     if pt_state.rendering.render_complete:
@@ -210,14 +210,14 @@ def main():
                         camera_buffer.update_data()
                         pt_state.start_render()
             
-            elif render_settings.render_mode == "rasterization":
+            elif settings.rendering.mode == "rasterization":
                 raster_pipeline.render()
         
             imgui_state.end_frame()
             glfw_window.swap()
             frame_stats.increment_frame_count()
     
-            frame_stats.cap_fps(screen.fps_cap)
+            frame_stats.cap_fps(settings.screen.fps_cap)
 
             if scene_state.changed_scene:
                 scene_state.changed_scene = False
@@ -230,7 +230,7 @@ def main():
 
 
 def update_stats(glfw_window, pt_state, fps, samples, render_complete):
-    if render_settings.render_mode == "path_tracing":
+    if settings.rendering.mode == "path_tracing":
         if render_complete or pt_state.rendering.should_view_saved:
             glfw_window.set_title(f"FPS: {fps:.2f} | Render Complete")
         else:
@@ -243,17 +243,17 @@ class PTShaders:
     def __init__(self, ctx):
         self.final = Shader(
             ctx,
-            file_paths.path_tracing.vert,
-            file_paths.path_tracing.frag
+            settings.file_paths.path_tracing.vert,
+            settings.file_paths.path_tracing.frag
         )
         self.pt = ComputeShader(
             ctx,
-            file_paths.path_tracing.comp
+            settings.file_paths.path_tracing.comp
         )
         self.bvh_bounds_debug = Shader(
             ctx,
-            file_paths.path_tracing.bvh_bounds_debug.vert,
-            file_paths.path_tracing.bvh_bounds_debug.frag
+            settings.file_paths.path_tracing.bvh_bounds_debug.vert,
+            settings.file_paths.path_tracing.bvh_bounds_debug.frag
         )
 
 
@@ -261,18 +261,18 @@ class RasterShaders:
     def __init__(self, ctx):
         self.pbr = Shader(
             ctx,
-            file_paths.pbr.vert,
-            file_paths.pbr.frag
+            settings.file_paths.pbr.vert,
+            settings.file_paths.pbr.frag
         )
         self.bg = Shader(
             ctx,
-            file_paths.background.vert,
-            file_paths.background.frag
+            settings.file_paths.background.vert,
+            settings.file_paths.background.frag
         )
         self.final = Shader(
             ctx,
-            file_paths.final.vert,
-            file_paths.final.frag
+            settings.file_paths.final.vert,
+            settings.file_paths.final.frag
         )
 
 

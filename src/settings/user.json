@@ -4,9 +4,11 @@
         "scene": "src/assets/models/cornell_box.glb",
         "hdri": "src/assets/hdris/day_sky_hdri.exr",
         "renders": "src/assets/renders/images",
-        "ai_training_scenes": "src/assets/models/ai_training/",
-        "ai_training_hdris": "src/assets/hdris/ai_training/",
-        "ai_training_renders": "src/assets/renders/ai_training"
+        "ai_training": {
+            "scenes": "src/assets/models/ai_training/",
+            "hdris": "src/assets/hdris/ai_training/",
+            "renders": "src/assets/renders/ai_training"
+        }
     },
     "screen": {
         "width": 1024,
@@ -57,10 +59,12 @@
         "tonemap": "AgX",
         "hdri_exposure": 1.0
     },
-    "render": {
-        "render_mode": "rasterization",
+    "rendering": {
+        "mode": "rasterization",
         "texture_size": [1024, 1024],
-        "tiles_x": 4,
-        "tiles_y": 2
+        "tiles": {
+            "x": 4,
+            "y": 2
+        }
     }
 }

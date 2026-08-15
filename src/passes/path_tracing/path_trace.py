@@ -4,42 +4,42 @@ from src.settings import *
 
 def _compute_uniforms(scene, camera, pt_state):
     # Prevent the samples from going over the max samples limit
-    samples_left = pt_settings.max_samples - pt_state.rendering.total_samples
-    if samples_left < pt_settings.spp:
+    samples_left = settings.path_tracing.max_samples - pt_state.rendering.total_samples
+    if samples_left < settings.path_tracing.spp:
         spp = samples_left
     else:
-        spp = pt_settings.spp
+        spp = settings.path_tracing.spp
 
     return {
-        "aspectRatio": set_f4(screen.aspect_ratio),
+        "aspectRatio": set_f4(settings.screen.aspect_ratio),
         "samplesPerPixel": spp,
         "totalSamples": pt_state.rendering.total_samples,
 
-        "maxTotalBounces": pt_settings.total_bounces,
-        "maxDiffuseBounces": pt_settings.diffuse_bounces,
-        "maxSpecularBounces": pt_settings.specular_bounces,
-        "maxTransmissionBounces": pt_settings.transmission_bounces,
+        "maxTotalBounces": settings.path_tracing.total_bounces,
+        "maxDiffuseBounces": settings.path_tracing.diffuse_bounces,
+        "maxSpecularBounces": settings.path_tracing.specular_bounces,
+        "maxTransmissionBounces": settings.path_tracing.transmission_bounces,
 
         "numFiniteLights": scene.num_finite_lights,
         "numEmissiveTriangles": scene.num_emissive_triangles,
 
-        "specularMode": pt_settings.specular_mode,
-        "geometryMode": pt_settings.geometry_mode,
-        "transmissionMode": pt_settings.transmission_mode,
-        "misMode": pt_settings.mis_mode,
+        "specularMode": settings.path_tracing.specular_mode,
+        "geometryMode": settings.path_tracing.geometry_mode,
+        "transmissionMode": settings.path_tracing.transmission_mode,
+        "misMode": settings.path_tracing.mis_mode,
         "uOffset": np.array([pt_state.tiles.curr_tile_x, pt_state.tiles.curr_tile_y], dtype=i4),
 
         "blur": camera.blur,
-        "hdriExposure": post_process_settings.hdri_exposure,
+        "hdriExposure": settings.post_processing.hdri_exposure,
 
         "debugMode": pt_state.debug.mode,
 
-        "maxBvhDepth": bvh_settings.max_depth,
+        "maxBvhDepth": settings.bvh.max_depth,
 
-        "backfaceCulling": set_i4(1) if pt_settings.backface_culling else set_i4(0),
+        "backfaceCulling": set_i4(1) if settings.path_tracing.backface_culling else set_i4(0),
 
-        "maxDirectLuminance": set_f4(pt_settings.max_direct_luminance),
-        "maxIndirectLuminance": set_f4(pt_settings.max_indirect_luminance)
+        "maxDirectLuminance": set_f4(settings.path_tracing.max_direct_luminance),
+        "maxIndirectLuminance": set_f4(settings.path_tracing.max_indirect_luminance)
     }
 
 

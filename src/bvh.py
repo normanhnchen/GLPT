@@ -66,7 +66,7 @@ class BVH:
         centroids = self.scene_centroids[indices]
         vertices = self.scene_vertices[triangles]
         
-        best_axis, best_pos, best_cost = find_best_split(centroids, vertices, bvh_settings.sah_bins)
+        best_axis, best_pos, best_cost = find_best_split(centroids, vertices, settings.bvh.sah_bins)
 
         parent_cost = self.calculate_node_cost(node_idx)
 

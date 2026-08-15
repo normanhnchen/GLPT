@@ -275,8 +275,8 @@ class RenderingUI:
 
         self.reset_rendering_button = Button("Reset Rendering Settings")
 
-        self.tiles_x_slider = IntSlider(1, 1024, "Tiles X", render_settings.tiles_x)
-        self.tiles_y_slider = IntSlider(1, 1024, "Tiles Y", render_settings.tiles_y)
+        self.tiles_x_slider = IntSlider(1, 1024, "Tiles X", settings.rendering.tiles.x)
+        self.tiles_y_slider = IntSlider(1, 1024, "Tiles Y", settings.rendering.tiles.y)
     
     def draw_stop_button(self):
         def on_change():
@@ -298,21 +298,21 @@ class RenderingUI:
     
     def draw_cancel_button(self):
         def on_change():
-            render_settings.render_mode = "rasterization"
+            settings.rendering.mode = "rasterization"
             self.pt_state.cancel_render()
 
         self.cancel_button.button(on_change)
     
     def draw_viewport_button(self):
         def on_change():
-            render_settings.render_mode = "rasterization"
+            settings.rendering.mode = "rasterization"
             self.pt_state.cancel_render()
 
         self.viewport_button.button(on_change)
     
     def draw_start_button(self):
         def on_change():
-            render_settings.render_mode = "path_tracing"
+            settings.rendering.mode = "path_tracing"
             self.camera_buffer.update_data()
             self.pt_state.start_render()
 
@@ -322,7 +322,7 @@ class RenderingUI:
     
     def draw_start_new_button(self):
         def on_change():
-            render_settings.render_mode = "path_tracing"
+            settings.rendering.mode = "path_tracing"
             self.camera_buffer.update_data()
             self.pt_state.start_render()
 
@@ -336,17 +336,17 @@ class RenderingUI:
     
     def draw_view_saved_button(self):
         def on_change():
-            render_settings.render_mode = "path_tracing"
+            settings.rendering.mode = "path_tracing"
             self.pt_state.rendering.should_view_saved = True
 
         self.view_saved_button.button(on_change)
     
     def draw_tiles_x_slider(self):
         def on_change(new_val):
-            render_settings.tiles_x = new_val
+            settings.rendering.tiles.x = new_val
             self.pt_state.restart_render()
             
-        self.tiles_x_slider.slider(render_settings.tiles_x)
+        self.tiles_x_slider.slider(settings.rendering.tiles.x)
         self.tiles_x_slider.dragging_logic(on_change)
         self.tiles_x_slider.minus_button(on_change)
         self.tiles_x_slider.plus_button(on_change)
@@ -354,10 +354,10 @@ class RenderingUI:
     
     def draw_tiles_y_slider(self):
         def on_change(new_val):
-            render_settings.tiles_y = new_val
+            settings.rendering.tiles.y = new_val
             self.pt_state.restart_render()
             
-        self.tiles_y_slider.slider(render_settings.tiles_y)
+        self.tiles_y_slider.slider(settings.rendering.tiles.y)
         self.tiles_y_slider.dragging_logic(on_change)
         self.tiles_y_slider.minus_button(on_change)
         self.tiles_y_slider.plus_button(on_change)
@@ -369,7 +369,7 @@ class RenderingUI:
 
     def draw_reset_rendering_button(self):
         def on_change():
-            render_settings.reset()
+            settings.rendering.reset()
             self.pt_state.restart_render()
 
         self.reset_rendering_button.button(on_change)
@@ -384,7 +384,7 @@ class PathTracingUI:
         self.transmission_bounces_slider = IntSlider(0, 1024, "Transmission Bounces")
         self.max_samples_slider = IntSlider(1, 16384, "Max Samples")
         self.spp_slider = IntSlider(1, 128, "Samples Per Pixel")
-        self.bvh_depth_slider = IntSlider(1, bvh_settings.max_depth, "BVH Depth")
+        self.bvh_depth_slider = IntSlider(1, settings.bvh.max_depth, "BVH Depth")
 
         self.specular_cycle_button = CycleButton("Specular Mode")
         self.geometry_cycle_button = CycleButton("Geometry Mode")
@@ -397,10 +397,10 @@ class PathTracingUI:
     
     def draw_total_bounces_slider(self):
         def on_change(new_val):
-            pt_settings.total_bounces = new_val
+            settings.path_tracing.total_bounces = new_val
             self.pt_state.restart_render()
         
-        self.total_bounces_slider.slider(pt_settings.total_bounces)
+        self.total_bounces_slider.slider(settings.path_tracing.total_bounces)
         self.total_bounces_slider.dragging_logic(on_change)
         self.total_bounces_slider.minus_button(on_change)
         self.total_bounces_slider.plus_button(on_change)
@@ -408,10 +408,10 @@ class PathTracingUI:
 
     def draw_diffuse_bounces_slider(self):
         def on_change(new_val):
-            pt_settings.diffuse_bounces = new_val
+            settings.path_tracing.diffuse_bounces = new_val
             self.pt_state.restart_render()
         
-        self.diffuse_bounces_slider.slider(pt_settings.diffuse_bounces)
+        self.diffuse_bounces_slider.slider(settings.path_tracing.diffuse_bounces)
         self.diffuse_bounces_slider.dragging_logic(on_change)
         self.diffuse_bounces_slider.minus_button(on_change)
         self.diffuse_bounces_slider.plus_button(on_change)
@@ -419,10 +419,10 @@ class PathTracingUI:
 
     def draw_specular_bounces_slider(self):
         def on_change(new_val):
-            pt_settings.specular_bounces = new_val
+            settings.path_tracing.specular_bounces = new_val
             self.pt_state.restart_render()
         
-        self.specular_bounces_slider.slider(pt_settings.specular_bounces)
+        self.specular_bounces_slider.slider(settings.path_tracing.specular_bounces)
         self.specular_bounces_slider.dragging_logic(on_change)
         self.specular_bounces_slider.minus_button(on_change)
         self.specular_bounces_slider.plus_button(on_change)
@@ -430,10 +430,10 @@ class PathTracingUI:
 
     def draw_transmission_bounces_slider(self):
         def on_change(new_val):
-            pt_settings.transmission_bounces = new_val
+            settings.path_tracing.transmission_bounces = new_val
             self.pt_state.restart_render()
         
-        self.transmission_bounces_slider.slider(pt_settings.transmission_bounces)
+        self.transmission_bounces_slider.slider(settings.path_tracing.transmission_bounces)
         self.transmission_bounces_slider.dragging_logic(on_change)
         self.transmission_bounces_slider.minus_button(on_change)
         self.transmission_bounces_slider.plus_button(on_change)
@@ -441,10 +441,10 @@ class PathTracingUI:
         
     def draw_max_samples_slider(self):
         def on_change(new_val):
-            pt_settings.max_samples = new_val
+            settings.path_tracing.max_samples = new_val
             self.pt_state.restart_render()
         
-        self.max_samples_slider.slider(pt_settings.max_samples)
+        self.max_samples_slider.slider(settings.path_tracing.max_samples)
         self.max_samples_slider.dragging_logic(on_change)
         self.max_samples_slider.minus_button(on_change)
         self.max_samples_slider.plus_button(on_change)
@@ -452,10 +452,10 @@ class PathTracingUI:
     
     def draw_spp_slider(self):
         def on_change(new_val):
-            pt_settings.spp = new_val
+            settings.path_tracing.spp = new_val
             self.pt_state.restart_render()
         
-        self.spp_slider.slider(pt_settings.spp)
+        self.spp_slider.slider(settings.path_tracing.spp)
         self.spp_slider.dragging_logic(on_change)
         self.spp_slider.minus_button(on_change)
         self.spp_slider.plus_button(on_change)
@@ -465,44 +465,44 @@ class PathTracingUI:
         specular_modes = ["GGX VNDF", "Cosine Hemisphere"]
 
         def on_change(next_val):
-            pt_settings.specular_mode = next_val
+            settings.path_tracing.specular_mode = next_val
             self.pt_state.restart_render()
 
-        self.specular_cycle_button.button(specular_modes, pt_settings.specular_mode, on_change)
+        self.specular_cycle_button.button(specular_modes, settings.path_tracing.specular_mode, on_change)
 
     def draw_geometry_cycle_button(self):
         geometry_modes = ["Height-Correlated Smith Method", "Schlick-GGX Approximation Method"]
         
         def on_change(next_val):
-            pt_settings.geometry_mode = next_val
+            settings.path_tracing.geometry_mode = next_val
             self.pt_state.restart_render()
 
-        self.geometry_cycle_button.button(geometry_modes, pt_settings.geometry_mode, on_change)
+        self.geometry_cycle_button.button(geometry_modes, settings.path_tracing.geometry_mode, on_change)
     
     def draw_transmission_cycle_button(self):
         transmissions_modes = ["Beer-Lambert", "None"]
         
         def on_change(next_val):
-            pt_settings.transmission_mode = next_val
+            settings.path_tracing.transmission_mode = next_val
             self.pt_state.restart_render()
 
-        self.transmission_cycle_button.button(transmissions_modes, pt_settings.transmission_mode, on_change)
+        self.transmission_cycle_button.button(transmissions_modes, settings.path_tracing.transmission_mode, on_change)
 
     def draw_mis_cycle_button(self):
         mis_modes = ["On", "Off"]
         
         def on_change(next_val):
-            pt_settings.mis_mode = next_val
+            settings.path_tracing.mis_mode = next_val
             self.pt_state.restart_render()
 
-        self.mis_cycle_button.button(mis_modes, pt_settings.mis_mode, on_change)
+        self.mis_cycle_button.button(mis_modes, settings.path_tracing.mis_mode, on_change)
 
     def draw_bvh_depth_slider(self):
         def on_change(new_val):
-            bvh_settings.max_depth = new_val
+            settings.bvh.max_depth = new_val
             self.pt_state.restart_render()
         
-        self.bvh_depth_slider.slider(bvh_settings.max_depth)
+        self.bvh_depth_slider.slider(settings.bvh.max_depth)
         self.bvh_depth_slider.dragging_logic(on_change)
         self.bvh_depth_slider.minus_button(on_change)
         self.bvh_depth_slider.plus_button(on_change)
@@ -510,7 +510,7 @@ class PathTracingUI:
 
     def draw_backface_culling_checkbox(self):
         def on_change(enabled):
-            pt_settings.backface_culling = enabled
+            settings.path_tracing.backface_culling = enabled
 
         def on_enable():
             self.pt_state.restart_render()
@@ -518,11 +518,11 @@ class PathTracingUI:
         def on_disable():
             self.pt_state.restart_render()
 
-        self.backface_culling_checkbox.checkbox(pt_settings.backface_culling, on_change, on_enable, on_disable)
+        self.backface_culling_checkbox.checkbox(settings.path_tracing.backface_culling, on_change, on_enable, on_disable)
 
     def draw_reset_pt_button(self):
         def on_change():
-            pt_settings.reset()
+            settings.path_tracing.reset()
             self.pt_state.restart_render()
 
         self.reset_pt_button.button(on_change)
@@ -719,7 +719,7 @@ class CameraUI:
 
     def draw_reset_camera_button(self):
         def on_change():
-            camera_settings.reset()
+            settings.camera.reset()
             self.camera.reload_from_settings()
             self.camera_buffer.update_data()
             self.pt_state.restart_render()
@@ -744,17 +744,17 @@ class PostProcessingUI:
                    "Neutral", "Reinhard", "Reinhard2", "Uchimura", "Uncharted2", "Unreal"]
 
         def on_change(new_val):
-            post_process_settings.tonemap = new_val
+            settings.post_processing.tonemap = new_val
             self.pt_state.restart_render()
 
-        self.tonemap_dropdown.dropdown(options, post_process_settings.tonemap, on_change)
+        self.tonemap_dropdown.dropdown(options, settings.post_processing.tonemap, on_change)
         
     def draw_exposure_slider(self):
         def on_change(new_val):
-            post_process_settings.exposure = new_val
+            settings.post_processing.exposure = new_val
             self.pt_state.restart_render()
         
-        self.exposure_slider.slider(post_process_settings.exposure)
+        self.exposure_slider.slider(settings.post_processing.exposure)
         self.exposure_slider.dragging_logic(on_change)
         self.exposure_slider.minus_button(on_change)
         self.exposure_slider.plus_button(on_change)
@@ -762,10 +762,10 @@ class PostProcessingUI:
     
     def draw_hdri_exposure_slider(self):
         def on_change(new_val):
-            post_process_settings.hdri_exposure = new_val
+            settings.post_processing.hdri_exposure = new_val
             self.pt_state.restart_render()
         
-        self.hdri_exposure_slider.slider(post_process_settings.hdri_exposure)
+        self.hdri_exposure_slider.slider(settings.post_processing.hdri_exposure)
         self.hdri_exposure_slider.dragging_logic(on_change)
         self.hdri_exposure_slider.minus_button(on_change)
         self.hdri_exposure_slider.plus_button(on_change)
@@ -773,7 +773,7 @@ class PostProcessingUI:
 
     def draw_reset_post_process_button(self):
         def on_change():
-            post_process_settings.reset()
+            settings.post_processing.reset()
             self.pt_state.restart_render()
 
         self.reset_post_process_button.button(on_change)
@@ -789,12 +789,12 @@ class ScreenUI:
 
         self.fps_slider = IntSlider(30, 361, "FPS", slider_speed=1)
 
-        self.window_resize_width_slider = IntSlider(screen.min_width, 999999, "Width")
-        self.window_resize_height_slider = IntSlider(screen.min_height, 999999, "Height")
+        self.window_resize_width_slider = IntSlider(settings.screen.min_width, 999999, "Width")
+        self.window_resize_height_slider = IntSlider(settings.screen.min_height, 999999, "Height")
     
     def draw_vsync_checkbox(self):
         def on_change(enabled):
-            screen.vsync = enabled
+            settings.screen.vsync = enabled
 
         def on_enable():
             glfwSwapInterval(1)
@@ -802,17 +802,17 @@ class ScreenUI:
         def on_disable():
             glfwSwapInterval(0)
         
-        enabled = screen.vsync
+        enabled = settings.screen.vsync
 
         self.vsync_checkbox.checkbox(enabled, on_change, on_enable, on_disable)
     
     def draw_fps_slider(self):
-        is_unlimited = screen.fps_cap == -1
-        display_fps = 361 if is_unlimited else screen.fps_cap
+        is_unlimited = settings.screen.fps_cap == -1
+        display_fps = 361 if is_unlimited else settings.screen.fps_cap
         fps_format = "None" if is_unlimited else "%d"
         
         def on_change(new_val):
-            screen.fps_cap = -1 if new_val > 360 else new_val
+            settings.screen.fps_cap = -1 if new_val > 360 else new_val
 
         self.fps_slider.slider(display_fps, val_format=fps_format)
         self.fps_slider.dragging_logic(on_change)
@@ -824,11 +824,11 @@ class ScreenUI:
         current_window = glfwGetCurrentContext()
 
         def on_change_width(new_val):
-            glfwSetWindowSize(current_window, new_val, screen.height)
+            glfwSetWindowSize(current_window, new_val, settings.screen.height)
             self.pt_state.restart_render()
 
         def on_change_height(new_val):
-            glfwSetWindowSize(current_window, screen.width, new_val)
+            glfwSetWindowSize(current_window, settings.screen.width, new_val)
             self.pt_state.restart_render()
 
         avail_width = imgui.get_content_region_avail().x
@@ -840,19 +840,19 @@ class ScreenUI:
         # Width
         self.window_resize_width_slider.draw_label()
         imgui.same_line()
-        self.window_resize_width_slider.slider(screen.width, width=slot_width)
+        self.window_resize_width_slider.slider(settings.screen.width, width=slot_width)
         self.window_resize_width_slider.dragging_logic(on_change_width)
 
         # Height
         imgui.same_line()
         self.window_resize_height_slider.draw_label()
         imgui.same_line()
-        self.window_resize_height_slider.slider(screen.height, width=slot_width)
+        self.window_resize_height_slider.slider(settings.screen.height, width=slot_width)
         self.window_resize_height_slider.dragging_logic(on_change_height)
 
     def draw_reset_screen_button(self):
         def on_change():
-            screen.reset()
+            settings.screen.reset()
             self.pt_state.restart_render()
 
         self.reset_screen_button.button(on_change)
@@ -912,12 +912,12 @@ class DebugUI:
         ]
 
         def on_change(new_val):
-            debug_settings.bvh.color_mode = new_val
+            settings.debug.bvh.color_mode = new_val
             self.pt_state.restart_render()
 
         bvh_ready = self.scene.bvh is not None
 
-        self.bvh_color_mode_cycle_button.button(options, debug_settings.bvh.color_mode, on_change, enabled=bvh_ready, reason="BVH is still building...")
+        self.bvh_color_mode_cycle_button.button(options, settings.debug.bvh.color_mode, on_change, enabled=bvh_ready, reason="BVH is still building...")
 
     def _clamp_to_scene_max_depth(self):
         # Clamps view layer/view depth back into range
@@ -926,27 +926,27 @@ class DebugUI:
         max_idx = self._get_max_idx()
 
         # Clamp view depth to the scene's max depth
-        if debug_settings.bvh.view_depth != -1 and debug_settings.bvh.view_depth > max_idx:
-            debug_settings.bvh.view_depth = max_idx
+        if settings.debug.bvh.view_depth != -1 and settings.debug.bvh.view_depth > max_idx:
+            settings.debug.bvh.view_depth = max_idx
 
         # Clamp view layer to the current view depth
-        if debug_settings.bvh.view_depth != -1 and debug_settings.bvh.view_layer > debug_settings.bvh.view_depth:
-            debug_settings.bvh.view_layer = debug_settings.bvh.view_depth
+        if settings.debug.bvh.view_depth != -1 and settings.debug.bvh.view_layer > settings.debug.bvh.view_depth:
+            settings.debug.bvh.view_layer = settings.debug.bvh.view_depth
 
         # Clamp view layer to the scene's max depth
-        if debug_settings.bvh.view_layer > max_idx:
-            debug_settings.bvh.view_layer = max_idx
+        if settings.debug.bvh.view_layer > max_idx:
+            settings.debug.bvh.view_layer = max_idx
 
     def draw_bvh_view_layer_slider(self):
         self.bvh_view_layer_slider.max_val = self._get_max_idx()
         self._clamp_to_scene_max_depth()
 
-        is_all = debug_settings.bvh.view_layer == -1
-        display_layer = -1 if is_all else debug_settings.bvh.view_layer
+        is_all = settings.debug.bvh.view_layer == -1
+        display_layer = -1 if is_all else settings.debug.bvh.view_layer
         layer_format = "All" if is_all else "%d"
 
         def on_change(new_val):
-            debug_settings.bvh.view_layer = -1 if new_val < 0 else new_val
+            settings.debug.bvh.view_layer = -1 if new_val < 0 else new_val
 
         bvh_ready = self.scene.bvh is not None
 
@@ -960,12 +960,12 @@ class DebugUI:
         self.bvh_view_depth_slider.max_val = self._get_max_idx()
         self._clamp_to_scene_max_depth()
 
-        is_max = debug_settings.bvh.view_depth == -1
-        display_depth = -1 if is_max else debug_settings.bvh.view_depth
+        is_max = settings.debug.bvh.view_depth == -1
+        display_depth = -1 if is_max else settings.debug.bvh.view_depth
         depth_format = "Max" if is_max else "%d"
 
         def on_change(new_val):
-            debug_settings.bvh.view_depth = -1 if new_val < 0 else new_val
+            settings.debug.bvh.view_depth = -1 if new_val < 0 else new_val
             self._clamp_to_scene_max_depth()
 
         bvh_ready = self.scene.bvh is not None
@@ -978,10 +978,10 @@ class DebugUI:
 
     def draw_max_direct_luminance_slider(self):
         def on_change(new_val):
-            pt_settings.max_direct_luminance = new_val
+            settings.path_tracing.max_direct_luminance = new_val
             self.pt_state.restart_render()
 
-        self.max_direct_luminance_slider.slider(pt_settings.max_direct_luminance)
+        self.max_direct_luminance_slider.slider(settings.path_tracing.max_direct_luminance)
         self.max_direct_luminance_slider.dragging_logic(on_change)
         self.max_direct_luminance_slider.minus_button(on_change)
         self.max_direct_luminance_slider.plus_button(on_change)
@@ -989,10 +989,10 @@ class DebugUI:
 
     def draw_max_indirect_luminance_slider(self):
         def on_change(new_val):
-            pt_settings.max_indirect_luminance = new_val
+            settings.path_tracing.max_indirect_luminance = new_val
             self.pt_state.restart_render()
 
-        self.max_indirect_luminance_slider.slider(pt_settings.max_indirect_luminance)
+        self.max_indirect_luminance_slider.slider(settings.path_tracing.max_indirect_luminance)
         self.max_indirect_luminance_slider.dragging_logic(on_change)
         self.max_indirect_luminance_slider.minus_button(on_change)
         self.max_indirect_luminance_slider.plus_button(on_change)
@@ -1000,7 +1000,7 @@ class DebugUI:
 
     def draw_reset_debug_button(self):
         def on_change():
-            debug_settings.reset()
+            settings.debug.reset()
             self.bvh_view_depth_slider.max_val = self._get_max_idx()
             self._clamp_to_scene_max_depth()
 
@@ -1136,7 +1136,7 @@ class SettingsUI:
             allow_view_saved=True
         ):
 
-        if render_settings.render_mode == "path_tracing":
+        if settings.rendering.mode == "path_tracing":
             if not self.pt_state.rendering.should_view_saved:
                 if self.pt_state.rendering.should_render:
                     self.rendering_ui.draw_stop_button()
@@ -1262,34 +1262,9 @@ class SettingsUI:
         imgui.set_next_window_size((600, 600))
         is_expand, settings_window = imgui.begin("Settings", settings_window)
 
-        if ai_training_settings.camera_setup_mode:
-            if is_expand:
-                if imgui.tree_node("Rendering"):
-                    self.draw_rendering_ui()
-
-                    imgui.tree_pop()
-                
-                if imgui.tree_node("Camera UI"):
-                    self.draw_camera_ui()
-
-                    imgui.tree_pop()
-                
-                if imgui.tree_node("Post Processing"):
-                    self.draw_post_processing_ui()
-
-                    imgui.tree_pop()
-                
-                if imgui.tree_node("Screen"):
-                    self.draw_screen_ui()
-
-                    imgui.tree_pop()
-                    
-                if imgui.tree_node("AI Training"):
-                    self.draw_ai_training_ui()
-
-                    imgui.tree_pop()
-
-        elif ai_training_settings.ai_training_mode:
+        # Render Mode
+        # -----------
+        if settings.ai_training.mode == 0:
             if is_expand:
                 if imgui.tree_node("Rendering"):
                     self.draw_rendering_ui(
@@ -1317,6 +1292,35 @@ class SettingsUI:
 
                     imgui.tree_pop()
 
+                if imgui.tree_node("AI Training"):
+                    self.draw_ai_training_ui()
+
+                    imgui.tree_pop()
+
+        # Camera Setup Mode
+        # -----------------
+        elif settings.ai_training.mode == 1:
+            if is_expand:
+                if imgui.tree_node("Rendering"):
+                    self.draw_rendering_ui()
+
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Camera UI"):
+                    self.draw_camera_ui()
+
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Post Processing"):
+                    self.draw_post_processing_ui()
+
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Screen"):
+                    self.draw_screen_ui()
+
+                    imgui.tree_pop()
+                    
                 if imgui.tree_node("AI Training"):
                     self.draw_ai_training_ui()
 

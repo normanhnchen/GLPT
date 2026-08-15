@@ -6,7 +6,7 @@ def _compute_uniforms():
     return {
         # Fragment Shader Uniforms
         # ------------------------
-        "exposure": post_process_settings.exposure
+        "exposure": settings.post_processing.exposure
     }
 
 
@@ -31,6 +31,6 @@ class FinalPass:
         uniform_dict = _compute_uniforms()
         _set_uniforms(self.shader.prog, uniform_dict)
 
-        self.shader.set_tonemap(post_process_settings.tonemap)
+        self.shader.set_tonemap(settings.post_processing.tonemap)
 
         self.quad.draw()
