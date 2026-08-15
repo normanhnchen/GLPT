@@ -21,6 +21,10 @@ QLabel#titleLabel {
     font-size: 96px;
 }
 
+QLabel#defaultLabel {
+    font-size: 16px;
+}
+
 QPushButton {
     background-color: #4c79a6;
     font-size: 36px;
@@ -67,9 +71,11 @@ QScrollArea {
 }
 """
 
+SCENE_SETTINGS_WIDTH = 200
+
 
 class CollapsibleSection(QWidget):
-    def __init__(self, title, width):
+    def __init__(self, title, width=None):
         super().__init__()
 
         self.main_layout = QVBoxLayout(self)
@@ -77,7 +83,8 @@ class CollapsibleSection(QWidget):
 
         self.toggle_button = QToolButton(self)
         self.toggle_button.setText(title)
-        self.toggle_button.setFixedWidth(width)
+        if width:
+            self.toggle_button.setFixedWidth(width)
         self.toggle_button.setCheckable(True)
         self.toggle_button.setChecked(False)
         self.toggle_button.setArrowType(Qt.ArrowType.RightArrow)
@@ -123,6 +130,30 @@ class IntSpinBox(QWidget):
 
         self.box_layout.addWidget(self.label)
         self.box_layout.addWidget(self.spin_box)
+
+
+class FileSelector(QWidget):
+    def __init__(self, label):
+        super().__init__()
+
+        self.box_layout = QHBoxLayout(self)
+
+        self.label = QLabel(label)
+        self.label.setObjectName("defaultLabel")
+        self.path_display = QLabel("No file selected")
+        self.path_display.setObjectName("defaultLabel")
+        self.browse_button = QPushButton("Browse")
+        self.browse_button.clicked.connect(self.browse)
+        self.browse_button.setFixedWidth(SCENE_SETTINGS_WIDTH)
+
+        self.box_layout.addWidget(self.label)
+        self.box_layout.addWidget(self.path_display, stretch=1)
+        self.box_layout.addWidget(self.browse_button)
+
+    def browse(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Select File", "", "glTF Files (*.gltf *.glb)")
+        if path:
+            self.path_display.setText(Path(path).name)
 
 
 class SettingsDialog(QDialog):
@@ -176,25 +207,16 @@ class SettingsDialog(QDialog):
         title = QLabel("Scene Settings")
         title.setObjectName("titleLabel")
 
-        scene_path_edit = QLineEdit()
-        scene_path_edit.setText(settings.file_paths.scene.name)
-        scene_path_edit.setFixedWidth(200)
-        scene_path_label = QLabel("Selected Scene:")
-
-        scene_file_button = QPushButton("Browse")
-        scene_file_button.setFixedWidth(200)
-        scene_file_button.clicked.connect(self.browse_scene_file)
+        self.scene_selector = FileSelector("Scene File:")
 
         box_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
         self.pages.addWidget(page)
-        box_layout.addWidget(scene_path_label, alignment=Qt.AlignmentFlag.AlignHCenter)
-        box_layout.addWidget(scene_path_edit, alignment=Qt.AlignmentFlag.AlignHCenter)
-        box_layout.addWidget(scene_file_button, alignment=Qt.AlignmentFlag.AlignHCenter)
+        box_layout.addWidget(self.scene_selector)
         box_layout.addSpacing(20)
         box_layout.addWidget(self.init_bvh(), alignment=Qt.AlignmentFlag.AlignJustify)
 
     def init_bvh(self):
-        section = CollapsibleSection("Advanced", 200)
+        section = CollapsibleSection("Advanced", SCENE_SETTINGS_WIDTH)
         section.setStyleSheet(COLLAPSIBLE_SECTION_STYLESHEET)
 
         # BVH Settings
@@ -217,9 +239,6 @@ class SettingsDialog(QDialog):
 
         box_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
         self.pages.addWidget(page)
-
-    def browse_scene_file(self):
-        QFileDialog.getOpenFileName(self, "Select Scene File", "")
 
 
 class Launcher(QMainWindow):
