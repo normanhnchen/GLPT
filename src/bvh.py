@@ -57,7 +57,7 @@ class BVH:
         self.max_depth = int(np.max(self.depths))
     
     def subdivide(self, node_idx):
-        if self.tri_counts[node_idx] <= 4:
+        if self.tri_counts[node_idx] <= settings.bvh.max_leaf_size:
             self.is_leafs[node_idx] = 1
             return
         

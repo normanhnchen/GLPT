@@ -183,10 +183,12 @@ class BVHSettings:
     def _load_internal(self):
         self.max_depth = self.internal_config["max_depth"]
         self.sah_bins = self.internal_config["sah_bins"]
+        self.max_leaf_size = self.internal_config["max_leaf_size"]
 
     def _load_user(self):
         self.max_depth = self.user_config["max_depth"]
         self.sah_bins = self.user_config["sah_bins"]
+        self.max_leaf_size = self.user_config["max_leaf_size"]
 
     def reset(self):
         self._load_internal()

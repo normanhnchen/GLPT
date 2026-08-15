@@ -61,9 +61,9 @@ QPushButton:hover {
 """
 
 COLLAPSIBLE_SECTION_STYLESHEET = """
-QToolButton {
+QToolButton#titleLabel {
+    font-size: 24px;
     border: none;
-    font-size: 16px;
 }
 
 QScrollArea {
@@ -83,6 +83,7 @@ class CollapsibleSection(QWidget):
 
         self.toggle_button = QToolButton(self)
         self.toggle_button.setText(title)
+        self.toggle_button.setObjectName("titleLabel")
         if width:
             self.toggle_button.setFixedWidth(width)
         self.toggle_button.setCheckable(True)
@@ -116,7 +117,7 @@ class CollapsibleSection(QWidget):
 
 
 class IntSpinBox(QWidget):
-    def __init__(self, label, min, max):
+    def __init__(self, label, min, max, default_val):
         super().__init__()
 
         self.box_layout = QHBoxLayout(self)
@@ -125,6 +126,7 @@ class IntSpinBox(QWidget):
 
         self.spin_box = QSpinBox()
         self.spin_box.setRange(min, max)
+        self.spin_box.setValue(default_val)
 
         self.label.setBuddy(self.spin_box)
 
@@ -221,9 +223,11 @@ class SettingsDialog(QDialog):
 
         # BVH Settings
         # ------------
-        sah_bins_spin_box = IntSpinBox("SAH Bins", 1, 64)
+        sah_bins_spin_box = IntSpinBox("SAH Bins", 1, 64, settings.bvh.sah_bins)
+        max_leaf_size_spin_box = IntSpinBox("Max Leaf Size", 1, 64, settings.bvh.max_leaf_size)
 
         section.add_content_widget(sah_bins_spin_box)
+        section.add_content_widget(max_leaf_size_spin_box)
 
         return section
 
