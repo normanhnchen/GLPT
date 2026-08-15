@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 import hashlib
 import os
+import shutil
 
 from src.settings import *
 from src.dtypes import *
@@ -84,6 +85,15 @@ def get_cache_path(path, type):
         return cache_path / f"{type}_{fingerprint}.npz"
     elif type == "bvh":
         return cache_path / f"{type}_{fingerprint}.npz"
+
+
+def import_model(src_path):
+    src_path = Path(src_path)
+    dst_path = settings.file_paths.scenes / src_path.name
+
+    shutil.copy2(src_path, dst_path)
+
+    return dst_path
 
 
 class Texture:

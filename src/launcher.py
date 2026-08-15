@@ -2,12 +2,13 @@ import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QGroupBox, QScrollArea,
     QHBoxLayout, QLabel, QPushButton, QSlider, QCheckBox, QStackedWidget, QSpinBox,
-    QDialog, QListWidget, QListWidgetItem, QFileDialog, QLineEdit, QToolButton
+    QDialog, QListWidget, QListWidgetItem, QFileDialog, QLineEdit, QToolButton, QComboBox
 )
 from PySide6.QtCore import Qt
 from pathlib import Path
 
 from src.settings import *
+from src.model import *
 
 
 APP_STYLESHEET = """
@@ -138,24 +139,74 @@ class FileSelector(QWidget):
     def __init__(self, label):
         super().__init__()
 
-        self.box_layout = QHBoxLayout(self)
+        self.selected_path = None
+
+        self.main_layout = QVBoxLayout(self)
+
+        self.box_layout = QHBoxLayout()
 
         self.label = QLabel(label)
         self.label.setObjectName("defaultLabel")
+
         self.path_display = QLabel("No file selected")
         self.path_display.setObjectName("defaultLabel")
-        self.browse_button = QPushButton("Browse")
-        self.browse_button.clicked.connect(self.browse)
-        self.browse_button.setFixedWidth(SCENE_SETTINGS_WIDTH)
+
+        self.import_button = QPushButton("Import")
+        self.import_button.clicked.connect(self.browse)
+        self.import_button.setFixedWidth(SCENE_SETTINGS_WIDTH)
+
+        self.existing_combo = QComboBox()
+        self.existing_combo.setFixedWidth(SCENE_SETTINGS_WIDTH)
+        self.existing_combo.currentIndexChanged.connect(self._select_existing)
 
         self.box_layout.addWidget(self.label)
         self.box_layout.addWidget(self.path_display, stretch=1)
-        self.box_layout.addWidget(self.browse_button)
+        self.box_layout.addWidget(self.import_button)
+
+        self.main_layout.addWidget(self.existing_combo)
+        self.main_layout.addLayout(self.box_layout)
+
+        self.refresh_existing()
+
+    def refresh_existing(self):
+        model_paths = sorted(settings.file_paths.scenes.glob("*.glb"))
+
+        self.existing_combo.blockSignals(True)
+        self.existing_combo.clear() # Remove old entries
+        self.existing_combo.addItem("Select existing", None)
+        for model_path in model_paths:
+            self.existing_combo.addItem(model_path.name, model_path)
+        self.existing_combo.blockSignals(False)
+
+    def _select_existing(self, idx):
+        model_path = self.existing_combo.itemData(idx)
+
+        if model_path is not None:
+            self.selected_path = model_path
+            self.path_display.setText(model_path.name)
+        
+        else:
+            self.path_display.setText("None selected")
+
+    def select_path(self, path):
+        for i in range(self.existing_combo.count()):
+            if self.existing_combo.itemData(i) == path:
+                self.existing_combo.setCurrentIndex(i)
+                return
+
+        self.selected_path = path
+        if path:
+            self.path_display.setText(path.name)
+        else:
+            self.path_display.setText("No file selected")
 
     def browse(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Select File", "", "glTF Files (*.gltf *.glb)")
+        path, _ = QFileDialog.getOpenFileName(self, "Import File", "", "glTF Files (*.gltf *.glb)")
         if path:
-            self.path_display.setText(Path(path).name)
+            dst_path = import_model(path)
+            self.selected_path = dst_path
+            self.refresh_existing()
+            self.select_path(dst_path)
 
 
 class SettingsDialog(QDialog):
