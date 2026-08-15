@@ -288,6 +288,17 @@ class ShaderGroup:
                 root_dir = ROOT_DIR / rel_dir
                 setattr(self, attr, root_dir)
 
+
+def _resolve(path):
+    path = Path(path)
+
+    if path.is_absolute():
+        return path
+
+    # File lives inside of the project root
+    return ROOT_DIR / path
+
+
 class FilePathSettings:
     class AITraining:
         def __init__(self, internal_config, user_config):
@@ -298,15 +309,15 @@ class FilePathSettings:
             self._load_user()
 
         def _load_internal(self):
-            self.scenes = ROOT_DIR / self.internal_config["scenes"]
-            self.hdris = ROOT_DIR / self.internal_config["hdris"]
-            self.renders = ROOT_DIR / self.internal_config["renders"]
-            self.camera_capture_states = ROOT_DIR / self.internal_config["camera_capture_states"]
+            self.scenes = _resolve(self.internal_config["scenes"])
+            self.hdris = _resolve(self.internal_config["hdris"])
+            self.renders = _resolve(self.internal_config["renders"])
+            self.camera_capture_states = _resolve(self.internal_config["camera_capture_states"])
 
         def _load_user(self):
-            self.scenes = ROOT_DIR / self.user_config["scenes"]
-            self.hdris = ROOT_DIR / self.user_config["hdris"]
-            self.renders = ROOT_DIR / self.user_config["renders"]
+            self.scenes = _resolve(self.user_config["scenes"])
+            self.hdris = _resolve(self.user_config["hdris"])
+            self.renders = _resolve(self.user_config["renders"])
 
     class Denoiser:
         def __init__(self, internal_config):
@@ -315,8 +326,8 @@ class FilePathSettings:
             self._load_internal()
 
         def _load_internal(self):
-            self.checkpoint = ROOT_DIR / self.internal_config["checkpoint"]
-            self.last_checkpoint = ROOT_DIR / self.internal_config["last_checkpoint"]
+            self.checkpoint = _resolve(self.internal_config["checkpoint"])
+            self.last_checkpoint = _resolve(self.internal_config["last_checkpoint"])
 
     class Cache:
         def __init__(self, internal_config):
@@ -325,8 +336,8 @@ class FilePathSettings:
             self._load_internal()
 
         def _load_internal(self):
-            self.scene = ROOT_DIR / self.internal_config["scene"]
-            self.bvh = ROOT_DIR / self.internal_config["bvh"]
+            self.scene = _resolve(self.internal_config["scene"])
+            self.bvh = _resolve(self.internal_config["bvh"])
             
     def __init__(self, internal_settings, user_settings):
         self.internal_config = internal_settings["file_paths"]
@@ -336,10 +347,10 @@ class FilePathSettings:
         self._load_user()
 
     def _load_internal(self):
-        self.scenes = ROOT_DIR / self.internal_config["scenes"]
-        self.scene = ROOT_DIR / self.internal_config["scene"]
-        self.hdri = ROOT_DIR / self.internal_config["hdri"]
-        self.renders = ROOT_DIR / self.internal_config["renders"]
+        self.scenes = _resolve(self.internal_config["scenes"])
+        self.scene = _resolve(self.internal_config["scene"])
+        self.hdri = _resolve(self.internal_config["hdri"])
+        self.renders = _resolve(self.internal_config["renders"])
 
         self.ai_training = self.AITraining(self.internal_config["ai_training"], self.user_config["ai_training"])
         self.denoiser = self.Denoiser(self.internal_config["denoiser"])
@@ -352,10 +363,10 @@ class FilePathSettings:
         self.cache = self.Cache(self.internal_config["cache"])
 
     def _load_user(self):
-        self.scenes = ROOT_DIR / self.user_config["scenes"]
-        self.scene = ROOT_DIR / self.user_config["scene"]
-        self.hdri = ROOT_DIR / self.user_config["hdri"]
-        self.renders = ROOT_DIR / self.user_config["renders"]
+        self.scenes = _resolve(self.user_config["scenes"])
+        self.scene = _resolve(self.user_config["scene"])
+        self.hdri = _resolve(self.user_config["hdri"])
+        self.renders = _resolve(self.user_config["renders"])
 
         self.ai_training = self.AITraining(self.internal_config["ai_training"], self.user_config["ai_training"])
 
@@ -366,11 +377,11 @@ class FilePathSettings:
         def rel(path):
             path = Path(path)
 
-            try:
+            if path.is_relative_to(ROOT_DIR):
                 return str(path.relative_to(ROOT_DIR))
-            except:
-                # File lives outside of the project root
-                return str(path)
+            
+            # File lives outside of the project root
+            return str(path)
         
         return {
             "file_paths": {
@@ -480,17 +491,17 @@ class Settings:
             group.reset()
 
 
-with open("src/settings/internal.json") as f:
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
+with open(ROOT_DIR / "src/settings/internal.json") as f:
     internal_settings = json.load(f)
 
-with open("src/settings/user.json") as f:
+with open(ROOT_DIR / "src/settings/user.json") as f:
     user_settings = json.load(f)
-
-ROOT_DIR = Path(__file__).resolve().parent.parent
 
 # glTF KHR_lights_punctual defines intensity in photometric units
 # Convert to radiometric units matching Blender's export constant
-LUMENS_TO_WATTS = 1.0 / 683.0
+LUMENS_TO_WATTS = 1 / 683
 
 AI_DEVICE = torch.device("cpu")
 if torch.cuda.is_available():
