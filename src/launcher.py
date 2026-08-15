@@ -64,6 +64,8 @@ class SettingsDialog(QDialog):
         self.sidebar.currentRowChanged.connect(self.pages.setCurrentIndex)
         
         self.init_general()
+        self.init_scene()
+        self.init_video()
 
         # Select the first item by default
         self.sidebar.setCurrentRow(0)
@@ -76,6 +78,30 @@ class SettingsDialog(QDialog):
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         title = QLabel("General Settings")
+        layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.pages.addWidget(page)
+
+    def init_scene(self):
+        self.sidebar.addItem("Scene Settings")
+
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        title = QLabel("Scene Settings")
+        layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.pages.addWidget(page)
+
+    def init_video(self):
+        self.sidebar.addItem("Video Settings")
+
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        title = QLabel("Video Settings")
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.pages.addWidget(page)
