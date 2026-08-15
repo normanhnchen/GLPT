@@ -2,9 +2,10 @@ import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QGroupBox,
     QHBoxLayout, QLabel, QPushButton, QSlider, QCheckBox, QStackedWidget,
-    QDialog, QListWidget, QListWidgetItem
+    QDialog, QListWidget, QListWidgetItem, QFileDialog, QLineEdit
 )
 from PySide6.QtCore import Qt
+from pathlib import Path
 
 from src.settings import *
 
@@ -37,6 +38,21 @@ QWidget {
     background-color: #1e1f22;
     color: #ffffff;
     font-weight: bold;
+}
+
+QLabel#titleLabel {
+    font-size: 32px;
+}
+
+QPushButton {
+    background-color: #4c79a6;
+    font-size: 16px;
+    border-radius: 8px;
+    padding: 8px 0px;
+}
+
+QPushButton:hover {
+    background-color: #7ca4cc;
 }
 """
 
@@ -78,6 +94,7 @@ class SettingsDialog(QDialog):
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         title = QLabel("General Settings")
+        title.setObjectName("titleLabel")
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.pages.addWidget(page)
@@ -90,9 +107,24 @@ class SettingsDialog(QDialog):
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         title = QLabel("Scene Settings")
+        title.setObjectName("titleLabel")
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.pages.addWidget(page)
+
+        scene_path_edit = QLineEdit()
+        scene_path_edit.setText(settings.file_paths.scene.name)
+        scene_path_edit.setFixedWidth(200)
+        scene_path_label = QLabel("Selected Scene:")
+
+        layout.addWidget(scene_path_label)
+        layout.addWidget(scene_path_edit)
+
+        scene_file_button = QPushButton("Browse")
+        scene_file_button.setFixedWidth(200)
+        scene_file_button.clicked.connect(self.browse_scene_file)
+
+        layout.addWidget(scene_file_button)
 
     def init_video(self):
         self.sidebar.addItem("Video Settings")
@@ -102,9 +134,13 @@ class SettingsDialog(QDialog):
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         title = QLabel("Video Settings")
+        title.setObjectName("titleLabel")
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.pages.addWidget(page)
+
+    def browse_scene_file(self):
+        QFileDialog.getOpenFileName(self, "Select Scene File", "")
 
 
 class Launcher(QMainWindow):
@@ -133,15 +169,15 @@ class Launcher(QMainWindow):
 
         layout.addSpacing(50)
 
-        button_run = QPushButton("Run")
-        button_run.setFixedWidth(300)
-        button_run.clicked.connect(self.run)
-        layout.addWidget(button_run, alignment=Qt.AlignmentFlag.AlignCenter)
+        run_button = QPushButton("Run")
+        run_button.setFixedWidth(300)
+        run_button.clicked.connect(self.run)
+        layout.addWidget(run_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        button_settings = QPushButton("Settings")
-        button_settings.setFixedWidth(300)
-        button_settings.clicked.connect(self.open_settings)
-        layout.addWidget(button_settings, alignment=Qt.AlignmentFlag.AlignCenter)
+        settings_button = QPushButton("Settings")
+        settings_button.setFixedWidth(300)
+        settings_button.clicked.connect(self.open_settings)
+        layout.addWidget(settings_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
     def run(self):
         print(0)
