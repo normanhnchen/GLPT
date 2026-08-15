@@ -93,17 +93,15 @@ class CollapsibleSection(QWidget):
         self.toggle_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.toggle_button.clicked.connect(self.toggle)
 
-        self.content_area = QScrollArea(self)
-        self.content_area.setWidgetResizable(True)
-        self.content_area.setVisible(False)
+        self.content_widget = QWidget(self)
+        self.content_widget.setVisible(False)
 
-        self.content_widget = QWidget()
         self.content_layout = QVBoxLayout(self.content_widget)
         self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.content_area.setWidget(self.content_widget)
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
 
         self.main_layout.addWidget(self.toggle_button, alignment=Qt.AlignmentFlag.AlignLeft)
-        self.main_layout.addWidget(self.content_area)
+        self.main_layout.addWidget(self.content_widget)
 
     def toggle(self, checked):
         if checked:
@@ -111,7 +109,7 @@ class CollapsibleSection(QWidget):
         else:
             self.toggle_button.setArrowType(Qt.ArrowType.RightArrow)
 
-        self.content_area.setVisible(checked)
+        self.content_widget.setVisible(checked)
 
     def add_content_widget(self, widget):
         self.content_layout.addWidget(widget)
@@ -143,13 +141,11 @@ class SceneSelector(QWidget):
 
         self.main_layout = QVBoxLayout(self)
 
-        self.box_layout = QHBoxLayout()
-
         self.label = QLabel(label)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setObjectName("defaultLabel")
 
-        self.path_display = QLabel("No file selected")
-        self.path_display.setObjectName("defaultLabel")
+        self.box_layout = QHBoxLayout()
 
         self.import_button = QPushButton("Import")
         self.import_button.clicked.connect(self.browse)
@@ -159,11 +155,10 @@ class SceneSelector(QWidget):
         self.existing_combo.setFixedWidth(SCENE_SETTINGS_WIDTH)
         self.existing_combo.currentIndexChanged.connect(self._select_existing)
 
-        self.box_layout.addWidget(self.label)
-        self.box_layout.addWidget(self.path_display, stretch=1)
+        self.box_layout.addWidget(self.existing_combo)
         self.box_layout.addWidget(self.import_button)
 
-        self.main_layout.addWidget(self.existing_combo)
+        self.main_layout.addWidget(self.label)
         self.main_layout.addLayout(self.box_layout)
 
         self.refresh_existing()
@@ -183,10 +178,6 @@ class SceneSelector(QWidget):
 
         if model_path is not None:
             self.selected_path = model_path
-            self.path_display.setText(model_path.name)
-        
-        else:
-            self.path_display.setText("None selected")
 
     def select_path(self, path):
         for i in range(self.existing_combo.count()):
@@ -195,11 +186,6 @@ class SceneSelector(QWidget):
                 return
 
         self.selected_path = path
-        if path:
-            self.path_display.setText(path.name)
-        
-        else:
-            self.path_display.setText("No file selected")
 
     def browse(self):
         path, _ = QFileDialog.getOpenFileName(self, "Import File", "", "glTF Files (*.gltf *.glb)")
@@ -218,13 +204,11 @@ class HDRISelector(QWidget):
 
         self.main_layout = QVBoxLayout(self)
 
-        self.box_layout = QHBoxLayout()
-
         self.label = QLabel(label)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setObjectName("defaultLabel")
 
-        self.path_display = QLabel("No file selected")
-        self.path_display.setObjectName("defaultLabel")
+        self.box_layout = QHBoxLayout()
 
         self.import_button = QPushButton("Import")
         self.import_button.clicked.connect(self.browse)
@@ -234,11 +218,10 @@ class HDRISelector(QWidget):
         self.existing_combo.setFixedWidth(SCENE_SETTINGS_WIDTH)
         self.existing_combo.currentIndexChanged.connect(self._select_existing)
 
-        self.box_layout.addWidget(self.label)
-        self.box_layout.addWidget(self.path_display, stretch=1)
+        self.box_layout.addWidget(self.existing_combo)
         self.box_layout.addWidget(self.import_button)
 
-        self.main_layout.addWidget(self.existing_combo)
+        self.main_layout.addWidget(self.label)
         self.main_layout.addLayout(self.box_layout)
 
         self.refresh_existing()
@@ -258,10 +241,6 @@ class HDRISelector(QWidget):
 
         if hdri_path is not None:
             self.selected_path = hdri_path
-            self.path_display.setText(hdri_path.name)
-        
-        else:
-            self.path_display.setText("None selected")
 
     def select_path(self, path):
         for i in range(self.existing_combo.count()):
@@ -270,12 +249,7 @@ class HDRISelector(QWidget):
                 return
 
         self.selected_path = path
-        if path:
-            self.path_display.setText(path.name)
-        
-        else:
-            self.path_display.setText("No file selected")
-
+    
     def browse(self):
         path, _ = QFileDialog.getOpenFileName(self, "Import File", "", "EXR Files (*.exr)")
         if path:
@@ -336,8 +310,8 @@ class SettingsDialog(QDialog):
         title = QLabel("Scene Settings")
         title.setObjectName("titleLabel")
 
-        self.scene_selector = SceneSelector("Scene File:")
-        self.hdri_selector = HDRISelector("HDRI File:")
+        self.scene_selector = SceneSelector("Scene File")
+        self.hdri_selector = HDRISelector("HDRI File")
 
         box_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
         self.pages.addWidget(page)
