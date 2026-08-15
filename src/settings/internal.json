@@ -52,8 +52,8 @@
             "scenes": "src\\assets\\models\\ai_training\\"
         },
         "cache": {
-            "bvh": "src\\assets\\cache\\",
-            "scene": "src\\assets\\cache\\"
+            "scenes": "src\\assets\\cache\\scene",
+            "bvhs": "src\\assets\\cache\\bvh"
         },
         "denoiser": {
             "checkpoint": "src\\ai\\denoiser\\checkpoint.pt",
@@ -86,6 +86,11 @@
         "renders": "src\\assets\\renders\\images",
         "scene": "src\\assets\\models\\cornell_box.glb",
         "scenes": "src\\assets\\models\\"
+    },
+    "cache_fingerprints": {
+        "chunk_size": 65536,
+        "max_chunks": 32,
+        "digest_size": 16
     },
     "path_tracing": {
         "backface_culling": false,
