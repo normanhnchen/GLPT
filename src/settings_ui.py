@@ -1128,6 +1128,8 @@ class SettingsUI:
         self.camera_capturing_ui = CameraCapturingUI(pt_state, scene_state, camera_capture_state)
         self.export_ui = ExportUI(export_state)
 
+        self.reset_all_button = Button("Reset All Settings")
+
     def draw_rendering_ui(self,
             allow_start=True,
             allow_cancel=True,
@@ -1255,6 +1257,25 @@ class SettingsUI:
         self.draw_scene_ui()
         self.draw_camera_capturing_ui()
 
+    def draw_reset_all_button(self):
+        def on_change():
+            settings.rendering.reset()
+            settings.path_tracing.reset()
+            settings.camera.reset()
+            settings.post_processing.reset()
+            settings.screen.reset()
+            settings.debug.reset()
+
+            self.camera.reload_from_settings()
+            self.camera_buffer.update_data()
+
+            self.debug_ui.bvh_view_depth_slider.max_val = self.debug_ui._get_max_idx()
+            self.debug_ui._clamp_to_scene_max_depth()
+
+            self.pt_state.restart_render()
+
+        self.reset_all_button.button(on_change)
+
     def draw(self, settings_window):
         if not settings_window:
             return settings_window
@@ -1262,9 +1283,7 @@ class SettingsUI:
         imgui.set_next_window_size((600, 600))
         is_expand, settings_window = imgui.begin("Settings", settings_window)
 
-        # Render Mode
-        # -----------
-        if settings.ai_training.mode == 0:
+        if settings.ai_training.mode == "render":
             if is_expand:
                 if imgui.tree_node("Rendering"):
                     self.draw_rendering_ui(
@@ -1297,9 +1316,7 @@ class SettingsUI:
 
                     imgui.tree_pop()
 
-        # Camera Setup Mode
-        # -----------------
-        elif settings.ai_training.mode == 1:
+        elif settings.ai_training.mode == "camera_setup":
             if is_expand:
                 if imgui.tree_node("Rendering"):
                     self.draw_rendering_ui()
@@ -1362,6 +1379,8 @@ class SettingsUI:
                     self.draw_export_ui()
 
                     imgui.tree_pop()
+
+        self.draw_reset_all_button()
         
         imgui.end()
 
