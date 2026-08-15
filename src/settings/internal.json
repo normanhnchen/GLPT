@@ -1,110 +1,129 @@
-{   
-    "file_paths": {
-        "scenes": "src/assets/models/",
-        "scene": "src/assets/models/cornell_box.glb",
-        "hdri": "src/assets/hdris/day_sky_hdri.exr",
-        "renders": "src/assets/renders/images",
-        "ai_training": {
-            "scenes": "src/assets/models/ai_training/",
-            "hdris": "src/assets/hdris/ai_training/",
-            "renders": "src/assets/renders/ai_training",
-            "camera_capture_states": "src/ai/training/camera_capture_states.json"
-        },
-        "denoiser": {
-            "checkpoint": "src/ai/denoiser/checkpoint.pt",
-            "last_checkpoint": "src/ai/denoiser/last_checkpoint.pt"
-        },
-        "path_tracing": {
-            "vert": "src/shaders/path_tracing/final.vs",
-            "frag": "src/shaders/path_tracing/final.fs",
-            "comp": "src/shaders/path_tracing/path_trace.comp",
-            "bvh_bounds_debug": {
-                "vert": "src/shaders/path_tracing/bvh_bounds_debug.vs",
-                "frag": "src/shaders/path_tracing/bvh_bounds_debug.fs"
-            }
-        },
-        "rasterization": {
-            "pbr": {
-                "vert": "src/shaders/rasterization/pbr.vs",
-                "frag": "src/shaders/rasterization/pbr.fs"
-            },
-            "background": {
-                "vert": "src/shaders/rasterization/background.vs",
-                "frag": "src/shaders/rasterization/background.fs"
-            },
-            "final": {
-                "vert": "src/shaders/rasterization/final.vs",
-                "frag": "src/shaders/rasterization/final.fs"
-            }
-        },
-        "cache": {
-            "scene": "src/assets/cache/",
-            "bvh": "src/assets/cache/"
-        }
-    },
-    "screen": {
-        "width": 1024,
-        "height": 1024,
-        "vsync": false,
-        "fps_cap": -1,
-        "min_width": 400,
-        "min_height": 300
-    },
-    "camera": {
-        "yaw": 90,
-        "pitch": 0,
-        "movement_speed": 5,
-        "mouse_sensitivity": 0.1,
-        "fov": 45,
-        "pos": [0, 0, 0],
-        "front": [0, 0, -1],
-        "up": [0, 1, 0],
-        "world_up": [0, 1, 0],
-        "blur": 1.0,
-        "dof_enabled": false,
-        "aperture": 0.0,
-        "focus_dist": 10
-    },
-    "path_tracing": {
-        "samples_per_pixel": 1,
-        "max_samples": 4096,
-        "total_bounces": 8,
-        "diffuse_bounces": 4,
-        "specular_bounces": 4,
-        "transmission_bounces": 8,
-        "specular_mode": 0,
-        "geometry_mode": 0,
-        "transmission_mode": 0,
-        "mis_mode": 0,
-        "backface_culling": false,
-        "max_direct_luminance": 10.0,
-        "max_indirect_luminance": 10.0
+{
+    "ai_training": {
+        "mode": "camera_setup"
     },
     "bvh": {
         "max_depth": 32,
         "sah_bins": 16
     },
+    "camera": {
+        "aperture": 0.0,
+        "blur": 1.0,
+        "dof_enabled": false,
+        "focus_dist": 10,
+        "fov": 45,
+        "front": [
+            0,
+            0,
+            -1
+        ],
+        "movement_speed": 5,
+        "mouse_sensitivity": 0.1,
+        "pitch": 0,
+        "pos": [
+            0,
+            0,
+            0
+        ],
+        "up": [
+            0,
+            1,
+            0
+        ],
+        "world_up": [
+            0,
+            1,
+            0
+        ],
+        "yaw": 90
+    },
     "debug": {
         "bvh": {
-            "view_layer": -1,
+            "color_mode": 0,
             "view_depth": -1,
-            "color_mode": 0
+            "view_layer": -1
         }
+    },
+    "file_paths": {
+        "ai_training": {
+            "camera_capture_states": "src/ai/training/camera_capture_states.json",
+            "hdris": "src/assets/hdris/ai_training/",
+            "renders": "src/assets/renders/ai_training",
+            "scenes": "src/assets/models/ai_training/"
+        },
+        "cache": {
+            "bvh": "src/assets/cache/",
+            "scene": "src/assets/cache/"
+        },
+        "denoiser": {
+            "checkpoint": "src/ai/denoiser/checkpoint.pt",
+            "last_checkpoint": "src/ai/denoiser/last_checkpoint.pt"
+        },
+        "hdri": "src/assets/hdris/day_sky_hdri.exr",
+        "path_tracing": {
+            "bvh_bounds_debug": {
+                "frag": "src/shaders/path_tracing/bvh_bounds_debug.fs",
+                "vert": "src/shaders/path_tracing/bvh_bounds_debug.vs"
+            },
+            "comp": "src/shaders/path_tracing/path_trace.comp",
+            "frag": "src/shaders/path_tracing/final.fs",
+            "vert": "src/shaders/path_tracing/final.vs"
+        },
+        "rasterization": {
+            "background": {
+                "frag": "src/shaders/rasterization/background.fs",
+                "vert": "src/shaders/rasterization/background.vs"
+            },
+            "final": {
+                "frag": "src/shaders/rasterization/final.fs",
+                "vert": "src/shaders/rasterization/final.vs"
+            },
+            "pbr": {
+                "frag": "src/shaders/rasterization/pbr.fs",
+                "vert": "src/shaders/rasterization/pbr.vs"
+            }
+        },
+        "renders": "src/assets/renders/images",
+        "scene": "src/assets/models/cornell_box.glb",
+        "scenes": "src/assets/models/"
+    },
+    "path_tracing": {
+        "backface_culling": false,
+        "diffuse_bounces": 4,
+        "geometry_mode": 0,
+        "max_direct_luminance": 10.0,
+        "max_indirect_luminance": 10.0,
+        "max_samples": 4096,
+        "mis_mode": 0,
+        "samples_per_pixel": 1,
+        "specular_bounces": 4,
+        "specular_mode": 0,
+        "total_bounces": 8,
+        "transmission_bounces": 8,
+        "transmission_mode": 0
     },
     "post_processing": {
         "exposure": 3.0,
-        "tonemap": "AgX",
-        "hdri_exposure": 1.0
+        "hdri_exposure": 1.0,
+        "tonemap": "AgX"
     },
     "rendering": {
         "mode": "rasterization",
-        "texture_size": [1024, 1024],
+        "texture_size": [
+            1024,
+            1024
+        ],
         "tiles": {
             "x": 4,
             "y": 2
         }
     },
-    "ai_training": {
-        "mode": "camera_setup"
+    "screen": {
+        "fps_cap": -1,
+        "height": 1024,
+        "min_height": 300,
+        "min_width": 400,
+        "vsync": false,
+        "width": 1024
     }
 }
