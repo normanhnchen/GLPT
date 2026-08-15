@@ -161,6 +161,7 @@ class PathTracingSettings:
                 "diffuse_bounces": self.diffuse_bounces,
                 "specular_bounces": self.specular_bounces,
                 "transmission_bounces": self.transmission_bounces,
+                "mis_mode": self.mis_mode,
                 "specular_mode": self.specular_mode,
                 "geometry_mode": self.geometry_mode,
                 "transmission_mode": self.transmission_mode,
@@ -372,7 +373,6 @@ class FilePathSettings:
                     "scenes": str(self.ai_training.scenes),
                     "hdris": str(self.ai_training.hdris),
                     "renders": str(self.ai_training.renders),
-                    "camera_capture_states": str(self.ai_training.camera_capture_states)
                 }
             }
         }
@@ -420,8 +420,10 @@ class RenderingSettings:
             "rendering": {
                 "mode": self.mode,
                 "texture_size": self.texture_size,
-                "tiles_x": self.tiles.x,
-                "tiles_y": self.tiles.y
+                "tiles": {
+                    "x": self.tiles.x,
+                    "y": self.tiles.y
+                }
             }
         }
 
