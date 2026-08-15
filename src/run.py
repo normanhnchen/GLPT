@@ -21,8 +21,8 @@ from src.pipelines.rasterization import *
 
 
 def main():
-    remove_stale_cache(settings.file_paths.scenes, settings.file_paths.cache.scene)
-    remove_stale_cache(settings.file_paths.scenes, settings.file_paths.cache.bvh)
+    remove_stale_cache()
+    remove_stale_cache()
     
     glfw_window = GlfwWindow()
     imgui_state = ImguiState()

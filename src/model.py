@@ -14,69 +14,76 @@ from src.bvh import *
 from src.buffers import *
 
 
-def _get_file_fingerprint(path, chunk_size=65536, max_chunks=32, digest_size=16):
+def _get_file_fingerprint(path):
     size = os.path.getsize(path)
-    h = hashlib.blake2b(digest_size=digest_size)
+    h = hashlib.blake2b(digest_size=settings.cache_fingerprints.digest_size)
     h.update(str(size).encode())
 
     # Apply ceiling division
-    num_chunks = min(max_chunks, -(-size // chunk_size))
+    num_chunks = min(settings.cache_fingerprints.max_chunks, -(-size // settings.cache_fingerprints.chunk_size))
 
     with open(path, "rb") as f:
-        if num_chunks * chunk_size >= size:
+        if num_chunks * settings.cache_fingerprints.chunk_size >= size:
             # File is small enough; read
             h.update(f.read())
         else:
-            stride = (size - chunk_size) / (num_chunks - 1) if num_chunks > 1 else 0
+            stride = (size - settings.cache_fingerprints.chunk_size) / (num_chunks - 1) if num_chunks > 1 else 0
             for i in range(num_chunks):
                 offset = int(i * stride)
                 f.seek(offset)
-                h.update(f.read(chunk_size))
+                h.update(f.read(settings.cache_fingerprints.chunk_size))
 
-    return h.hexdigest()
+    return f"{Path(path).stem}_{h.hexdigest()}"
 
 
-def remove_stale_cache(scenes_dir, cache_dir):
-    scenes_dir = Path(scenes_dir).resolve()
-    cache_dir = Path(cache_dir).resolve()
-
-    valid_codes = []
-    for scene_file in scenes_dir.rglob("*"):
+def remove_stale_cache():
+    valid_fingerprints = []
+    for scene_file in Path(settings.file_paths.scenes).glob("*"):
         if scene_file.is_file():
-            rel_path = scene_file.relative_to(ROOT_DIR)
-            
-            name = str(rel_path.parent / rel_path.stem).replace("/", "_").replace("\\", "_")
-            fingerprint = _get_file_fingerprint(scene_file)
+            valid_fingerprints.append(_get_file_fingerprint(scene_file))
 
-            valid_codes.append(f"{name}_{fingerprint}")
+    # Note: Cache files are saved as .npz files
 
-    for cache_file in cache_dir.glob("*"):
-        stem = cache_file.stem
-        for prefix in ("scene_", "bvh_"):
-            if stem.startswith(prefix):
-                code = stem[len(prefix):]
+    # Scene Caches
+    # ------------
+    for cache_file in Path(settings.file_paths.cache.scenes).glob("*.npz"):
+        if cache_file.is_file():
+            stem = cache_file.stem
+            if stem.startswith("scene_"):
+                fingerprint = stem[len("scene_"):]
+
+                if fingerprint not in valid_fingerprints:
+                    cache_file.unlink()
+
                 break
 
-        else:
-            continue
+    # BVH Caches
+    # ----------
+    for cache_file in Path(settings.file_paths.cache.bvhs).glob("*.npz"):
+        if cache_file.is_file():
+            stem = cache_file.stem
+            if stem.startswith("bvh_"):
+                fingerprint = stem[len("bvh_"):]
 
-        if code not in valid_codes:
-            cache_file.unlink()
+                if fingerprint not in valid_fingerprints:
+                    cache_file.unlink()
+
+                break
 
 
-def get_cache_path(path, cache_dir, type):
-    abs_path = Path(path).resolve()
-    abs_cache_dir = Path(cache_dir).resolve()
+def get_cache_path(path, type):
+    path = Path(path).resolve()
+    if type == "scene":
+        cache_path = Path(settings.file_paths.cache.scenes).resolve()
+    elif type == "bvh":
+        cache_path = Path(settings.file_paths.cache.bvhs).resolve()
 
-    rel_path = abs_path.relative_to(ROOT_DIR)
-
-    cache_name = str(rel_path.parent / rel_path.stem).replace("/", "_").replace("\\", "_")
-    fingerprint = _get_file_fingerprint(abs_path)
+    fingerprint = _get_file_fingerprint(path)
 
     if type == "scene":
-        return abs_cache_dir / f"{type}_{cache_name}_{fingerprint}"
+        return cache_path / f"{type}_{fingerprint}.npz"
     elif type == "bvh":
-        return abs_cache_dir / f"{type}_{cache_name}_{fingerprint}"
+        return cache_path / f"{type}_{fingerprint}.npz"
 
 
 class Texture:
@@ -487,8 +494,8 @@ class Scene:
         self.scene_path = scene_path
         self.scene_name = Path(scene_path).stem
 
-        self.scene_cache_path = get_cache_path(scene_path, settings.file_paths.cache.scene, "scene")
-        self.bvh_cache_path = get_cache_path(scene_path, settings.file_paths.cache.bvh, "bvh")
+        self.scene_cache_path = get_cache_path(scene_path, "scene")
+        self.bvh_cache_path = get_cache_path(scene_path, "bvh")
 
     def build(self):
         scene = trimesh.load(self.scene_path)
@@ -723,8 +730,7 @@ class Scene:
     
     def build_bvh(self):
         try:
-            # Note: numpy adds the file suffix automatically
-            cache_path = get_cache_path(self.scene_path, settings.file_paths.cache.bvh, "bvh").with_suffix(".npz")
+            cache_path = get_cache_path(self.scene_path, "bvh")
 
             self.bvh = load_bvh_data(cache_path)
             self.num_bvh_nodes = self.bvh.nodes_used
@@ -994,6 +1000,7 @@ class Scene:
     
 
 def save_bvh_data(bvh, cache_path):
+    # Note: numpy adds the file suffix automatically
     np.savez_compressed(
         cache_path,
         aabb_mins=bvh.aabb_mins,
@@ -1035,6 +1042,7 @@ def save_scene_data(scene, cache_path):
     # Unduplicate material textures by stripping texture images
     scene.strip_material_images()
 
+    # Note: numpy adds the file suffix automatically
     np.savez_compressed(
         cache_path,
         vertices=scene.vertices,
@@ -1107,8 +1115,7 @@ def load_scene_data(scene, cache_path):
 
 
 def load_scene(scene_path):
-    # Note: numpy adds the file suffix automatically
-    scene_cache_path = get_cache_path(scene_path, settings.file_paths.cache.scene, "scene").with_suffix(".npz")
+    scene_cache_path = get_cache_path(scene_path, "scene")
 
     scene = Scene(scene_path)
 

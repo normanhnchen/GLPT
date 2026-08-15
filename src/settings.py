@@ -336,8 +336,8 @@ class FilePathSettings:
             self._load_internal()
 
         def _load_internal(self):
-            self.scene = _resolve(self.internal_config["scene"])
-            self.bvh = _resolve(self.internal_config["bvh"])
+            self.scenes = _resolve(self.internal_config["scenes"])
+            self.bvhs = _resolve(self.internal_config["bvhs"])
             
     def __init__(self, internal_settings, user_settings):
         self.internal_config = internal_settings["file_paths"]
@@ -461,6 +461,21 @@ class AITrainingSettings:
         self._load_internal()
 
 
+class CacheFingerprintSettings:
+    def __init__(self, internal_settings):
+        self.internal_config = internal_settings["cache_fingerprints"]
+
+        self._load_internal()
+
+    def _load_internal(self):
+        self.chunk_size = self.internal_config["chunk_size"]
+        self.max_chunks = self.internal_config["max_chunks"]
+        self.digest_size = self.internal_config["digest_size"]
+
+    def reset(self):
+        self._load_internal()
+
+
 class Settings:
     def __init__(self, internal_settings, user_settings):
         self.screen = ScreenSettings(internal_settings, user_settings)
@@ -472,6 +487,7 @@ class Settings:
         self.file_paths = FilePathSettings(internal_settings, user_settings)
         self.rendering = RenderingSettings(internal_settings, user_settings)
         self.ai_training = AITrainingSettings(internal_settings)
+        self.cache_fingerprints = CacheFingerprintSettings(internal_settings)
 
         self._groups = [
             self.screen, self.camera, self.path_tracing, self.bvh, self.debug,
