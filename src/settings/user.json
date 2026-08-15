@@ -36,7 +36,8 @@
         "hdri": "src\\assets\\hdris\\day_sky_hdri.exr",
         "renders": "src\\assets\\renders\\images",
         "scene": "src\\assets\\models\\cornell_box.glb",
-        "scenes": "src\\assets\\models"
+        "scenes": "src\\assets\\models",
+        "hdris": "src\\assets\\hdris"
     },
     "path_tracing": {
         "backface_culling": false,

@@ -135,7 +135,7 @@ class IntSpinBox(QWidget):
         self.box_layout.addWidget(self.spin_box)
 
 
-class FileSelector(QWidget):
+class SceneSelector(QWidget):
     def __init__(self, label):
         super().__init__()
 
@@ -197,11 +197,87 @@ class FileSelector(QWidget):
         self.selected_path = path
         if path:
             self.path_display.setText(path.name)
+        
         else:
             self.path_display.setText("No file selected")
 
     def browse(self):
         path, _ = QFileDialog.getOpenFileName(self, "Import File", "", "glTF Files (*.gltf *.glb)")
+        if path:
+            dst_path = import_model(path)
+            self.selected_path = dst_path
+            self.refresh_existing()
+            self.select_path(dst_path)
+
+
+class HDRISelector(QWidget):
+    def __init__(self, label):
+        super().__init__()
+
+        self.selected_path = None
+
+        self.main_layout = QVBoxLayout(self)
+
+        self.box_layout = QHBoxLayout()
+
+        self.label = QLabel(label)
+        self.label.setObjectName("defaultLabel")
+
+        self.path_display = QLabel("No file selected")
+        self.path_display.setObjectName("defaultLabel")
+
+        self.import_button = QPushButton("Import")
+        self.import_button.clicked.connect(self.browse)
+        self.import_button.setFixedWidth(SCENE_SETTINGS_WIDTH)
+
+        self.existing_combo = QComboBox()
+        self.existing_combo.setFixedWidth(SCENE_SETTINGS_WIDTH)
+        self.existing_combo.currentIndexChanged.connect(self._select_existing)
+
+        self.box_layout.addWidget(self.label)
+        self.box_layout.addWidget(self.path_display, stretch=1)
+        self.box_layout.addWidget(self.import_button)
+
+        self.main_layout.addWidget(self.existing_combo)
+        self.main_layout.addLayout(self.box_layout)
+
+        self.refresh_existing()
+
+    def refresh_existing(self):
+        hdri_paths = sorted(settings.file_paths.hdris.glob("*.exr"))
+
+        self.existing_combo.blockSignals(True)
+        self.existing_combo.clear() # Remove old entries
+        self.existing_combo.addItem("Select existing", None)
+        for hdri_path in hdri_paths:
+            self.existing_combo.addItem(hdri_path.name, hdri_path)
+        self.existing_combo.blockSignals(False)
+
+    def _select_existing(self, idx):
+        hdri_path = self.existing_combo.itemData(idx)
+
+        if hdri_path is not None:
+            self.selected_path = hdri_path
+            self.path_display.setText(hdri_path.name)
+        
+        else:
+            self.path_display.setText("None selected")
+
+    def select_path(self, path):
+        for i in range(self.existing_combo.count()):
+            if self.existing_combo.itemData(i) == path:
+                self.existing_combo.setCurrentIndex(i)
+                return
+
+        self.selected_path = path
+        if path:
+            self.path_display.setText(path.name)
+        
+        else:
+            self.path_display.setText("No file selected")
+
+    def browse(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Import File", "", "EXR Files (*.exr)")
         if path:
             dst_path = import_model(path)
             self.selected_path = dst_path
@@ -260,11 +336,13 @@ class SettingsDialog(QDialog):
         title = QLabel("Scene Settings")
         title.setObjectName("titleLabel")
 
-        self.scene_selector = FileSelector("Scene File:")
+        self.scene_selector = SceneSelector("Scene File:")
+        self.hdri_selector = HDRISelector("HDRI File:")
 
         box_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
         self.pages.addWidget(page)
         box_layout.addWidget(self.scene_selector)
+        box_layout.addWidget(self.hdri_selector)
         box_layout.addSpacing(20)
         box_layout.addWidget(self.init_bvh(), alignment=Qt.AlignmentFlag.AlignJustify)
 

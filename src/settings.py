@@ -349,10 +349,12 @@ class FilePathSettings:
         self._load_user()
 
     def _load_internal(self):
-        self.scenes = _resolve(self.internal_config["scenes"])
         self.scene = _resolve(self.internal_config["scene"])
         self.hdri = _resolve(self.internal_config["hdri"])
         self.renders = _resolve(self.internal_config["renders"])
+
+        self.scenes = _resolve(self.internal_config["scenes"])
+        self.hdris = _resolve(self.internal_config["hdris"])
 
         self.ai_training = self.AITraining(self.internal_config["ai_training"], self.user_config["ai_training"])
         self.denoiser = self.Denoiser(self.internal_config["denoiser"])
@@ -365,10 +367,12 @@ class FilePathSettings:
         self.cache = self.Cache(self.internal_config["cache"])
 
     def _load_user(self):
-        self.scenes = _resolve(self.user_config["scenes"])
         self.scene = _resolve(self.user_config["scene"])
         self.hdri = _resolve(self.user_config["hdri"])
         self.renders = _resolve(self.user_config["renders"])
+
+        self.scenes = _resolve(self.internal_config["scenes"])
+        self.hdris = _resolve(self.internal_config["hdris"])
 
         self.ai_training = self.AITraining(self.internal_config["ai_training"], self.user_config["ai_training"])
 

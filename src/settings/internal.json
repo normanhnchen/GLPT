@@ -86,7 +86,8 @@
         },
         "renders": "src\\assets\\renders\\images",
         "scene": "src\\assets\\models\\cornell_box.glb",
-        "scenes": "src\\assets\\models\\"
+        "scenes": "src\\assets\\models",
+        "hdris": "src\\assets\\hdris"
     },
     "cache_fingerprints": {
         "chunk_size": 65536,
