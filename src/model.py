@@ -749,22 +749,12 @@ class Scene:
 
             self.bvh = load_bvh_data(cache_path)
             self.num_bvh_nodes = self.bvh.nodes_used
-
-            print("Loaded BVH from cache")
         except:
-            start_time = time.perf_counter()
-            print("Building BVH...")
-
             bvh = BVH(self)
             self.bvh = bvh
             self.num_bvh_nodes = self.bvh.nodes_used
 
-            end_time = time.perf_counter()
-            print(f"BVH built in {end_time - start_time:.4f}s")
-
             save_bvh_data(bvh, self.bvh_cache_path)
-            
-            print("BVH saved to cache")
     
     # Logic for parsing GLB files assisted by AI
     def _get_extensions(self):
@@ -1136,21 +1126,9 @@ def load_scene(scene_path):
 
     try:
         load_scene_data(scene, scene_cache_path)
-
-        print("Loaded scene data from cache")
     except:
-        print("Building scene...")
-        start_time = time.perf_counter()
-
         scene.build()
 
-        end_time = time.perf_counter()
-        print(f"Scene built in {end_time - start_time:.4f}s")
-
-        print("Scene saving to cache...")
-
         save_scene_data(scene, scene_cache_path)
-        
-        print("Scene data saved to cache")
     
     return scene

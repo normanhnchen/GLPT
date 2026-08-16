@@ -161,7 +161,7 @@ def main():
             if scene_state.ai_training_finished:
                 break
 
-            update_stats(glfw_window, pt_state, frame_stats.avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
+            update_stats(glfw_window, pt_state, bvh_state, frame_stats.avg_fps, pt_state.rendering.total_samples, pt_state.rendering.render_complete)
 
             ctx.screen.use()
             ctx.viewport = (0, 0, settings.screen.width, settings.screen.height)
@@ -229,14 +229,27 @@ def main():
     glfw_window.shutdown()
 
 
-def update_stats(glfw_window, pt_state, fps, samples, render_complete):
+def update_stats(glfw_window, pt_state, bvh_state, fps, samples, render_complete):
     if settings.rendering.mode == "path_tracing":
         if render_complete or pt_state.rendering.should_view_saved:
-            glfw_window.set_title(f"FPS: {fps:.2f} | Render Complete in {pt_state.rendering.render_time:.2f}s")
+            glfw_window.set_title(f"FPS: {fps:.2f} | Render Complete In {pt_state.rendering.render_time:.2f}s")
+        
         else:
             glfw_window.set_title(f"FPS: {fps:.2f} | Samples: {samples}")
+    
     else:
-        glfw_window.set_title(f"FPS: {fps:.2f}")
+        if not bvh_state.ready:
+            glfw_window.set_title(f"FPS: {fps:.2f} | Building BVH")
+
+        else:
+            if not bvh_state.buffers_created:
+                glfw_window.set_title(f"FPS: {fps:.2f} | Creating BVH Buffers | BVH Built In {bvh_state.build_time:.2f}")
+
+            elif bvh_state.build_time:
+                glfw_window.set_title(f"FPS: {fps:.2f} | Path Tracing Is Ready | BVH Built In {bvh_state.build_time:.2f}")
+
+            else:
+                glfw_window.set_title(f"FPS: {fps:.2f} | Path Tracing Is Ready")
 
 
 class PTShaders:

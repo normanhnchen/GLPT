@@ -493,13 +493,21 @@ class BVHState:
         self.built = False
         self.builder = None
 
+        self.build_time = None
+        self.buffers_created = False
+
     def background_build(self):
         self.builder = BVHBackgroundBuilder(self.scene)
         self.bvh_built = False
 
     def build(self):
+        build_start_time = time.perf_counter()
+
         self.scene.build_bvh()
         self.bvh_built = True
+
+        build_end_time = time.perf_counter()
+        self.build_time = build_end_time - build_start_time
 
     def update(self, bvh_node_loc, tri_indices_loc, bvh_depths_loc):
         if self.ready:
@@ -510,8 +518,6 @@ class BVHState:
             self.builder = None
         
         if self.bvh_built:
-            print("Creating BVH buffers...")
-
             bvh_node_buffer = BVHNodeBuffer(self.scene)
             tri_indices_buffer = TriangleIndicesBuffer(self.scene)
             bvh_depths_buffer = BVHDepthsBuffer(self.scene)
@@ -522,7 +528,7 @@ class BVHState:
 
             self.ready = True
 
-            print("Path tracing is ready")
+            self.buffers_created = True
 
 
 class CameraCaptureState:
