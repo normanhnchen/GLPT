@@ -159,8 +159,13 @@ class RenderState:
         self.should_view_saved = False
         self.should_render = False
 
+        self.render_start_time = None
+        self.render_end_time = None
+        self.render_time = None
+
     def start(self):
         self.should_render = True
+        self.render_start_time = time.perf_counter()
 
     def stop_render(self):
         self.should_render = False
@@ -177,6 +182,8 @@ class RenderState:
     def complete(self):
         self.render_complete = True
         self.should_view_saved = True
+        self.render_end_time = time.perf_counter()
+        self.render_time = self.render_end_time - self.render_start_time
 
 
 class DebugState:

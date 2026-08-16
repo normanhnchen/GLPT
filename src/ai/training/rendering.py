@@ -232,7 +232,7 @@ def main():
 def update_stats(glfw_window, pt_state, fps, samples, render_complete):
     if settings.rendering.mode == "path_tracing":
         if render_complete or pt_state.rendering.should_view_saved:
-            glfw_window.set_title(f"FPS: {fps:.2f} | Render Complete")
+            glfw_window.set_title(f"FPS: {fps:.2f} | Render Complete in {pt_state.rendering.render_time:.2f}s")
         else:
             glfw_window.set_title(f"FPS: {fps:.2f} | Samples: {samples}")
     else:
