@@ -197,7 +197,8 @@ class BVHSettings:
         return {
             "bvh": {
                 "max_depth": self.max_depth,
-                "sah_bins": self.sah_bins
+                "sah_bins": self.sah_bins,
+                "max_leaf_size": self.max_leaf_size
             }
         }
 

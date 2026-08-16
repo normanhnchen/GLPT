@@ -1,6 +1,6 @@
 {
     "ai_training": {
-        "mode": "camera_setup"
+        "mode": "off"
     },
     "bvh": {
         "max_depth": 32,
