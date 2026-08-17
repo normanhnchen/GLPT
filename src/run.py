@@ -292,7 +292,6 @@ class SettingsDialog(QDialog):
         
         self.init_general()
         self.init_scene()
-        self.init_video()
 
     def init_general(self):
         self.sidebar.addItem("General")
@@ -317,13 +316,25 @@ class SettingsDialog(QDialog):
         title = QLabel("Scene Settings")
         title.setObjectName("titleLabel")
 
+        self.texture_size_layout = QHBoxLayout()
+        self.texture_size_width_spin_box = IntSpinBox("Texture Size", 1, 16384, settings.rendering.texture_size[0])
+        self.texture_size_height_spin_box = IntSpinBox("Texture Size", 1, 16384, settings.rendering.texture_size[1])
+
+        self.texture_size_label = QLabel("Texture Size")
+        self.texture_size_label.setObjectName("defaultLabel")
+
         self.scene_selector = SceneSelector("Scene File")
         self.hdri_selector = HDRISelector("HDRI File")
+
+        self.texture_size_layout.addWidget(self.texture_size_width_spin_box, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.texture_size_layout.addWidget(self.texture_size_height_spin_box, alignment=Qt.AlignmentFlag.AlignCenter)
 
         box_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
         self.pages.addWidget(page)
         box_layout.addWidget(self.scene_selector)
         box_layout.addWidget(self.hdri_selector)
+        box_layout.addWidget(self.texture_size_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        box_layout.addLayout(self.texture_size_layout)
         box_layout.addSpacing(20)
         box_layout.addWidget(self.init_bvh(), alignment=Qt.AlignmentFlag.AlignJustify)
 
@@ -341,25 +352,15 @@ class SettingsDialog(QDialog):
 
         return section
 
-    def init_video(self):
-        self.sidebar.addItem("Video Settings")
-
-        page = QWidget()
-        box_layout = QVBoxLayout(page)
-        box_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        title = QLabel("Video Settings")
-        title.setObjectName("titleLabel")
-
-        box_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
-        self.pages.addWidget(page)
-
     def apply_to_settings(self):
         if self.scene_selector.selected_path is not None:
             settings.file_paths.scene = self.scene_selector.selected_path
 
         if self.hdri_selector.selected_path is not None:
             settings.file_paths.hdri = self.hdri_selector.selected_path
+
+        settings.rendering.texture_size[0] = self.texture_size_width_spin_box.spin_box.value()
+        settings.rendering.texture_size[1] = self.texture_size_height_spin_box.spin_box.value()
 
         settings.bvh.sah_bins = self.sah_bins_spin_box.spin_box.value()
         settings.bvh.max_leaf_size = self.max_leaf_size_spin_box.spin_box.value()

@@ -41,12 +41,19 @@ def _get_bvh_fingerprint():
     h = hashlib.blake2b(str(settings.bvh).encode(), digest_size=4)
     return h.hexdigest()
 
+def _get_scene_fingerprint():
+    h = hashlib.blake2b(str(settings.rendering.texture_size).encode(), digest_size=4)
+    return h.hexdigest()
+
 
 def remove_stale_cache():
     valid_fingerprints = []
     for scene_file in Path(settings.file_paths.scenes).glob("*"):
         if scene_file.is_file():
             valid_fingerprints.append(_get_file_fingerprint(scene_file))
+
+    current_bvh_fingerprint = _get_bvh_fingerprint()
+    current_scene_fingerprint = _get_scene_fingerprint()
 
     # Note: Cache files are saved as .npz files
 
@@ -56,15 +63,13 @@ def remove_stale_cache():
         if cache_file.is_file():
             stem = cache_file.stem
             if stem.startswith("scene_"):
-                fingerprint = stem[len("scene_"):]
+                file_fingerprint, scene_fingerprint = stem[len("scene_"):].rsplit("_", 1)
 
-                if fingerprint not in valid_fingerprints:
+                if file_fingerprint not in valid_fingerprints or scene_fingerprint != current_scene_fingerprint:
                     cache_file.unlink()
 
     # BVH Caches
     # ----------
-    current_bvh_fingerprint = _get_bvh_fingerprint()
-
     for cache_file in Path(settings.file_paths.cache.bvhs).glob("*.npz"):
         if cache_file.is_file():
             stem = cache_file.stem
@@ -85,7 +90,9 @@ def get_cache_path(path, type):
     file_fingerprint = _get_file_fingerprint(path)
 
     if type == "scene":
-        return cache_path / f"{type}_{file_fingerprint}.npz"
+        scene_fingerprint = _get_scene_fingerprint()
+
+        return cache_path / f"{type}_{file_fingerprint}_{scene_fingerprint}.npz"
     elif type == "bvh":
         bvh_fingerprint = _get_bvh_fingerprint()
         
