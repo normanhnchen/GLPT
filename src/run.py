@@ -312,21 +312,7 @@ class SettingsDialog(QDialog):
         settings_layout.addWidget(self.sidebar)
         settings_layout.addWidget(self.pages)
         
-        self.init_general()
         self.init_scene()
-
-    def init_general(self):
-        self.sidebar.addItem("General")
-
-        page = QWidget()
-        box_layout = QVBoxLayout(page)
-        box_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        title = QLabel("General Settings")
-        title.setObjectName("titleLabel")
-
-        box_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
-        self.pages.addWidget(page)
 
     def init_scene(self):
         self.sidebar.addItem("Scene Settings")
