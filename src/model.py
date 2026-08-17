@@ -299,12 +299,18 @@ class Material:
 
 class HDRI:
     def __init__(self, hdri_path):
-        img = cv2.imread(hdri_path, cv2.IMREAD_UNCHANGED)
-        # Convert from OpenCV default format of BGR color to RGB color
-        self.img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        
-        self.height, self.width, self.channels = self.img.shape
-        self.img_bytes = self.img.tobytes()
+        if hdri_path:
+            img = cv2.imread(hdri_path, cv2.IMREAD_UNCHANGED)
+            # Convert from OpenCV default format of BGR color to RGB color
+            self.img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            
+            self.height, self.width, self.channels = self.img.shape
+            self.img_bytes = self.img.tobytes()
+
+        else:
+            self.height, self.width, self.channels = 1, 1, 3
+            self.img = np.full((self.height, self.width, self.channels), settings.path_tracing.default_hdri_color, dtype=f4)
+            self.img_bytes = self.img.tobytes()
 
         self.hdri_tex = None
 

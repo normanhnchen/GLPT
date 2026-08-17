@@ -130,6 +130,8 @@ class PathTracingSettings:
         self.max_direct_luminance = self.internal_config["max_direct_luminance"]
         self.max_indirect_luminance = self.internal_config["max_indirect_luminance"]
 
+        self.default_hdri_color = self.internal_config["default_hdri_color"]
+
     def _load_user(self):
         self.spp = self.user_config["samples_per_pixel"]
         self.max_samples = self.user_config["max_samples"]
@@ -287,19 +289,24 @@ class ShaderGroup:
             if isinstance(rel_dir, dict):
                 # Parse nested shader groups
                 setattr(self, attr, ShaderGroup(rel_dir))
+
             else:
                 root_dir = ROOT_DIR / rel_dir
                 setattr(self, attr, root_dir)
 
 
 def _resolve(path):
-    path = Path(path)
+    if path:
+        path = Path(path)
 
-    if path.is_absolute():
-        return path
+        if path.is_absolute():
+            return path
 
-    # File lives inside of the project root
-    return ROOT_DIR / path
+        # File lives inside of the project root
+        return ROOT_DIR / path
+
+    # This case is for when there is no HDRI selected
+    return path
 
 
 class FilePathSettings:
@@ -382,13 +389,17 @@ class FilePathSettings:
 
     def user_settings_to_dict(self):
         def rel(path):
-            path = Path(path)
+            if path:
+                path = Path(path)
 
-            if path.is_relative_to(ROOT_DIR):
-                return str(path.relative_to(ROOT_DIR))
+                if path.is_relative_to(ROOT_DIR):
+                    return str(path.relative_to(ROOT_DIR))
+                
+                # File lives outside of the project root
+                return str(path)
             
-            # File lives outside of the project root
-            return str(path)
+            # This case is for when there is no HDRI selected
+            return path
         
         return {
             "file_paths": {

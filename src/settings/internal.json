@@ -107,7 +107,8 @@
         "specular_mode": 0,
         "total_bounces": 8,
         "transmission_bounces": 8,
-        "transmission_mode": 0
+        "transmission_mode": 0,
+        "default_hdri_color": 1
     },
     "post_processing": {
         "exposure": 3.0,

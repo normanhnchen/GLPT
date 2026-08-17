@@ -75,6 +75,8 @@ QScrollArea {
 
 SCENE_SETTINGS_WIDTH = 200
 
+NO_HDRI = object()
+
 
 class CollapsibleSection(QWidget):
     def __init__(self, title, width=None):
@@ -235,13 +237,17 @@ class HDRISelector(QWidget):
         self.existing_combo.addItem("Select existing", None)
         for hdri_path in hdri_paths:
             self.existing_combo.addItem(hdri_path.name, hdri_path)
+        self.existing_combo.addItem("None", NO_HDRI)
         self.existing_combo.blockSignals(False)
 
     def _select_existing(self, idx):
         hdri_path = self.existing_combo.itemData(idx)
 
         if hdri_path is not None:
-            self.selected_path = hdri_path
+            if hdri_path == NO_HDRI:
+                self.selected_path = False
+            else:
+                self.selected_path = hdri_path
 
     def select_path(self, path):
         for i in range(self.existing_combo.count()):
