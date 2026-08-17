@@ -26,6 +26,8 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
     vec3 entryPoint = vec3(0.0);
     bool isInsideMedium = false;
 
+    float tAccum = 0.0;
+
     PathSample pathSample;
     pathSample.baseCol = vec3(0.0);
     pathSample.normal = vec3(0.0);
@@ -157,6 +159,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             if (mat.alpha < mat.alphaCutoff) {
                 // Advance the ray and ignore the hit
                 ray.o = si.p + ray.d * EPSILON;
+                tAccum += si.t;
                 // Decrement to negate the loop's i++
                 i--;
                 continue;
@@ -167,6 +170,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             if (Pcg3d(rng).x > mat.alpha) {
                 // Advance the ray and ignore the hit
                 ray.o = si.p + ray.d * EPSILON;
+                tAccum += si.t;
                 // Decrement to negate the loop's i++
                 i--;
                 continue;
@@ -225,7 +229,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         if (i == 0) {
             pathSample.baseCol = mat.baseCol;
             pathSample.normal = si.ns;
-            pathSample.depth = si.t;
+            pathSample.depth = tAccum + si.t;
 
             if (debugMode == 1) { // Albedo
                 pathSample.combined = pathSample.baseCol;

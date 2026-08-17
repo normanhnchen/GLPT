@@ -1,6 +1,6 @@
 from src.passes.path_tracing.path_trace import *
 from src.passes.path_tracing.final import *
-from src.passes.path_tracing.bvh_depth_debug import *
+from src.passes.path_tracing.depth_debug import *
 from src.passes.path_tracing.bvh_bounds_debug import *
 
 
@@ -10,7 +10,7 @@ class PathTracingPipeline:
         self.pt_state = pt_state
         self.ai_denoiser = ai_denoiser
         self.pt_pass = PathTracePass(scene, camera, pt_state, pt_shaders.pt)
-        self.bvh_depth_debug_pass = BVHDepthDebugPass(pt_state)
+        self.depth_debug_pass = DepthDebugPass(pt_state)
         self.bvh_bounds_debug_pass = BVHBoundsDebugPass(ctx, scene, camera, pt_shaders.bvh_bounds_debug)
         self.final_pass = FinalPass(ctx, pt_shaders.final, pt_state, final_output_state)
 
@@ -48,6 +48,6 @@ class PathTracingPipeline:
 
             # Depth
             if self.pt_state.debug.mode == 3:
-                self.bvh_depth_debug_pass.render()
+                self.depth_debug_pass.render()
 
         self.final_pass.render()
