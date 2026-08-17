@@ -31,9 +31,8 @@ middle_mouse_down = False
 need_resize = False
 
 
-def main():
-    remove_stale_cache(settings.file_paths.scenes, settings.file_paths.cache.scene)
-    remove_stale_cache(settings.file_paths.scenes, settings.file_paths.cache.bvh)
+def run_app():
+    remove_stale_cache()
     
     glfw_window = GlfwWindow()
     imgui_state = ImguiState()
@@ -229,6 +228,10 @@ def main():
     glfw_window.shutdown()
 
 
+def main():
+    run_app()
+
+
 def update_stats(glfw_window, pt_state, bvh_state, fps, samples, render_complete):
     if settings.rendering.mode == "path_tracing":
         if render_complete or pt_state.rendering.should_view_saved:
@@ -243,10 +246,10 @@ def update_stats(glfw_window, pt_state, bvh_state, fps, samples, render_complete
 
         else:
             if not bvh_state.buffers_created:
-                glfw_window.set_title(f"FPS: {fps:.2f} | Creating BVH Buffers | BVH Built In {bvh_state.build_time:.2f}")
+                glfw_window.set_title(f"FPS: {fps:.2f} | Creating BVH Buffers | BVH Built In {bvh_state.build_time:.2f}s")
 
             elif bvh_state.build_time:
-                glfw_window.set_title(f"FPS: {fps:.2f} | Path Tracing Is Ready | BVH Built In {bvh_state.build_time:.2f}")
+                glfw_window.set_title(f"FPS: {fps:.2f} | Path Tracing Is Ready | BVH Built In {bvh_state.build_time:.2f}s")
 
             else:
                 glfw_window.set_title(f"FPS: {fps:.2f} | Path Tracing Is Ready")

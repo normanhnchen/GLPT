@@ -10,6 +10,7 @@ from pathlib import Path
 from src.settings import *
 from src.model import *
 import src.renderer as renderer
+import src.ai.training.renderer as ai_training_renderer
 
 
 APP_STYLESHEET = """
@@ -62,6 +63,25 @@ QPushButton:hover {
 }
 """
 
+AI_TRAINING_STYLESHEET = """
+QWidget {
+    background-color: #1e1f22;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+QPushButton {
+    background-color: #4c79a6;
+    font-size: 32px;
+    border-radius: 8px;
+    padding: 16px 4px;
+}
+
+QPushButton:hover {
+    background-color: #7ca4cc;
+}
+"""
+
 COLLAPSIBLE_SECTION_STYLESHEET = """
 QToolButton#titleLabel {
     font-size: 24px;
@@ -74,6 +94,8 @@ QScrollArea {
 """
 
 SCENE_SETTINGS_WIDTH = 200
+AI_TRAINING_WIDTH = 400
+MENU_WIDTH = 300
 
 NO_HDRI = object()
 
@@ -366,6 +388,39 @@ class SettingsDialog(QDialog):
         settings.bvh.max_leaf_size = self.max_leaf_size_spin_box.spin_box.value()
 
 
+class AITrainingDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("AI Training")
+        self.resize(600, 400)
+
+        self.init_buttons()
+
+    def init_buttons(self):
+        buttons_layout = QVBoxLayout(self)
+        buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        camera_setup_button = QPushButton("Camera Setup Mode")
+        camera_setup_button.setFixedWidth(AI_TRAINING_WIDTH)
+        camera_setup_button.clicked.connect(self.run_camera_setup)
+
+        auto_rendering_button = QPushButton("Auto Rendering Mode")
+        auto_rendering_button.setFixedWidth(AI_TRAINING_WIDTH)
+        auto_rendering_button.clicked.connect(self.run_auto_render)
+
+        buttons_layout.addWidget(camera_setup_button)
+        buttons_layout.addWidget(auto_rendering_button)
+
+    def run_camera_setup(self):
+        settings.ai_training.mode = "camera_setup"
+        QApplication.instance().quit()
+
+    def run_auto_render(self):
+        settings.ai_training.mode = "render"
+        QApplication.instance().quit()
+
+
 class LoadWorker(QThread):
     progress = Signal(int, str)
     finished_loading = Signal(object, object, object, object) # Scene, AIDenoiser, Camera, buffer (dict)
@@ -405,22 +460,28 @@ class Launcher(QMainWindow):
         box_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.settings_dialog = None
+        self.ai_training_dialog = None
 
         title = QLabel("GLPT")
         title.setObjectName("titleLabel")
 
         run_button = QPushButton("Run")
-        run_button.setFixedWidth(300)
+        run_button.setFixedWidth(MENU_WIDTH)
         run_button.clicked.connect(self.run)
 
         settings_button = QPushButton("Settings")
-        settings_button.setFixedWidth(300)
+        settings_button.setFixedWidth(MENU_WIDTH)
         settings_button.clicked.connect(self.open_settings)
+
+        ai_training_button = QPushButton("AI Training")
+        ai_training_button.setFixedWidth(MENU_WIDTH)
+        ai_training_button.clicked.connect(self.open_ai_training)
 
         box_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
         box_layout.addSpacing(50)
         box_layout.addWidget(run_button, alignment=Qt.AlignmentFlag.AlignCenter)
         box_layout.addWidget(settings_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        box_layout.addWidget(ai_training_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.stacked_widget.addWidget(self.menu_widget)
 
@@ -442,6 +503,7 @@ class Launcher(QMainWindow):
         self.stacked_widget.addWidget(self.loading_widget)
 
     def run(self):
+        settings.ai_training.mode = "off"
         self.save_user_settings()
 
         self.progress_bar.setValue(0)
@@ -466,7 +528,8 @@ class Launcher(QMainWindow):
         self.loading_label.setText(message)
 
     def on_finished_loading(self, scene, ai_denoiser, camera, buffers):
-        self.worker.wait()  # make sure the OS thread has actually finished
+        # Make sure the OS thread has actually finished
+        self.worker.wait()
         self.pending_run_data = (scene, ai_denoiser, camera, buffers)
         self.close()
         QApplication.instance().quit()
@@ -474,10 +537,21 @@ class Launcher(QMainWindow):
     def on_failed(self, error_message):
         self.loading_label.setText(f"Failed to load: {error_message}")
 
+    def open_ai_training(self):
+        """Open an AI training dialog window in a way which doesn't block the main application."""
+
+        if not self.ai_training_dialog:
+            self.ai_training_dialog = AITrainingDialog()
+
+        self.ai_training_dialog.setStyleSheet(AI_TRAINING_STYLESHEET)
+
+        self.ai_training_dialog.show()
+        # Bring AI training dialog to the front
+        self.ai_training_dialog.raise_()
+        self.ai_training_dialog.activateWindow()
+
     def open_settings(self):
-        """
-        Open a settings dialog window in a way which doesn't block the main application.
-        """
+        """Open a settings dialog window in a way which doesn't block the main application."""
 
         if not self.settings_dialog:
             self.settings_dialog = SettingsDialog()
@@ -502,6 +576,9 @@ def main():
     if launcher.pending_run_data is not None:
         scene, ai_denoiser, camera, buffers = launcher.pending_run_data
         renderer.run_app(scene, ai_denoiser, camera, buffers)
+
+    if settings.ai_training.mode == "camera_setup" or settings.ai_training.mode == "render":
+        ai_training_renderer.run_app()
 
 
 if __name__ == "__main__":

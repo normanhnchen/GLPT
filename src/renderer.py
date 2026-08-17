@@ -198,10 +198,10 @@ def update_stats(glfw_window, pt_state, bvh_state, fps, samples, render_complete
 
         else:
             if not bvh_state.buffers_created:
-                glfw_window.set_title(f"FPS: {fps:.2f} | Creating BVH Buffers | BVH Built In {bvh_state.build_time:.2f}")
+                glfw_window.set_title(f"FPS: {fps:.2f} | Creating BVH Buffers | BVH Built In {bvh_state.build_time:.2f}s")
 
             elif bvh_state.build_time:
-                glfw_window.set_title(f"FPS: {fps:.2f} | Path Tracing Is Ready | BVH Built In {bvh_state.build_time:.2f}")
+                glfw_window.set_title(f"FPS: {fps:.2f} | Path Tracing Is Ready | BVH Built In {bvh_state.build_time:.2f}s")
 
             else:
                 glfw_window.set_title(f"FPS: {fps:.2f} | Path Tracing Is Ready")
