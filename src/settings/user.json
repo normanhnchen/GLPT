@@ -1,0 +1,78 @@
+{
+    "bvh": {
+        "max_depth": 32,
+        "max_leaf_size": 4,
+        "sah_bins": 16
+    },
+    "camera": {
+        "aperture": 0.0,
+        "blur": 1.0,
+        "dof_enabled": false,
+        "focus_dist": 10,
+        "fov": 45,
+        "mouse_sensitivity": 0.1,
+        "movement_speed": 5,
+        "pitch": 0,
+        "pos": [
+            0,
+            0,
+            0
+        ],
+        "yaw": 90
+    },
+    "debug": {
+        "bvh": {
+            "color_mode": 0,
+            "view_depth": -1,
+            "view_layer": -1
+        }
+    },
+    "file_paths": {
+        "ai_training": {
+            "hdris": "src\\assets\\hdris\\ai_training",
+            "renders": "src\\assets\\renders\\ai_training",
+            "scenes": "src\\assets\\models\\ai_training"
+        },
+        "hdri": false,
+        "renders": "src\\assets\\renders\\images",
+        "scene": "src\\assets\\models\\texture_test.glb",
+        "scenes": "src\\assets\\models"
+    },
+    "path_tracing": {
+        "backface_culling": false,
+        "diffuse_bounces": 4,
+        "geometry_mode": 0,
+        "max_direct_luminance": 10.0,
+        "max_indirect_luminance": 10.0,
+        "max_samples": 4096,
+        "mis_mode": 0,
+        "samples_per_pixel": 1,
+        "specular_bounces": 4,
+        "specular_mode": 0,
+        "total_bounces": 8,
+        "transmission_bounces": 8,
+        "transmission_mode": 0
+    },
+    "post_processing": {
+        "exposure": 3.0,
+        "hdri_exposure": 1.0,
+        "tonemap": "AgX"
+    },
+    "rendering": {
+        "mode": "rasterization",
+        "texture_size": [
+            1024,
+            1024
+        ],
+        "tiles": {
+            "x": 4,
+            "y": 2
+        }
+    },
+    "screen": {
+        "fps_cap": -1,
+        "height": 1024,
+        "vsync": false,
+        "width": 1024
+    }
+}

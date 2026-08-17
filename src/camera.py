@@ -1,6 +1,6 @@
 import glm
 
-from src.settings import camera_settings, screen
+from src.settings import *
 
 
 # Defines several possible options for camera movement
@@ -19,22 +19,26 @@ class CameraMovement:
 class Camera:
     def __init__(
             self,
-            pos=camera_settings.pos,
-            front=camera_settings._front,
-            up=camera_settings._up,
+            pos=settings.camera.pos,
+            front=settings.camera.front,
+            up=settings.camera.up,
             right=None,
-            world_up=camera_settings._world_up,
-            yaw=camera_settings._yaw,
-            pitch=camera_settings._pitch,
-            movement_speed=camera_settings.movement_speed,
-            mouse_sensitivity=camera_settings.mouse_sensitivity,
-            fov=camera_settings.fov
+            world_up=settings.camera.world_up,
+            yaw=settings.camera.yaw,
+            pitch=settings.camera.pitch,
+            movement_speed=settings.camera.movement_speed,
+            mouse_sensitivity=settings.camera.mouse_sensitivity,
+            fov=settings.camera.fov,
+            blur=settings.camera.blur,
+            dof_enabled=settings.camera.dof_enabled,
+            aperture=settings.camera.aperture,
+            focus_dist=settings.camera.focus_dist
         ):
-        self.pos = pos
-        self.front = front
-        self.up = up
+        self.pos = glm.vec3(pos)
+        self.front = glm.vec3(front)
+        self.up = glm.vec3(up)
         self.right = right
-        self.world_up = world_up
+        self.world_up = glm.vec3(world_up)
         # Euler angles
         self.yaw = yaw
         self.pitch = pitch
@@ -42,6 +46,11 @@ class Camera:
         self.movement_speed = movement_speed
         self.mouse_sensitivity = mouse_sensitivity
         self.fov = fov
+
+        self.blur = blur
+        self.dof_enabled = dof_enabled
+        self.aperture = aperture
+        self.focus_dist = focus_dist
 
         self._update_camera_vectors()
 
@@ -65,7 +74,7 @@ class Camera:
         elif direction == CameraMovement.DOWN:
             self.pos -= self.world_up * velocity
     
-    def process_mouse_movement(self, xoffset, yoffset, constrain_pitch=True):
+    def process_mouse_movement(self, xoffset, yoffset, constrainpitch=True):
         xoffset *= self.mouse_sensitivity
         yoffset *= self.mouse_sensitivity
 
@@ -73,7 +82,7 @@ class Camera:
         self.pitch += yoffset
 
         # Make sure that when pitch is out of bounds, screen doesn't get flipped
-        if constrain_pitch:
+        if constrainpitch:
             if self.pitch > 89.99:
                 self.pitch = 89.99
             elif self.pitch < -89.99:
@@ -89,6 +98,22 @@ class Camera:
         elif self.fov > 135:
             self.fov = 135
 
+    def set_orientation(self, yaw=None, pitch=None, constrainpitch=True):
+        if yaw is not None:
+            self.yaw = yaw
+        if pitch is not None:
+            self.pitch = pitch
+        
+            # Make sure that when pitch is out of bounds, screen doesn't get flipped
+            if constrainpitch:
+                if self.pitch > 89.99:
+                    self.pitch = 89.99
+                elif self.pitch < -89.99:
+                    self.pitch = -89.99
+        
+        # Update front, right and up Vectors using the updated Euler angles
+        self._update_camera_vectors()
+
     def _update_camera_vectors(self):
         # Calculate the new front vector
         self.front = glm.vec3()
@@ -103,18 +128,26 @@ class Camera:
     def get_state(self):
         return {
             "pos": list(self.pos),
-            "front": list(self.front),
-            "up": list(self.up),
-            "right": list(self.right),
-            "fov": self.fov
+            "yaw": self.yaw,
+            "pitch": self.pitch,
+            "fov": self.fov,
+            "dof_enabled": self.dof_enabled,
+            "aperture": self.aperture,
+            "focus_dist": self.focus_dist,
+            "blur": self.blur,
         }
 
     def load_state(self, state):
         self.pos = glm.vec3(state["pos"])
-        self.front = glm.vec3(state["front"])
-        self.up = glm.vec3(state["up"])
-        self.right = glm.vec3(state["right"])
+        self.yaw = state["yaw"]
+        self.pitch = state["pitch"]
         self.fov = state["fov"]
+        self.dof_enabled = state["dof_enabled"]
+        self.aperture = state["aperture"]
+        self.focus_dist = state["focus_dist"]
+        self.blur = state["blur"]
+
+        self._update_camera_vectors()
     
     def has_moved(self):
         current_state = self.get_state()
@@ -126,7 +159,25 @@ class Camera:
     def get_perspective(self):
         near = 0.01
         far = 1000
-        return glm.perspective(glm.radians(self.fov), screen.width / screen.height, near, far)
+        return glm.perspective(glm.radians(self.fov), settings.screen.width / settings.screen.height, near, far)
 
     def get_view(self):
         return glm.lookAt(self.pos, self.pos + self.front, self.up)
+
+    def reload_from_settings(self):
+        self.pos = glm.vec3(settings.camera.pos)
+        self.front = glm.vec3(settings.camera.front)
+        self.up = glm.vec3(settings.camera.up)
+        self.right = None
+        self.world_up = glm.vec3(settings.camera.world_up)
+        self.yaw = settings.camera.yaw
+        self.pitch = settings.camera.pitch
+        self.movement_speed = settings.camera.movement_speed
+        self.mouse_sensitivity = settings.camera.mouse_sensitivity
+        self.fov = settings.camera.fov
+        self.blur = settings.camera.blur
+        self.dof_enabled = settings.camera.dof_enabled
+        self.aperture = settings.camera.aperture
+        self.focus_dist = settings.camera.focus_dist
+
+        self._update_camera_vectors()

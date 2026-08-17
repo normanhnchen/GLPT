@@ -15,21 +15,22 @@ layout(local_size_x=16, local_size_y=16) in;
 PathSample PathTrace(Ray ray, inout uvec3 rng) {
     SurfaceInteraction si;
 
+    si.nodesVisited = 0;
     si.mat.ior = 1.0;
 
     vec3 throughput = vec3(1.0);
-    vec3 radiance = vec3(0.0);
+    vec3 directRadiance = vec3(0.0);
+    vec3 indirectRadiance = vec3(0.0);
 
     // Entry point of a ray travelling through a medium
     vec3 entryPoint = vec3(0.0);
     bool isInsideMedium = false;
 
-    bool isFirstHit = true;
-
     PathSample pathSample;
     pathSample.baseCol = vec3(0.0);
     pathSample.normal = vec3(0.0);
     pathSample.depth = 0.0;
+    pathSample.combined = vec3(0.0);
 
     float prevBsdfPdf = 0.0;
     vec3 prevPoint = vec3(0.0);
@@ -49,19 +50,32 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         if (!Intersect(ray, si)) {
             // Ray has exited the scene
 
+            if (i == 0) {
+                pathSample.depth = -1.0;
+            }
+
             vec3 envColor = SampleHdri(ray.d);
             if (misMode == 0) {
-                if (isFirstHit) {
-                    radiance += throughput * envColor * hdriExposure;
+                if (i == 0) {
+                    directRadiance += throughput * envColor * hdriExposure;
                 } else {
                     // Multiple Importance Sample (MIS)
                     // --------------------------------
                     float lightPdf = HdriPdf(ray.d);
                     float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, lightPdf);
-                    radiance += throughput * envColor * hdriExposure * misWeight;
+
+                    if (i == 1) {
+                        directRadiance += throughput * envColor * hdriExposure * misWeight;
+                    } else {
+                        indirectRadiance += throughput * envColor * hdriExposure * misWeight;
+                    }
                 }
             } else if (misMode == 1) {
-                radiance += throughput * envColor * hdriExposure;
+                if (i == 0 || i == 1) {
+                    directRadiance += throughput * envColor * hdriExposure;
+                } else {
+                    indirectRadiance += throughput * envColor * hdriExposure;
+                }
             }
 
             break;
@@ -122,9 +136,9 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         if (mat.hasNormalTex == 1) {
             mat3 localToWorld = mat3(si.dpdu, si.dpdv, si.ns);
             // Get normal in world space
-            vec3 ns = texture(normalTextures, vec3(si.uv, mat.normalTexId)).rgb;
-            ns = ns * 2.0 - 1.0;
-            ns = normalize(localToWorld * ns);
+            vec3 texNormal = texture(normalTextures, vec3(si.uv, mat.normalTexId)).rgb;
+            texNormal = texNormal * 2.0 - 1.0;
+            ns = normalize(localToWorld * texNormal);
         }
         
         ns = EnsureValidReflection(si.ng, -ray.d, ns);
@@ -137,31 +151,14 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
         si.localToWorld = mat3(dpdu, dpdv, ns);
         si.worldToLocal = transpose(si.localToWorld);
-        
-        // Add light contribution
-        if (mat.hasEmission == 1) {
-            if (misMode == 0) {
-                if (isFirstHit) {
-                    radiance += throughput * mat.emissive * mat.emissiveStrength;
-                } else {
-                    // Multiple Importance Sample (MIS)
-                    // --------------------------------
-                    float areaLightPdf = AreaLightPdf(si, ray, prevPoint);
-                    float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, areaLightPdf);
-                    vec3 indirect = mat.emissive * mat.emissiveStrength * misWeight;
-                    indirect = ClampLuminance(indirect, MAX_INDIRECT_LUMINANCE);
-                    radiance += throughput * indirect;
-                }
-            } else if (misMode == 1) {
-                radiance += throughput * mat.emissive * mat.emissiveStrength;
-            }
-        }
 
         if (mat.alphaMode == 1) {
             // MASK
             if (mat.alpha < mat.alphaCutoff) {
                 // Advance the ray and ignore the hit
                 ray.o = si.p + ray.d * EPSILON;
+                // Decrement to negate the loop's i++
+                i--;
                 continue;
             }
         }
@@ -170,14 +167,38 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             if (Pcg3d(rng).x > mat.alpha) {
                 // Advance the ray and ignore the hit
                 ray.o = si.p + ray.d * EPSILON;
+                // Decrement to negate the loop's i++
+                i--;
                 continue;
             }
         }
 
         // Prevent 0 roughness which results in NaN in many functions
         mat.roughness = max(mat.roughness, 1e-2);
-
         si.mat = mat;
+        
+        // Add light contribution
+        if (mat.hasEmission == 1) {
+            if (misMode == 0) {
+                if (i == 0) {
+                    directRadiance += throughput * mat.emissive * mat.emissiveStrength;
+                } else {
+                    // Multiple Importance Sample (MIS)
+                    // --------------------------------
+                    float areaLightPdf = AreaLightPdf(si, ray, prevPoint);
+                    float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, areaLightPdf);
+                    vec3 indirect = mat.emissive * mat.emissiveStrength * misWeight;
+                    indirect = ClampLuminance(indirect, maxIndirectLuminance);
+                    indirectRadiance += throughput * indirect;
+                }
+            } else if (misMode == 1) {
+                if (i == 0) {
+                    directRadiance += throughput * mat.emissive * mat.emissiveStrength;
+                } else {
+                    indirectRadiance += throughput * mat.emissive * mat.emissiveStrength;
+                }
+            }
+        }
         
         if (misMode == 0) {
             vec3 direct = vec3(0.0);
@@ -190,21 +211,36 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             direct += SampleAreaLight(si, ray, rng);
             direct += SampleHdriLight(si, ray, rng);
 
-            direct = ClampLuminance(direct, MAX_DIRECT_LUMINANCE);
+            direct = ClampLuminance(direct, maxDirectLuminance);
 
-            radiance += throughput * direct;
+            if (i == 0) {
+                directRadiance += throughput * direct;
+            } else {
+                indirectRadiance += throughput * direct;
+            }
         }
 
         BsdfSample bsdfSample = SampleBsdf(rng, ray, si, bounceDepth);
 
-        if (isFirstHit) {
+        if (i == 0) {
             pathSample.baseCol = mat.baseCol;
             pathSample.normal = si.ns;
-            // Subtract from 1 as depth color reduces with distance
-            float depth = 1.0 - si.t * depthFactor / 2.0;
-            pathSample.depth = clamp(depth, 0.0, 1.0);
+            pathSample.depth = si.t;
 
-            isFirstHit = false;
+            if (debugMode == 1) { // Albedo
+                pathSample.combined = pathSample.baseCol;
+                break;
+            } else if (debugMode == 2) { // Normal
+                // Encode to range [0, 1]
+                pathSample.combined = pathSample.normal * 0.5 + 0.5;
+                break;
+            } else if (debugMode == 3) { // Depth
+                pathSample.combined = vec3(pathSample.depth);
+                break;
+            } else if (debugMode == 6) { // BVH Depth
+                pathSample.combined = GetBvhDepthColor(si.nodesVisited, MAX_NODES_VISITED);
+                break;
+            }
         }
 
         prevBsdfPdf = bsdfSample.pdf;
@@ -218,7 +254,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         throughput *= transmittance;
         throughput *= bsdfSample.f;
 
-        throughput = ClampLuminance(throughput, MAX_INDIRECT_LUMINANCE);
+        throughput = ClampLuminance(throughput, maxIndirectLuminance);
 
         ray.d = bsdfSample.wi;
 
@@ -242,7 +278,13 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         }
     }
     
-    pathSample.combined = radiance;
+    if (debugMode == 0) { // Off
+        pathSample.combined = directRadiance + indirectRadiance;
+    } else if (debugMode == 4) { // Direct
+        pathSample.combined = directRadiance;
+    } else if (debugMode == 5) { // Indirect
+        pathSample.combined = indirectRadiance;
+    }
 
     return pathSample;
 }
@@ -262,6 +304,8 @@ void main() {
     vec3 sampleBaseColor = vec3(0.0);
     vec3 sampleNormal = vec3(0.0);
     float sampleDepth = 0.0;
+    float sampleHitCount = 0.0;
+
     for (int i = 0; i < samplesPerPixel; i++) {
         // Get random vec3 (range [0, 1])
         // Convert to range [-0.5, 0.5]
@@ -296,38 +340,50 @@ void main() {
         sampleCombined += pathSample.combined;
         sampleBaseColor += pathSample.baseCol;
         sampleNormal += pathSample.normal;
-        sampleDepth += pathSample.depth;
+        
+        if (pathSample.depth >= 0.0) {
+            sampleDepth += pathSample.depth;
+            sampleHitCount += 1.0;
+        }
     }
+
     sampleCombined /= float(samplesPerPixel);
     sampleBaseColor /= float(samplesPerPixel);
     sampleNormal /= float(samplesPerPixel);
-    sampleDepth /= float(samplesPerPixel);
+    float sampleHitFraction = sampleHitCount / float(samplesPerPixel);
+    sampleDepth = sampleHitCount > 0.0 ? sampleDepth / sampleHitCount : 0.0;
 
     vec3 oldCombined = imageLoad(combinedPass, pixelCoords).rgb;
     vec3 oldBaseColor = imageLoad(baseColorPass, pixelCoords).rgb;
     vec3 oldNormal = imageLoad(normalPass, pixelCoords).rgb;
-    float oldDepth = imageLoad(depthPass, pixelCoords).r;
+    vec2 oldDepth = imageLoad(depthPass, pixelCoords).rg;
+
     float weight = float(samplesPerPixel) / (float(totalSamples + samplesPerPixel));
     
     vec3 finalCombined;
     vec3 finalBaseCol;
     vec3 finalNormal;
     float finalDepth;
+    float finalHitFraction;
+
     if (totalSamples == 0) {
         // Ignore old color
+        // ----------------
         finalCombined = sampleCombined;
         finalBaseCol = sampleBaseColor;
         finalNormal = sampleNormal;
         finalDepth = sampleDepth;
+        finalHitFraction = sampleHitFraction;
     } else {
         finalCombined = mix(oldCombined.rgb, sampleCombined, weight);
         finalBaseCol = mix(oldBaseColor.rgb, sampleBaseColor, weight);
         finalNormal = mix(oldNormal.rgb, sampleNormal, weight);
         finalDepth = mix(oldDepth.r, sampleDepth, weight);
+        finalHitFraction = mix(oldDepth.g, sampleHitFraction, weight);
     }
     
     imageStore(combinedPass, pixelCoords, vec4(finalCombined, 1.0));
     imageStore(baseColorPass, pixelCoords, vec4(finalBaseCol, 1.0));
     imageStore(normalPass, pixelCoords, vec4(finalNormal, 1.0));
-    imageStore(depthPass, pixelCoords, vec4(vec3(finalDepth), 1.0));
+    imageStore(depthPass, pixelCoords, vec4(finalDepth, finalHitFraction, 0.0, 1.0));
 }

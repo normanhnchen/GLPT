@@ -7,9 +7,8 @@ class CameraBuffer:
     def __init__(self, camera):
         camera_data = np.zeros(1, dtype=camera_dtype)
 
-        camera_data["aperture"] = post_process_settings.aperture
-        camera_data["focusDist"] = post_process_settings.focus_dist
-        camera_data["autoFocus"] = post_process_settings.auto_focus
+        camera_data["aperture"] = camera.aperture
+        camera_data["focusDist"] = camera.focus_dist
 
         self.camera = camera
         self.camera_data = camera_data
@@ -20,9 +19,8 @@ class CameraBuffer:
         self.camera_data["up"] = self.camera.up
         self.camera_data["right"] = self.camera.right
         self.camera_data["fov"] = self.camera.fov
-        self.camera_data["aperture"] = post_process_settings.aperture
-        self.camera_data["focusDist"] = post_process_settings.focus_dist
-        self.camera_data["autoFocus"] = post_process_settings.auto_focus
+        self.camera_data["aperture"] = self.camera.aperture
+        self.camera_data["focusDist"] = self.camera.focus_dist
 
         self.camera_buffer.write(self.camera_data.tobytes())
     
@@ -33,6 +31,7 @@ class CameraBuffer:
 
 class MaterialBuffer:
     def __init__(self, scene):
+        self.scene = scene
         material_data = np.zeros(scene.num_materials, dtype=material_dtype)
 
         for i, mat in enumerate(scene.materials):
@@ -50,6 +49,7 @@ class MaterialBuffer:
             material_data[i]["doubleSided"] = mat.double_sided
 
             # Flags
+            # -----
             material_data[i]["hasEmission"] = mat.has_emission
             material_data[i]["hasBaseColTex"] = mat.has_base_color_tex
             material_data[i]["hasEmissiveTex"] = mat.has_emissive_tex
@@ -59,6 +59,7 @@ class MaterialBuffer:
             material_data[i]["hasOcclTex"] = mat.has_occlusion_tex
             
             # Texture IDs
+            # -----------
             material_data[i]["baseTexId"] = mat.base_color_tex_id
             material_data[i]["emissiveTexId"] = mat.emissive_tex_id
             material_data[i]["roughTexId"] = mat.roughness_tex_id
@@ -73,6 +74,43 @@ class MaterialBuffer:
             material_data[i]["ior"] = mat.ior
         
         self.material_data = material_data
+
+    def update_data(self):
+        """
+        Update the material buffer (after scrambling the materials).
+        Only used for AI training.
+        """
+
+        for i, mat in enumerate(self.scene.materials):
+            self.material_data[i]["baseCol"] = mat.base_color[:3]
+            self.material_data[i]["alpha"] = mat.base_color[-1]
+            self.material_data[i]["roughness"] = mat.roughness
+            self.material_data[i]["emissive"] = mat.emissive_color
+            self.material_data[i]["metallic"] = mat.metallic
+
+            self.material_data[i]["alphaMode"] = mat.alpha_mode
+
+            # Flags
+            # -----
+            self.material_data[i]["hasBaseColTex"] = mat.has_base_color_tex
+            self.material_data[i]["hasRoughTex"] = mat.has_roughness_tex
+            self.material_data[i]["hasMetalTex"] = mat.has_metallic_tex
+            self.material_data[i]["hasNormalTex"] = mat.has_normal_tex
+            
+            # Texture IDs
+            # -----------
+            self.material_data[i]["baseTexId"] = mat.base_color_tex_id
+            self.material_data[i]["roughTexId"] = mat.roughness_tex_id
+            self.material_data[i]["metalTexId"] = mat.metallic_tex_id
+            self.material_data[i]["normalTexId"] = mat.normal_tex_id
+            
+            # glTF extensions
+            # ---------------
+            self.material_data[i]["emissiveStrength"] = mat.emissive_strength
+            self.material_data[i]["transmission"] = mat.transmission
+            self.material_data[i]["ior"] = mat.ior
+
+        self.material_buffer.write(self.material_data.tobytes())
     
     def bind(self, ctx, loc):
         self.material_buffer = ctx.buffer(self.material_data.tobytes())
@@ -97,6 +135,8 @@ class LightBuffer:
 
 class TriangleBuffer:
     def __init__(self, scene):
+        self.scene = scene
+
         triangle_data = np.zeros(scene.num_triangles, dtype=triangle_dtype)
         
         idx0 = scene.triangles[:, 0]
@@ -130,6 +170,16 @@ class TriangleBuffer:
         triangle_data[scene.emissive_triangle_indices]["lightPmf"] = scene.area_light_p
 
         self.triangle_data = triangle_data
+
+    def update_data(self):
+        """
+        Update the triangle buffer (after scrambling the materials and recalculating the alias tables).
+        Only used for AI training.
+        """
+
+        self.triangle_data[self.scene.emissive_triangle_indices]["lightPmf"] = self.scene.area_light_p
+
+        self.triangle_buffer.write(self.triangle_data.tobytes())
 
     def bind(self, ctx, loc):
         self.triangle_buffer = ctx.buffer(self.triangle_data.tobytes())
@@ -166,6 +216,8 @@ class TriangleIndicesBuffer:
 
 class EmissiveTrianglesBuffer:
     def __init__(self, scene):
+        self.scene = scene
+
         # Ensure there is atleast a buffer size
         num_emissive_triangles = max(scene.num_emissive_triangles, 1)
         
@@ -179,11 +231,25 @@ class EmissiveTrianglesBuffer:
 
         self.emissive_triangles_data = emissive_triangles_data
 
+    def update_data(self):
+        """
+        Update the emissive triangle buffer (after scrambling the materials and recalculating the alias tables).
+        Only used for AI training.
+        """
+
+        if self.scene.num_emissive_triangles > 0:
+            self.emissive_triangles_data["triId"][:self.scene.num_emissive_triangles] = self.scene.emissive_triangle_indices
+            self.emissive_triangles_data["q"] = self.scene.area_light_q
+            self.emissive_triangles_data["p"] = self.scene.area_light_p
+            self.emissive_triangles_data["alias"] = self.scene.area_light_alias
+
+        self.emissive_triangles_buffer.write(self.emissive_triangles_data.tobytes())
+
     def bind(self, ctx, loc):
         self.emissive_triangles_buffer = ctx.buffer(self.emissive_triangles_data.tobytes())
         self.emissive_triangles_buffer.bind_to_storage_buffer(loc)
 
-class FiniteLightsbuffer:
+class FiniteLightsBuffer:
     def __init__(self, scene):
         # Ensure there is atleast a buffer size
         num_finite_lights = max(scene.num_finite_lights, 1)
@@ -201,3 +267,12 @@ class FiniteLightsbuffer:
     def bind(self, ctx, loc):
         self.finite_lights_buffer = ctx.buffer(self.finite_lights_data.tobytes())
         self.finite_lights_buffer.bind_to_storage_buffer(loc)
+
+
+class BVHDepthsBuffer:
+    def __init__(self, scene):
+        self.bvh_depths_data = scene.bvh.depths.astype(i4)
+    
+    def bind(self, ctx, loc):
+        self.bvh_depths_buffer = ctx.buffer(self.bvh_depths_data.tobytes())
+        self.bvh_depths_buffer.bind_to_storage_buffer(loc)

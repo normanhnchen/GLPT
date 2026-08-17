@@ -1,0 +1,44 @@
+{
+  "scene_0.glb": [
+    {
+      "aperture": 0.0,
+      "blur": 1.0,
+      "dof_enabled": false,
+      "focus_dist": 10,
+      "fov": 45,
+      "pitch": -34.400000000000084,
+      "pos": [
+        5.264457702636719,
+        5.330512046813965,
+        -4.576706886291504
+      ],
+      "yaw": 130.19999999999956
+    },
+    {
+      "aperture": 0.0,
+      "blur": 1.0,
+      "dof_enabled": false,
+      "focus_dist": 10,
+      "fov": 44.0,
+      "pitch": -41.500000000000185,
+      "pos": [
+        -2.7339954376220703,
+        5.939539432525635,
+        -4.001883029937744
+      ],
+      "yaw": 68.00000000000081
+    }
+  ],
+  "scene_1.glb": [],
+  "scene_10.glb": [],
+  "scene_11.glb": [],
+  "scene_12.glb": [],
+  "scene_2.glb": [],
+  "scene_3.glb": [],
+  "scene_4.glb": [],
+  "scene_5.glb": [],
+  "scene_6.glb": [],
+  "scene_7.glb": [],
+  "scene_8.glb": [],
+  "scene_9.glb": []
+}

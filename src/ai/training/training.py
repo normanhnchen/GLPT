@@ -5,7 +5,7 @@ import os
 import random
 
 from src.settings import *
-from src.network import *
+from src.ai.denoiser.network import *
 
 
 # https://dl.acm.org/doi/10.1145/3072959.3073708
@@ -102,7 +102,7 @@ class DenoiseDataset(Dataset):
         
         return x, target
 
-full_dataset = DenoiseDataset(file_paths.ai_training_renders)
+full_dataset = DenoiseDataset(settings.file_paths.ai_training.renders)
 # Split 10% of the dataset to be validation cases
 val_size = max(1, int(0.1 * len(full_dataset)))
 # Split the rest of the dataset to be train cases
@@ -120,7 +120,7 @@ criterion = nn.L1Loss()
 epochs = 100
 
 try:
-    checkpoint = torch.load(file_paths.denoiser_last_checkpoint, map_location=AI_DEVICE)
+    checkpoint = torch.load(settings.file_paths.denoiser.last_checkpoint, map_location=AI_DEVICE)
     denoiser.load_state_dict(checkpoint["model_state_dict"])
     optim.load_state_dict(checkpoint["optimizer_state_dict"])
     starting_epoch = checkpoint["epoch"] + 1
@@ -177,6 +177,6 @@ for epoch in range(starting_epoch, epochs):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         curr_checkpoint["best_val_loss"] = best_val_loss
-        torch.save(curr_checkpoint, file_paths.denoise_checkpoint)
+        torch.save(curr_checkpoint, settings.file_paths.denoiser.checkpoint)
 
-    torch.save(curr_checkpoint, file_paths.denoiser_last_checkpoint)
+    torch.save(curr_checkpoint, settings.file_paths.denoiser.last_checkpoint)

@@ -85,5 +85,36 @@ vec2 SampleUnitDisk(inout uvec3 rng) {
     return vec2(radius * cos(theta), radius * sin(theta));
 }
 
+vec3 GetBvhDepthColor(int currDepth, int maxDepth) {
+    float t = clamp(float(currDepth) / float(maxDepth), 0.0, 1.0);
+
+    vec3 col;
+    col.r = smoothstep(0.5, 0.75, t);
+    col.g = smoothstep(0.0, 0.25, t) - smoothstep(0.75, 1.0, t);
+    col.b = 1.0 - smoothstep(0.25, 0.5, t);
+
+    return col;
+}
+
+// HSB to RGB function from Iñigo Quiles
+// https://www.shadertoy.com/view/MsS3Wc
+vec3 HsbToRgb(in vec3 c){
+    vec3 rgb = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+    rgb = rgb * rgb * (3.0 - 2.0 * rgb);
+    return c.z * mix(vec3(1.0), rgb, c.y);
+}
+
+vec3 GetBvhRgbColor(vec3 aabbMin, vec3 aabbMax) {
+    vec3 center = (aabbMin + aabbMax) * 0.5;
+    
+    float theta = atan(center.z, center.x);
+    
+    // Map from [-π, π] to [0, 1]
+    float c = theta / (2.0 * PI) + 0.5;
+    
+    vec3 hsb = vec3(c, 1.0, 1.0);
+    return HsbToRgb(hsb);
+}
+
 
 #endif

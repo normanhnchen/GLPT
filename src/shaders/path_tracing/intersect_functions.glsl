@@ -30,8 +30,10 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triId, float closestT, inou
     // Check if the hit distance is positive and closer than current closest triangle
     if (t < EPSILON || t >= closestT) return false;
 
-    Material mat = materials[tri.matId];
-    if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
+    if (backfaceCulling == 1) {
+        Material mat = materials[tri.matId];
+        if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
+    }
 
     si.bary = vec2(u, v);
     si.t = t;
@@ -66,7 +68,9 @@ bool ShadowRayTriangleIntersect(inout uvec3 rng, inout Ray ray, Triangle tri, in
     if (t < EPSILON || t >= closestT) return false;
 
     Material mat = materials[tri.matId];
-    if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
+    if (backfaceCulling == 1) {
+        if (mat.doubleSided == 0 && det < 0.0 && mat.transmission == 0.0) return false;
+    }
 
     float w = 1.0 - u - v;
     vec2 texCoords = w * tri.v0.uv + u * tri.v1.uv + v * tri.v2.uv;
@@ -115,6 +119,8 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
     bool didIntersect = false;
     float closestT = INF;
 
+    int totalNodesVisited = si.nodesVisited;
+
     int nodeStack[MAX_BVH_DEPTH];
     int stackIdx = 0;
     // Push root node index onto the stack
@@ -123,6 +129,8 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
     vec3 invRayD = 1.0 / ray.d;
 
     while (stackIdx > 0) {
+        totalNodesVisited++;
+        
         // Pop the latest node index off
         int currIdx = nodeStack[--stackIdx];
         BvhNode currNode = BvhNodes[currIdx];
@@ -142,7 +150,7 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
                 int left = currNode.leftChildId;
                 int right = currNode.rightChildId;
 
-                if (stackIdx < MAX_BVH_DEPTH) {
+                if (stackIdx < maxBvhDepth && stackIdx < MAX_BVH_DEPTH) {
                     // Push children onto the stack if there are children
                     if (left != -1 && right != -1) {
                         BvhNode leftNode = BvhNodes[left];
@@ -168,6 +176,8 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
             }
         }
     }
+
+    si.nodesVisited = totalNodesVisited;
 
     return didIntersect;
 }

@@ -19,7 +19,6 @@ uniform int samplesPerPixel;
 uniform int totalSamples;
 uniform float blur;
 uniform float hdriExposure;
-uniform float depthFactor;
 
 uniform int maxTotalBounces;
 uniform int maxDiffuseBounces;
@@ -29,10 +28,19 @@ uniform int maxTransmissionBounces;
 uniform int numFiniteLights;
 uniform int numEmissiveTriangles;
 
-uniform int specularMode = 0;
-uniform int geometryMode = 0;
-uniform int transmissionMode = 0;
-uniform int misMode = 0;
+uniform int specularMode;
+uniform int geometryMode;
+uniform int transmissionMode;
+uniform int misMode;
+
+uniform int debugMode;
+
+uniform int maxBvhDepth;
+
+uniform int backfaceCulling;
+
+uniform float maxDirectLuminance;
+uniform float maxIndirectLuminance;
 
 
 // --- final.fs ---
@@ -54,6 +62,15 @@ uniform bool Reinhard2;
 uniform bool Uchimura;
 uniform bool Uncharted2;
 uniform bool Unreal;
+
+
+// --- bvh_bounds_debug.vs ---
+// --- bvh_bounds_debug.fs ---
+
+uniform int bvhViewLayer;
+uniform int bvhViewDepth;
+uniform int bvhMaxNodeDepth;
+uniform int bvhColorMode;
 
 
 /*

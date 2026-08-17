@@ -4,8 +4,10 @@ import cv2
 import pygltflib
 import glm
 import time
-import pickle
 from pathlib import Path
+import hashlib
+import os
+import shutil
 
 from src.settings import *
 from src.dtypes import *
@@ -13,17 +15,97 @@ from src.bvh import *
 from src.buffers import *
 
 
-def get_cache_path(path, cache_dir, type):
-    abs_path = Path(path).resolve()
-    abs_cache_dir = Path(cache_dir).resolve()
+def _get_file_fingerprint(path):
+    size = os.path.getsize(path)
+    h = hashlib.blake2b(digest_size=settings.cache_fingerprints.digest_size)
+    h.update(str(size).encode())
 
-    rel_path = abs_path.relative_to(ROOT_DIR)
+    # Apply ceiling division
+    num_chunks = min(settings.cache_fingerprints.max_chunks, -(-size // settings.cache_fingerprints.chunk_size))
 
-    cache_name = str(rel_path.parent / rel_path.stem).replace("/", "_").replace("\\", "_")
+    with open(path, "rb") as f:
+        if num_chunks * settings.cache_fingerprints.chunk_size >= size:
+            # File is small enough; read
+            h.update(f.read())
+        else:
+            stride = (size - settings.cache_fingerprints.chunk_size) / (num_chunks - 1) if num_chunks > 1 else 0
+            for i in range(num_chunks):
+                offset = int(i * stride)
+                f.seek(offset)
+                h.update(f.read(settings.cache_fingerprints.chunk_size))
+
+    return f"{Path(path).stem}_{h.hexdigest()}"
+
+
+def _get_bvh_fingerprint():
+    h = hashlib.blake2b(str(settings.bvh).encode(), digest_size=4)
+    return h.hexdigest()
+
+def _get_scene_fingerprint():
+    h = hashlib.blake2b(str(settings.rendering.texture_size).encode(), digest_size=4)
+    return h.hexdigest()
+
+
+def remove_stale_cache():
+    valid_fingerprints = []
+    for scene_file in Path(settings.file_paths.scenes).glob("*"):
+        if scene_file.is_file():
+            valid_fingerprints.append(_get_file_fingerprint(scene_file))
+
+    current_bvh_fingerprint = _get_bvh_fingerprint()
+    current_scene_fingerprint = _get_scene_fingerprint()
+
+    # Note: Cache files are saved as .npz files
+
+    # Scene Caches
+    # ------------
+    for cache_file in Path(settings.file_paths.cache.scenes).glob("*.npz"):
+        if cache_file.is_file():
+            stem = cache_file.stem
+            if stem.startswith("scene_"):
+                file_fingerprint, scene_fingerprint = stem[len("scene_"):].rsplit("_", 1)
+
+                if file_fingerprint not in valid_fingerprints or scene_fingerprint != current_scene_fingerprint:
+                    cache_file.unlink()
+
+    # BVH Caches
+    # ----------
+    for cache_file in Path(settings.file_paths.cache.bvhs).glob("*.npz"):
+        if cache_file.is_file():
+            stem = cache_file.stem
+            if stem.startswith("bvh_"):
+                file_fingerprint, bvh_fingerprint = stem[len("bvh_"):].rsplit("_", 1)
+
+                if file_fingerprint not in valid_fingerprints or bvh_fingerprint != current_bvh_fingerprint:
+                    cache_file.unlink()
+
+
+def get_cache_path(path, type):
+    path = Path(path).resolve()
     if type == "scene":
-        return abs_cache_dir / f"{type}_{cache_name}"
+        cache_path = Path(settings.file_paths.cache.scenes).resolve()
     elif type == "bvh":
-        return abs_cache_dir / f"{type}_{cache_name}.pkl"
+        cache_path = Path(settings.file_paths.cache.bvhs).resolve()
+
+    file_fingerprint = _get_file_fingerprint(path)
+
+    if type == "scene":
+        scene_fingerprint = _get_scene_fingerprint()
+
+        return cache_path / f"{type}_{file_fingerprint}_{scene_fingerprint}.npz"
+    elif type == "bvh":
+        bvh_fingerprint = _get_bvh_fingerprint()
+        
+        return cache_path / f"{type}_{file_fingerprint}_{bvh_fingerprint}.npz"
+
+
+def import_model(src_path):
+    src_path = Path(src_path)
+    dst_path = settings.file_paths.scenes / src_path.name
+
+    shutil.copy2(src_path, dst_path)
+
+    return dst_path
 
 
 class Texture:
@@ -91,7 +173,7 @@ class Material:
             self.occlusion_tex
         ]
 
-        width, height = render_settings.texture_size
+        width, height = settings.rendering.texture_size
         for tex in self.textures:
             tex.resize(width, height)
 
@@ -144,13 +226,13 @@ class Material:
         if KHR_materials_emissive_strength:
             self.emissive_strength = KHR_materials_emissive_strength["emissiveStrength"]
         else:
-            self.emissive_strength = 0.0
+            self.emissive_strength = set_f4(0)
 
         KHR_materials_transmission = extensions.get("KHR_materials_transmission")
         if KHR_materials_transmission:
             self.transmission = KHR_materials_transmission["transmissionFactor"]
         else:
-            self.transmission = set_f4(0.0)
+            self.transmission = set_f4(0)
 
         KHR_materials_ior = extensions.get("KHR_materials_ior")
         if KHR_materials_ior:
@@ -165,15 +247,77 @@ class Material:
             return color / 255
         return color
 
+    def snapshot_original(self):
+        """
+        Create a snapshot of the original material before scrambling.
+        Only used for AI training.
+        """
+
+        self._original_base_color = self.base_color.copy()
+        self._original_roughness = float(self.roughness)
+        self._original_metallic = float(self.metallic)
+        self._original_emissive_color = self.emissive_color.copy()
+        self._original_emissive_strength = float(self.emissive_strength)
+        self._original_has_emission = bool(self.has_emission)
+        self._original_transmission = float(self.transmission)
+        self._original_ior = float(self.ior)
+        self._original_alpha_mode = int(self.alpha_mode)
+
+    def _reset(self):
+        """
+        Restore this material to its original (un-scrambled) values.
+        Only used for AI training.
+        """
+
+        self.base_color = self._original_base_color.copy()
+        self.roughness = set_f4(self._original_roughness)
+        self.metallic = set_f4(self._original_metallic)
+        self.emissive_color = self._original_emissive_color.copy()
+        self.emissive_strength = self._original_emissive_strength
+        self.has_emission = set_i4(1 if self._original_has_emission else 0)
+        self.transmission = set_f4(self._original_transmission)
+        self.ior = set_f4(self._original_ior)
+        self.alpha_mode = set_f4(self._original_alpha_mode)
+
+    def scramble(self):
+        """
+        Randomize material properties.
+        Only used for AI training.
+        """
+
+        self._reset()
+
+        self.base_color[:3] = np.random.uniform(0, 1, 3).astype(f4)
+        if np.random.rand() < 0.1:
+            self.base_color[-1] = set_f4(np.random.uniform(0.1, 0.9))
+            self.alpha_mode = 2 # BLEND
+        
+        self.roughness = set_f4(np.random.uniform(0, 1))
+        self.metallic = set_f4(np.random.uniform(0, 1))
+
+        if self._original_has_emission:
+            self.emissive_color = np.random.uniform(0, 1, 3).astype(f4)
+            self.emissive_strength *= set_f4(np.random.uniform(0.1, 10))
+
+        if np.random.rand() < 0.3:
+            self.transmission = set_f4(np.random.uniform(0, 1))
+            self.ior = set_f4(np.random.uniform(1, 2.4))
+
 
 class HDRI:
     def __init__(self, hdri_path):
-        img = cv2.imread(hdri_path, cv2.IMREAD_UNCHANGED)
-        # Convert from OpenCV default format of BGR color to RGB color
-        self.img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        
-        self.height, self.width, self.channels = self.img.shape
-        self.img_bytes = self.img.tobytes()
+        if hdri_path:
+            img = cv2.imread(hdri_path, cv2.IMREAD_UNCHANGED)
+            # Convert from OpenCV default format of BGR color to RGB color
+            self.img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            
+            self.height, self.width, self.channels = self.img.shape
+            self.img_bytes = self.img.tobytes()
+
+        else:
+            self.height, self.width, self.channels = 1, 1, 3
+            self.img = np.full((self.height, self.width, self.channels), settings.path_tracing.default_hdri_color, dtype=f4)
+            self.img_bytes = self.img.tobytes()
 
         self.hdri_tex = None
 
@@ -236,14 +380,150 @@ class HDRI:
         if self.hdri_tex is not None:
             self.hdri_tex.release()
 
+    def snapshot_original(self):
+        """
+        Create a snapshot of the original image before scrambling.
+        Only used for AI training.
+        """
+        
+        self._original_img = self.img.copy()
+
+    def _reset(self):
+        """
+        Restore this HDRI to its original (un-scrambled) image.
+        Only used for AI training.
+        """
+
+        self.img = self._original_img.copy()
+        self.img_bytes = self.img.tobytes()
+
+    def scramble(self):
+        """
+        Randomize HDRI rotation, emissive strength, and color.
+        Only used for AI training.
+        """
+
+        self._reset()
+
+        random_rot = np.random.uniform(0, 2 * np.pi, 3).astype(f4)
+        random_exposure_factor = set_f4(np.random.uniform(0.1, 10))
+        random_color_factor = np.random.uniform(0, 2, 3).astype(f4)
+
+        u = (np.arange(self.width) + 0.5) / self.width
+        v = (np.arange(self.height) + 0.5) / self.height
+
+        theta, phi = self._uv_to_spherical(u, v)
+        x, y, z = self._spherical_to_cartesian(theta, phi)
+
+        rot_mat = self._rotation_matrix(*random_rot)
+        # Transform the matrix since numpy is row-major, the matrix is column-major
+        rotated = np.stack([x, y, z], axis=-1) @ rot_mat.T
+
+        x = rotated[..., 0]
+        y = rotated[..., 1]
+        z = rotated[..., 2]
+
+        theta, phi = self._cartesian_to_spherical(x, y, z)
+
+        u, v = self._spherical_to_uv(theta, phi)
+        x_map = (u * self.width).astype(f4)
+        y_map = (v * self.height).astype(f4)
+
+        rotated_img = cv2.remap(
+            self._original_img,
+            x_map, y_map,
+            interpolation=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_WRAP,
+        )
+
+        self.img = rotated_img * random_exposure_factor * random_color_factor
+        self.img_bytes = self.img.tobytes()
+
+        # Rebuild alias tables based on the new HDRI
+        self._build_hdri_distribution()
+
+    def _uv_to_spherical(self, u, v):
+        # Azimuthal [-π, π]
+        phi = (u - 0.5) * 2 * np.pi
+        # Zenith [0, π]
+        theta = v * np.pi
+
+        return theta, phi
+
+    def _spherical_to_cartesian(self, theta, phi):
+        theta_grid, phi_grid = np.meshgrid(theta, phi, indexing="ij")
+
+        x = np.sin(theta_grid) * np.cos(phi_grid)
+        y = np.cos(theta_grid)
+        z = np.sin(theta_grid) * np.sin(phi_grid)
+
+        return x, y, z
+
+    def _cartesian_to_spherical(self, x, y, z):
+        # Prevent floating point error
+        y = np.clip(y, -1, 1)
+
+        theta = np.arccos(y)
+        phi = np.arctan2(z, x)
+
+        return theta, phi
+
+    def _rotation_matrix(self, pitch_rad, yaw_rad, roll_rad):
+        p = pitch_rad
+        y = yaw_rad
+        r = roll_rad
+
+        R_pitch = np.array([
+            [1, 0, 0],
+            [0, np.cos(p), -np.sin(p)],
+            [0, np.sin(p), np.cos(p)]
+        ])
+
+        R_roll = np.array([
+            [np.cos(r), -np.sin(r), 0],
+            [np.sin(r), np.cos(r), 0],
+            [0, 0, 1]
+        ])
+
+        R_yaw = np.array([
+            [np.cos(y), 0, np.sin(y)],
+            [0, 1, 0],
+            [-np.sin(y), 0, np.cos(y)]
+        ])
+
+        return R_yaw @ R_pitch @ R_roll
+
+    def _spherical_to_uv(self, theta, phi):
+        u = phi / (2 * np.pi) + 0.5
+        v = theta / np.pi
+
+        return u, v
+
+    def update_img(self):
+        """
+        Update the HDRI image buffer after scrambling.
+        Only used for AI training.
+        """
+
+        self.hdri_tex.write(self.img_bytes)
+
+    def update_cdfs(self):
+        """
+        Update the CDF buffers after scrambling.
+        Only used for AI training.
+        """
+        
+        self.row_cdf_tex.write(self.row_cdf.tobytes())
+        self.col_cdf_tex.write(self.col_cdf.tobytes())
+
 
 class Scene:
     def __init__(self, scene_path):
         self.scene_path = scene_path
         self.scene_name = Path(scene_path).stem
 
-        self.scene_cache_path = get_cache_path(scene_path, file_paths.scene_cache, "scene")
-        self.bvh_cache_path = get_cache_path(scene_path, file_paths.bvh_cache, "bvh")
+        self.scene_cache_path = get_cache_path(scene_path, "scene")
+        self.bvh_cache_path = get_cache_path(scene_path, "bvh")
 
     def build(self):
         scene = trimesh.load(self.scene_path)
@@ -339,7 +619,7 @@ class Scene:
         self._compute_tangents()
 
         def to_array(tex_list):
-            width, height = render_settings.texture_size
+            width, height = settings.rendering.texture_size
             if not tex_list:
                 return np.zeros((0, height, width, 4), dtype=np.uint8)
             arr = np.zeros((len(tex_list), height, width, 4), dtype=np.uint8)
@@ -478,27 +758,16 @@ class Scene:
     
     def build_bvh(self):
         try:
-            with open(self.bvh_cache_path, "rb") as f:
-                self.bvh = pickle.load(f)
-            
+            cache_path = get_cache_path(self.scene_path, "bvh")
+
+            self.bvh = load_bvh_data(cache_path)
             self.num_bvh_nodes = self.bvh.nodes_used
-
-            print("Loaded BVH from cache")
         except:
-            start_time = time.perf_counter()
-            print("Building BVH...")
-
             bvh = BVH(self)
             self.bvh = bvh
             self.num_bvh_nodes = self.bvh.nodes_used
 
-            end_time = time.perf_counter()
-            print(f"BVH built in {end_time - start_time:.4f}s")
-
-            with open(self.bvh_cache_path, "wb") as f:
-                pickle.dump(bvh, f)
-            
-            print("BVH saved to cache")
+            save_bvh_data(bvh, self.bvh_cache_path)
     
     # Logic for parsing GLB files assisted by AI
     def _get_extensions(self):
@@ -636,7 +905,7 @@ class Scene:
             for img in tex_list:
                 data.extend(img.tobytes())
             
-            width, height = render_settings.texture_size
+            width, height = settings.rendering.texture_size
                 
             self.texture_arrays[name] = ctx.texture_array(
                 size=(width, height, len(tex_list)),
@@ -685,11 +954,113 @@ class Scene:
         if self.hdri is not None:
             self.hdri.release()
 
+    def snapshot_original_materials(self):
+        """
+        Create a snapshot of the original materials before scrambling.
+        Only used for AI training.
+        """
+        
+        for mat in self.materials:
+            mat.snapshot_original()
+
+    def scramble_materials(self):
+        """
+        Randomize all scene material properties and textures.
+        Only used for AI training.
+        """
+
+        num_base_color = len(self.base_color_textures)
+        num_roughness = len(self.roughness_textures)
+        num_metallic = len(self.metallic_textures)
+        num_normal = len(self.normal_textures)
+
+        for mat in self.materials:
+            mat.scramble()
+
+            # Base color texture randomization
+            if num_base_color > 0:
+                if np.random.rand() < 0.5:
+                    mat.base_color_tex_id = set_i4(np.random.randint(0, num_base_color))
+                    mat.has_base_color_tex = set_i4(1)
+                else:
+                    mat.base_color_tex_id = set_i4(-1)
+                    mat.has_base_color_tex = set_i4(0)
+
+            # Roughness texture randomization
+            if num_roughness > 0:
+                if np.random.rand() < 0.5: 
+                    mat.roughness_tex_id = set_i4(np.random.randint(0, num_roughness))
+                    mat.has_roughness_tex = set_i4(1)
+                else:
+                    mat.roughness_tex_id = set_i4(-1)
+                    mat.has_roughness_tex = set_i4(0)
+
+            # Metallic texture randomization
+            if num_metallic > 0:
+                if np.random.rand() < 0.5: 
+                    mat.metallic_tex_id = set_i4(np.random.randint(0, num_metallic))
+                    mat.has_metallic_tex = set_i4(1)
+                else:
+                    mat.metallic_tex_id = set_i4(-1)
+                    mat.has_metallic_tex = set_i4(0)
+
+            # Normal map randomization
+            if num_normal > 0:
+                if np.random.rand() < 0.5:
+                    mat.normal_tex_id = set_i4(np.random.randint(0, num_normal))
+                    mat.has_normal_tex = set_i4(1)
+                else:
+                    mat.normal_tex_id = set_i4(-1)
+                    mat.has_normal_tex = set_i4(0)
+
+        # Rebuild alias tables for light sampling based on newly scrambled emission values
+        self._find_emissive_triangles()
+    
+
+def save_bvh_data(bvh, cache_path):
+    # Note: numpy adds the file suffix automatically
+    np.savez_compressed(
+        cache_path,
+        aabb_mins=bvh.aabb_mins,
+        aabb_maxs=bvh.aabb_maxs,
+        left_child_indices=bvh.left_child_indices,
+        right_child_indices=bvh.right_child_indices,
+        first_tri_indices=bvh.first_tri_indices,
+        tri_counts=bvh.tri_counts,
+        is_leafs=bvh.is_leafs,
+        depths=bvh.depths,
+        tri_indices=bvh.tri_indices,
+        nodes_used=bvh.nodes_used,
+        max_depth=bvh.max_depth,
+    )
+
+
+def load_bvh_data(cache_path):
+    data = np.load(cache_path)
+
+    # Skip __init__ since it excepts a Scene object to build from
+    bvh = BVH.__new__(BVH)
+
+    bvh.aabb_mins = data["aabb_mins"]
+    bvh.aabb_maxs = data["aabb_maxs"]
+    bvh.left_child_indices = data["left_child_indices"]
+    bvh.right_child_indices = data["right_child_indices"]
+    bvh.first_tri_indices = data["first_tri_indices"]
+    bvh.tri_counts = data["tri_counts"]
+    bvh.is_leafs = data["is_leafs"]
+    bvh.depths = data["depths"]
+    bvh.tri_indices = data["tri_indices"]
+    bvh.nodes_used = int(data["nodes_used"])
+    bvh.max_depth = int(data["max_depth"])
+
+    return bvh
+
 
 def save_scene_data(scene, cache_path):
     # Unduplicate material textures by stripping texture images
     scene.strip_material_images()
 
+    # Note: numpy adds the file suffix automatically
     np.savez_compressed(
         cache_path,
         vertices=scene.vertices,
@@ -762,28 +1133,15 @@ def load_scene_data(scene, cache_path):
 
 
 def load_scene(scene_path):
-    # Note: numpy adds the file suffix automatically
-    scene_cache_path = get_cache_path(scene_path, file_paths.scene_cache, "scene").with_suffix(".npz")
+    scene_cache_path = get_cache_path(scene_path, "scene")
 
     scene = Scene(scene_path)
 
     try:
         load_scene_data(scene, scene_cache_path)
-
-        print("Loaded scene data from cache")
     except:
-        print("Building scene...")
-        start_time = time.perf_counter()
-
         scene.build()
 
-        end_time = time.perf_counter()
-        print(f"Scene built in {end_time - start_time:.4f}s")
-
-        print("Scene saving to cache...")
-
         save_scene_data(scene, scene_cache_path)
-        
-        print("Scene data saved to cache")
     
     return scene

@@ -125,6 +125,8 @@ struct SurfaceInteraction {
     bool isBackFace;
     // Only used for emissive triangles
     float area;
+    // Track BVH node checks
+    int nodesVisited;
 };
 
 struct VisibilityInteraction {
