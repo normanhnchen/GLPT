@@ -38,7 +38,8 @@ def _get_file_fingerprint(path):
 
 
 def _get_bvh_fingerprint():
-    h = hashlib.blake2b(str(settings.bvh).encode(), digest_size=4)
+    bvh_values = (settings.bvh.max_depth, settings.bvh.sah_bins, settings.bvh.max_leaf_size)
+    h = hashlib.blake2b(repr(bvh_values).encode(), digest_size=4)
     return h.hexdigest()
 
 def _get_scene_fingerprint():
@@ -48,7 +49,7 @@ def _get_scene_fingerprint():
 
 def remove_stale_cache():
     valid_fingerprints = []
-    for scene_file in Path(settings.file_paths.scenes).glob("*"):
+    for scene_file in Path(settings.file_paths.scenes).rglob("*"):
         if scene_file.is_file():
             valid_fingerprints.append(_get_file_fingerprint(scene_file))
 
@@ -59,7 +60,7 @@ def remove_stale_cache():
 
     # Scene Caches
     # ------------
-    for cache_file in Path(settings.file_paths.cache.scenes).glob("*.npz"):
+    for cache_file in Path(settings.file_paths.cache.scenes).rglob("*.npz"):
         if cache_file.is_file():
             stem = cache_file.stem
             if stem.startswith("scene_"):
@@ -70,7 +71,7 @@ def remove_stale_cache():
 
     # BVH Caches
     # ----------
-    for cache_file in Path(settings.file_paths.cache.bvhs).glob("*.npz"):
+    for cache_file in Path(settings.file_paths.cache.bvhs).rglob("*.npz"):
         if cache_file.is_file():
             stem = cache_file.stem
             if stem.startswith("bvh_"):
