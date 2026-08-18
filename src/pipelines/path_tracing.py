@@ -28,11 +28,12 @@ class PathTracingPipeline:
             self.pt_state.debug.mode == 0 # Off
         )
 
+        override_texture = None
+
         if is_denoising:
             self.pt_state.denoise(self.ai_denoiser)
 
-            # Draw to screen
-            self.pt_state.denoising.saved_denoised.use(location=0)
+            override_texture = self.pt_state.denoising.saved_denoised
 
             # Prevent resizing saved texture
             # Clips the image
@@ -50,4 +51,4 @@ class PathTracingPipeline:
             if self.pt_state.debug.mode == 3:
                 self.depth_debug_pass.render()
 
-        self.final_pass.render()
+        self.final_pass.render(override_texture=override_texture)

@@ -213,6 +213,7 @@ class DenoiseState:
     def reset(self):
         self._release_buffer()
         self.saved_denoised = None
+        self.should_denoise = False
 
 
 class PTState:

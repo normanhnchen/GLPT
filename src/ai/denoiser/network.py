@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
+
 from src.dtypes import *
+from src.settings import *
 
 
 # https://dl.acm.org/doi/10.1145/3072959.3073708
@@ -12,8 +14,8 @@ class ConvBlock(nn.Module):
 
         # 3x3 convolutions
         # Padding of 1 to keep the output the same size
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, device=AI_DEVICE)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, device=AI_DEVICE)
         # inplace=true to overwrite tensor; optimization
         self.relu1 = nn.ReLU(inplace=True)
         self.relu2 = nn.ReLU(inplace=True)
@@ -46,7 +48,7 @@ class DecoderBlock(nn.Module):
         super().__init__()
 
         # kernel_size=2 and stride=2 to upsample by 2 times
-        self.up = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2)
+        self.up = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2, device=AI_DEVICE)
         self.conv = ConvBlock(in_channels, out_channels)
     
     def forward(self, x, skip_connection):
@@ -77,7 +79,7 @@ class UNet(nn.Module):
         self.d4 = DecoderBlock(128, 64)
 
         # kernel_size=1 to reduce the 64 feature channels without reducing the image size
-        self.conv_out = nn.Conv2d(64, out_channels, kernel_size=1)
+        self.conv_out = nn.Conv2d(64, out_channels, kernel_size=1, device=AI_DEVICE)
     
     def forward(self, x):
         x0 = self.conv_in(x)
@@ -149,18 +151,21 @@ class KPCN(nn.Module):
         pad = nn.ReflectionPad2d([pad_size, pad_size, pad_size, pad_size])
         # (B, 3, H, W) -> # (B, 3, H+2*pad, W+2*pad)
         padded = pad(combined)
-        
-        # (B, 3, H+2*pad, W+2*pad) -> (B, 3*K*K, H*W)
-        patches = nn.functional.unfold(padded, K)
-        # (B, 3*K*K, H*W) -> (B, 3, K*K, H, W)
-        patches = patches.view(B, 3, K * K, H, W)
+
+        output = torch.zeros([B, 3, K * K, H, W], device=AI_DEVICE, dtype=torch.float32)
+        # (B, 3, H+2*pad, W+2*pad) -> (B, 3, K*K, H, W)
+        idx = 0
+        for i in range(K):
+            for j in range(K):
+                output[:, :, idx, :, :] = padded[:, :, i:i + H, j:j + W]
+                idx += 1
 
         # Add batch dimension at index 1
         # (B, K*K, H, W) -> (B, 1, K*K, H, W)
         w = weights.unsqueeze(1)
 
         # Apply weights to the combined image RGB channels
-        return (patches * w).sum(dim=2) # (B, 3, H, W)
+        return (output * w).sum(dim=2) # (B, 3, H, W)
 
     def denoise(self, combined, albedo, normal, depth, denoised):
         with torch.no_grad():
@@ -174,7 +179,7 @@ class KPCN(nn.Module):
             x = torch.cat([combined, albedo, normal, depth], dim=1)
 
             output = self(x, combined)
-            return self._tensor_to_tex(output, denoised)
+            self._tensor_to_tex(output, denoised)
     
     def _tex_to_tensor(self, tex, keep_channels=None):
         # bytearray() to copy the original as it is not writable (PyTorch requirement)
@@ -195,7 +200,7 @@ class KPCN(nn.Module):
         # Add batch dimension at index 0 (C, H, W) -> (1, C, H, W)
         t = t.unsqueeze(0)
 
-        return t
+        return t.to(AI_DEVICE)
     
     def _tensor_to_tex(self, tensor, denoised_tex):
         # Reshape to OpenGL texture data (H, W, C)
@@ -203,5 +208,5 @@ class KPCN(nn.Module):
         
         t = t.permute(1, 2, 0).contiguous()
         
-        data = t.numpy().tobytes()
+        data = t.cpu().numpy().tobytes()
         denoised_tex.write(data)

@@ -26,11 +26,12 @@ class FinalPass:
         self.final_output_state = final_output_state
         self.quad = FullScreenQuad(ctx, shader)
 
-    def render(self):
+    def render(self, override_texture=None):
         self.final_output_state.output_fbo.use()
 
         # Draw to screen
-        self.pt_state.framebuffers.combined.use(location=0)
+        texture = override_texture if override_texture is not None else self.pt_state.framebuffers.combined
+        texture.use(location=0)
 
         uniform_dict = _compute_uniforms()
         _set_uniforms(self.shader.prog, uniform_dict)
