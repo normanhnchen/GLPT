@@ -37,6 +37,25 @@ def exr_to_tensor(exr_img, keep_channels=None):
     return t
 
 
+def save_checkpoint(checkpoint, path):
+    """
+    Saves to the checkpoing temp file then replaces the actual checkpoint file.
+    Prevents file corruption when breaking in the terminal during the middle of a normal save.
+    """
+
+    path = Path(path)
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+
+    try:
+        with tmp_path.open("wb") as f:
+            torch.save(checkpoint, f)
+        tmp_path.replace(path)
+    
+    except:
+        tmp_path.unlink(missing_ok=True)
+        raise
+
+
 class DenoiseDataset(Dataset):
     def __init__(self, renders_path, patch_size=256):
         self.combined_path = renders_path / "combined/"
@@ -181,6 +200,6 @@ for epoch in range(starting_epoch, epochs):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         curr_checkpoint["best_val_loss"] = best_val_loss
-        torch.save(curr_checkpoint, settings.file_paths.denoiser.checkpoint)
+        save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.checkpoint)
 
-    torch.save(curr_checkpoint, settings.file_paths.denoiser.last_checkpoint)
+    save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.last_checkpoint)
