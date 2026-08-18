@@ -175,10 +175,17 @@ class KPCN(nn.Module):
             albedo = self._tex_to_tensor(albedo, keep_channels=3) # RGBA -> RGB
             normal = self._tex_to_tensor(normal, keep_channels=3) # RGBA -> RGB
             depth = self._tex_to_tensor(depth, keep_channels=1) # RGBA -> R
+
+            combined = self.compress(combined)
+            albedo = self.compress(albedo)
+            normal = self.compress(normal)
+            depth = self.compress(depth)
+
             # 10 channels
             x = torch.cat([combined, albedo, normal, depth], dim=1)
 
             output = self(x, combined)
+            output = self.decompress(output)
             self._tensor_to_tex(output, denoised)
     
     def _tex_to_tensor(self, tex, keep_channels=None):
@@ -210,3 +217,9 @@ class KPCN(nn.Module):
         
         data = t.cpu().numpy().tobytes()
         denoised_tex.write(data)
+
+    def compress(self, x):
+        return torch.log1p(x.clamp(min=0))
+
+    def decompress(self, x):
+        return torch.expm1(x).clamp(min=0)

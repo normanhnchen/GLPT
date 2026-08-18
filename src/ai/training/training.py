@@ -139,8 +139,10 @@ for epoch in range(starting_epoch, epochs):
     epoch_loss = 0
     for x, target in train_loader:
         x = x.to(AI_DEVICE)
+        x = denoiser.compress(x)
         combined = x[:, :3].to(AI_DEVICE)
         target = target.to(AI_DEVICE)
+        target = denoiser.compress(target)
 
         optim.zero_grad()
         prediction = denoiser(x, combined)
@@ -157,8 +159,10 @@ for epoch in range(starting_epoch, epochs):
     with torch.no_grad():
         for x, target in val_loader:
             x = x.to(AI_DEVICE)
+            x = denoiser.compress(x)
             combined = x[:, :3].to(AI_DEVICE)
             target = target.to(AI_DEVICE)
+            target = denoiser.compress(target)
 
             prediction = denoiser(x, combined)
             
