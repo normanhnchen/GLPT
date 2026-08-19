@@ -1,6 +1,8 @@
 {
     "ai_training": {
-        "mode": "off"
+        "mode": "off",
+        "target_samples": 4096,
+        "noisy_samples_list": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     },
     "bvh": {
         "max_depth": 32,

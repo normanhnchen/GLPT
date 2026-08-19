@@ -81,6 +81,8 @@ def run_app():
 
         scene.scramble_materials()
         scene.hdri.scramble()
+
+        settings.ai_training.get_new_noisy_samples()
         
         if settings.ai_training.mode != "camera_setup":
             camera_capture_state.load_next_state()

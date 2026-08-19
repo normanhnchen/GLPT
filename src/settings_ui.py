@@ -463,13 +463,19 @@ class PathTracingUI:
         self.transmission_bounces_slider.plus_button(on_change)
         self.transmission_bounces_slider.draw_label()
         
-    def draw_max_samples_slider(self):
+    def draw_max_samples_slider(self, ai_training_mode=False):
         def on_change(new_val):
-            settings.path_tracing.max_samples = new_val
+            if ai_training_mode:
+                settings.ai_training.target_samples = new_val
+            else:
+                settings.path_tracing.max_samples = new_val
             self.pt_state.restart_render()
             settings_changed()
-        
-        self.max_samples_slider.slider(settings.path_tracing.max_samples)
+
+        if ai_training_mode:
+            self.max_samples_slider.slider(settings.ai_training.target_samples)
+        else:
+            self.max_samples_slider.slider(settings.path_tracing.max_samples)
         self.max_samples_slider.dragging_logic(on_change)
         self.max_samples_slider.minus_button(on_change)
         self.max_samples_slider.plus_button(on_change)
@@ -1428,6 +1434,11 @@ class SettingsUI:
                 if imgui.tree_node("Rendering"):
                     self.draw_rendering_ui()
 
+                    imgui.tree_pop()
+
+                if imgui.tree_node("Path Tracing"):
+                    self.draw_path_tracing_ui(allow_modes=False)
+                        
                     imgui.tree_pop()
                 
                 if imgui.tree_node("Camera UI"):

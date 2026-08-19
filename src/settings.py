@@ -3,6 +3,7 @@ import numpy as np
 import glm
 from pathlib import Path
 import torch
+import random
 
 
 class ScreenSettings:
@@ -474,6 +475,12 @@ class AITrainingSettings:
 
     def _load_internal(self):
         self.mode = self.internal_config["mode"]
+        self.target_samples = self.internal_config["target_samples"]
+        self.noisy_samples_list = self.internal_config["noisy_samples_list"]
+        self.noisy_samples = random.choice(self.noisy_samples_list)
+
+    def get_new_noisy_samples(self):
+        self.noisy_samples = random.choice(self.noisy_samples_list)
 
     def reset(self):
         self._load_internal()

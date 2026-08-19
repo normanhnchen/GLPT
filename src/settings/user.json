@@ -33,9 +33,9 @@
             "renders": "src\\assets\\renders\\ai_training",
             "scenes": "src\\assets\\models\\ai_training"
         },
-        "hdri": false,
+        "hdri": "src\\assets\\hdris\\ai_training\\IndoorEnvironmentHDRI012_4K_HDR.exr",
         "renders": "src\\assets\\renders\\images",
-        "scene": "src\\assets\\models\\alpha_test.glb",
+        "scene": "src\\assets\\models\\ai_training\\scene_11.glb",
         "scenes": "src\\assets\\models"
     },
     "path_tracing": {
@@ -59,14 +59,14 @@
         "tonemap": "AgX"
     },
     "rendering": {
-        "mode": "rasterization",
+        "mode": "path_tracing",
         "texture_size": [
             1024,
             1024
         ],
         "tiles": {
             "x": 4,
-            "y": 2
+            "y": 4
         }
     },
     "screen": {
