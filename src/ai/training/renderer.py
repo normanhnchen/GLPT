@@ -295,4 +295,5 @@ class RasterShaders:
 
 
 if __name__ == "__main__":
-    main()
+    for i in range(settings.ai_training.num_pass_throughs):
+        main()

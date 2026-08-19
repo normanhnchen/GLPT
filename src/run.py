@@ -400,10 +400,12 @@ class AITrainingDialog(QDialog):
 
     def run_camera_setup(self):
         settings.ai_training.mode = "camera_setup"
+        settings.rendering.mode = "rasterization"
         QApplication.instance().quit()
 
     def run_auto_render(self):
         settings.ai_training.mode = "render"
+        settings.rendering.mode = "path_tracing"
         QApplication.instance().quit()
 
 

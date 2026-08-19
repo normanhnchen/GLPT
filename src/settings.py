@@ -447,7 +447,6 @@ class RenderingSettings:
         self.tiles = self.Tiles(self.internal_config["tiles"], self.user_config["tiles"])
 
     def _load_user(self):
-        self.mode = self.user_config["mode"]
         self.texture_size = self.user_config["texture_size"]
         self.tiles = self.Tiles(self.internal_config["tiles"], self.user_config["tiles"])
 
@@ -478,6 +477,7 @@ class AITrainingSettings:
         self.target_samples = self.internal_config["target_samples"]
         self.noisy_samples_list = self.internal_config["noisy_samples_list"]
         self.noisy_samples = random.choice(self.noisy_samples_list)
+        self.num_pass_throughs = self.internal_config["num_pass_throughs"]
 
     def get_new_noisy_samples(self):
         self.noisy_samples = random.choice(self.noisy_samples_list)

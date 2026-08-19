@@ -35,7 +35,7 @@
         },
         "hdri": "src\\assets\\hdris\\ai_training\\IndoorEnvironmentHDRI012_4K_HDR.exr",
         "renders": "src\\assets\\renders\\images",
-        "scene": "src\\assets\\models\\ai_training\\scene_11.glb",
+        "scene": "src\\assets\\models\\cornell_box.glb",
         "scenes": "src\\assets\\models"
     },
     "path_tracing": {
@@ -44,7 +44,7 @@
         "geometry_mode": 0,
         "max_direct_luminance": 10.0,
         "max_indirect_luminance": 10.0,
-        "max_samples": 4096,
+        "max_samples": 100,
         "mis_mode": 0,
         "samples_per_pixel": 1,
         "specular_bounces": 4,
@@ -65,8 +65,8 @@
             1024
         ],
         "tiles": {
-            "x": 4,
-            "y": 4
+            "x": 1,
+            "y": 1
         }
     },
     "screen": {
