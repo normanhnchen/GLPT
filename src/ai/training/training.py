@@ -87,6 +87,9 @@ class DenoiseDataset(Dataset):
         depth = exr_to_tensor(depth, keep_channels=1)
         target = exr_to_tensor(target, keep_channels=3)
 
+        # Normalize depth via the inverse depth method
+        depth = denoiser.normalize_depth(depth)
+
         x = torch.cat([combined, albedo, normal, depth])
 
         # Get random image patch
@@ -120,6 +123,20 @@ class DenoiseDataset(Dataset):
             target = torch.rot90(target, k, dims=[1, 2])
         
         return x, target
+
+
+def _compress(x, target):
+    combined = x[:, :3]
+    albedo = x[:, 3:6]
+    normal = x[:, 6:9]
+    depth = x[:, 9:10]
+
+    combined = denoiser.compress(combined)
+    target = denoiser.compress(target)
+
+    x = torch.cat([combined, albedo, normal, depth], dim=1)
+    return x, target
+
 
 full_dataset = DenoiseDataset(settings.file_paths.ai_training.renders)
 # Split 10% of the dataset to be validation cases
@@ -158,10 +175,9 @@ for epoch in range(starting_epoch, epochs):
     epoch_loss = 0
     for x, target in train_loader:
         x = x.to(AI_DEVICE)
-        x = denoiser.compress(x)
-        combined = x[:, :3].to(AI_DEVICE)
         target = target.to(AI_DEVICE)
-        target = denoiser.compress(target)
+        x, target = _compress(x, target)
+        combined = x[:, :3].to(AI_DEVICE)
 
         optim.zero_grad()
         prediction = denoiser(x, combined)
@@ -178,10 +194,9 @@ for epoch in range(starting_epoch, epochs):
     with torch.no_grad():
         for x, target in val_loader:
             x = x.to(AI_DEVICE)
-            x = denoiser.compress(x)
-            combined = x[:, :3].to(AI_DEVICE)
             target = target.to(AI_DEVICE)
-            target = denoiser.compress(target)
+            x, target = _compress(x, target)
+            combined = x[:, :3].to(AI_DEVICE)
 
             prediction = denoiser(x, combined)
             

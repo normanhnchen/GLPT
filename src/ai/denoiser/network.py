@@ -176,11 +176,11 @@ class KPCN(nn.Module):
             normal = self._tex_to_tensor(normal, keep_channels=3) # RGBA -> RGB
             depth = self._tex_to_tensor(depth, keep_channels=1) # RGBA -> R
 
-            combined = self.compress(combined)
-            albedo = self.compress(albedo)
-            normal = self.compress(normal)
-            depth = self.compress(depth)
+            # Normalize depth via the inverse depth method
+            depth = self.normalize_depth(depth)
 
+            combined = self.compress(combined)
+            
             # 10 channels
             x = torch.cat([combined, albedo, normal, depth], dim=1)
 
@@ -223,3 +223,10 @@ class KPCN(nn.Module):
 
     def decompress(self, x):
         return torch.expm1(x).clamp(min=0)
+
+    def normalize_depth(self, depth):
+        # Ray misses are set to -1.0 in the path tracer
+        depth[depth == -1.0] = torch.inf
+
+        # Inverse depth
+        return 1 / (depth + 1e-4)
