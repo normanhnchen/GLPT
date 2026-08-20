@@ -956,8 +956,9 @@ class DebugUI:
             "Depth", # 3
             "Direct", # 4
             "Indirect", # 5
-            "BVH Depth", # 6
-            "BVH Bounds", # 7
+            "Demodulated", # 6
+            "BVH Depth", # 7
+            "BVH Bounds", # 8
         ]
 
         def on_change(new_val):
@@ -1423,6 +1424,11 @@ class SettingsUI:
                     self.draw_screen_ui()
 
                     imgui.tree_pop()
+                
+                if imgui.tree_node("Debug"):
+                    self.draw_debug_ui()
+
+                    imgui.tree_pop()
 
                 if imgui.tree_node("AI Training"):
                     self.draw_ai_training_ui()
@@ -1453,6 +1459,11 @@ class SettingsUI:
                 
                 if imgui.tree_node("Screen"):
                     self.draw_screen_ui()
+
+                    imgui.tree_pop()
+                
+                if imgui.tree_node("Debug"):
+                    self.draw_debug_ui()
 
                     imgui.tree_pop()
                     

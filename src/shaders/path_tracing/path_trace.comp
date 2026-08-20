@@ -241,7 +241,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             } else if (debugMode == 3) { // Depth
                 pathSample.combined = vec3(pathSample.depth);
                 break;
-            } else if (debugMode == 6) { // BVH Depth
+            } else if (debugMode == 7) { // BVH Depth
                 pathSample.combined = GetBvhDepthColor(si.nodesVisited, MAX_NODES_VISITED);
                 break;
             }
@@ -288,6 +288,13 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         pathSample.combined = directRadiance;
     } else if (debugMode == 5) { // Indirect
         pathSample.combined = indirectRadiance;
+    } else if (debugMode == 6) { // Demodulated
+        if (pathSample.depth < 0.0) {
+            pathSample.combined = directRadiance + indirectRadiance;
+        } else {
+            vec3 safeAlbedo = max(pathSample.baseCol, vec3(EPSILON));
+            pathSample.combined = (directRadiance + indirectRadiance) / safeAlbedo;
+        }
     }
 
     return pathSample;

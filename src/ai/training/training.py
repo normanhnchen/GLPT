@@ -131,6 +131,9 @@ def _compress(x, target):
     normal = x[:, 6:9]
     depth = x[:, 9:10]
 
+    combined = denoiser.demodulate(combined, albedo)
+    target = denoiser.demodulate(target, albedo)
+
     combined = denoiser.compress(combined)
     target = denoiser.compress(target)
 

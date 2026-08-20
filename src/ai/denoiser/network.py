@@ -179,13 +179,15 @@ class KPCN(nn.Module):
             # Normalize depth via the inverse depth method
             depth = self.normalize_depth(depth)
 
+            combined = self.demodulate(combined, albedo)
             combined = self.compress(combined)
-            
+
             # 10 channels
             x = torch.cat([combined, albedo, normal, depth], dim=1)
 
             output = self(x, combined)
             output = self.decompress(output)
+            output = self.remodulate(output, albedo)
             self._tensor_to_tex(output, denoised)
     
     def _tex_to_tensor(self, tex, keep_channels=None):
@@ -230,3 +232,9 @@ class KPCN(nn.Module):
 
         # Inverse depth
         return 1 / (depth + 1e-4)
+
+    def demodulate(self, x, albedo):
+        return x / albedo.clamp(min=1e-4)
+
+    def remodulate(self, x, albedo):
+        return x * albedo.clamp(min=1e-4)
