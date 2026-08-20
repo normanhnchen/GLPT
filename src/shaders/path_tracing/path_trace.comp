@@ -355,7 +355,7 @@ void main() {
     sampleBaseColor /= float(samplesPerPixel);
     sampleNormal /= float(samplesPerPixel);
     float sampleHitFraction = sampleHitCount / float(samplesPerPixel);
-    sampleDepth = sampleHitCount > 0.0 ? sampleDepth / sampleHitCount : 0.0;
+    sampleDepth = sampleHitCount > 0.0 ? sampleDepth / sampleHitCount : -1.0;
 
     vec3 oldCombined = imageLoad(combinedPass, pixelCoords).rgb;
     vec3 oldBaseColor = imageLoad(baseColorPass, pixelCoords).rgb;
@@ -382,8 +382,17 @@ void main() {
         finalCombined = mix(oldCombined.rgb, sampleCombined, weight);
         finalBaseCol = mix(oldBaseColor.rgb, sampleBaseColor, weight);
         finalNormal = mix(oldNormal.rgb, sampleNormal, weight);
-        finalDepth = mix(oldDepth.r, sampleDepth, weight);
         finalHitFraction = mix(oldDepth.g, sampleHitFraction, weight);
+
+        float oldHits = oldDepth.g * float(totalSamples);
+        float newHits = oldHits + sampleHitCount;
+
+        if (sampleHitCount > 0.0) {
+            float hitWeight = sampleHitCount / newHits;
+            finalDepth = mix(oldDepth.r, sampleDepth, hitWeight);
+        } else {
+            finalDepth = oldDepth.r;
+        }
     }
     
     imageStore(combinedPass, pixelCoords, vec4(finalCombined, 1.0));
