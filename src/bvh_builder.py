@@ -1,7 +1,7 @@
 import threading
 
 
-class BVHBuilder:
+class BVHBackgroundBuilder:
     def __init__(self, scene):
         self.scene = scene
         self._thread = threading.Thread(target=self._build, daemon=True)

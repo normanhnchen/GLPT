@@ -9,77 +9,9 @@ flat in int matId;
 
 out vec4 fragColor;
 
-struct Material {
-    // Basic material
-    vec3 baseCol;
-    float alpha;
-    vec3 emissive;
-    float metallic;
-    float roughness;
-    float ao;
-    // Settings
-    int alphaMode; // 0=OPAQUE, 1=MASK, or 2=BLEND
-    float alphaCutoff;
-    int doubleSided;
-    // Flags
-    int hasEmission;
-    int hasBaseColTex;
-    int hasEmissiveTex;
-    int hasRoughTex;
-    int hasMetalTex;
-    int hasNormalTex;
-    int hasOcclTex;
-    // Texture IDs
-    int baseTexId;
-    int emissiveTexId;
-    int roughTexId;
-    int metalTexId;
-    int normalTexId;
-    int occlTexId;
-    // glTF extensions
-    float emissiveStrength;
-    float transmission;
-    float ior;
-    float pad1;
-    float pad2;
-    float pad3;
-};
 
-struct Light {
-    vec3 col;
-    int type; // Point: 0, directional: 1, spot: 2
-    vec3 pos;
-    float intensity;
-    vec3 dir;
-    float range;
-    int isSpot;
-    float innerConeAngle;
-    float outerConeAngle;
-    float pad1;
-};
+#include "src/shaders/common.glsl"
 
-layout (std430, binding = 2) buffer MaterialBuffer {
-    Material materials[];
-};
-
-layout (std430, binding = 3) buffer LightBuffer {
-    Light lights[];
-};
-
-layout(binding = 0) uniform sampler2DArray baseColorTextures;
-layout(binding = 1) uniform sampler2DArray emissiveTextures;
-layout(binding = 2) uniform sampler2DArray roughnessTextures;
-layout(binding = 3) uniform sampler2DArray metallicTextures;
-layout(binding = 4) uniform sampler2DArray normalTextures;
-layout(binding = 5) uniform sampler2DArray occlusionTextures;
-
-layout(binding = 6) uniform sampler2D hdri;
-
-#define PI 3.14159265359
-
-uniform int numLights;
-
-uniform vec3 cameraPos;
 
 // https://learnopengl.com/PBR/Theory
 float DistributionGGX(vec3 N, vec3 H, float a) {
@@ -120,38 +52,34 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0) {
 // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md
 // https://www.pbr-book.org/4ed/Light_Sources/Point_Lights
 void SampleLight(Light light, out vec3 L, out vec3 radiance) {
-    // Directional
-    if (light.type == 1) {
-        L = normalize(-light.dir);
-        radiance = light.col * light.intensity;
-        return;
-    }
-
     L = normalize(light.pos - worldPos);
     float dist = length(light.pos - worldPos);
-
     // Prevent division by zero
     float attenuation = 1.0 / max(dist * dist, 0.0001);
 
     // Point
     if (light.type == 0) {
         radiance = light.col * light.intensity * attenuation;
-        radiance /= 4.0 * PI * 100.0;
         return;
-    } 
-    
+    }
+    // Directional
+    else if (light.type == 1) {
+        L = normalize(-light.d);
+        radiance = light.col * light.intensity;
+        return;
+    }
     // Spot
+    else if (light.type == 2) {
+        float lightAngleScale = 1.0 / max(0.001, cos(light.innerConeAngle) - cos(light.outerConeAngle));
+        float lightAngleOffset = -cos(light.outerConeAngle) * lightAngleScale;
 
-    float lightAngleScale = 1.0 / max(0.001, cos(light.innerConeAngle) - cos(light.outerConeAngle));
-    float lightAngleOffset = -cos(light.outerConeAngle) * lightAngleScale;
+        float cd = dot(normalize(-light.d), L);
+        float angularAttenuation = clamp(cd * lightAngleScale + lightAngleOffset, 0.0, 1.0);
+        angularAttenuation *= angularAttenuation;
+        attenuation *= angularAttenuation;
 
-    float cd = dot(normalize(-light.dir), L);
-    float angularAttenuation = clamp(cd * lightAngleScale + lightAngleOffset, 0.0, 1.0);
-    angularAttenuation *= angularAttenuation;
-    attenuation *= angularAttenuation;
-
-    radiance = light.col * light.intensity * attenuation;
-    radiance /= 4.0 * PI * 100.0;
+        radiance = light.col * light.intensity * attenuation;
+    }
 }
 
 vec3 SampleHDRI(vec3 dir) {
@@ -269,6 +197,10 @@ void main() {
     }
 
     vec3 color = SamplePBR(N, mat);
+
+    if (mat.hasEmission == 1) {
+        color += mat.emissive * mat.emissiveStrength;
+    }
     
     fragColor = vec4(color, 1.0);
 }

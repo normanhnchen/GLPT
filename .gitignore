@@ -1,7 +1,11 @@
 # Assets & Cache
 *.pkl
+*.npz
+*.pt
 *.glb
 *.exr
+*.png
+*.tmp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
