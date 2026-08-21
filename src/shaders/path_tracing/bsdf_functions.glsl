@@ -5,24 +5,27 @@
 #include "src/shaders/common.glsl"
 
 
-// https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
+// Adaptation from "Cosine-Weighted Hemisphere Sampling," Physically Based Rendering: From Theory to Implementation
+// https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#Cosine-WeightedHemisphereSampling
 vec3 CosineSampleHemisphere(inout uvec3 rng, SurfaceInteraction si) {
-    vec3 Xi = Pcg3d(rng);
-    float Xi1 = Xi.x;
-    float Xi2 = Xi.y;
+    vec2 xy = UniformSampleUnitDisk(rng);
+    float x = xy.x;
+    float y = xy.y;
 
-    float theta = acos(sqrt(Xi1));
-    float phi = 2.0 * PI * Xi2;
-    
-    // Sample in local space
-    vec3 wo = vec3(
-        sin(theta) * cos(phi),
-        sin(theta) * sin(phi),
-        cos(theta)
-    );
+    // Malley's Method
+    float z = sqrt(max(1.0 - x * x - y * y, 0.0));
+
+    vec3 wo = vec3(x, y, z);
 
     // Transform to world space
     return normalize(si.localToWorld * wo);
+}
+
+// Adaptation from "Cosine-Weighted Hemisphere Sampling," Physically Based Rendering: From Theory to Implementation
+// https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#Cosine-WeightedHemisphereSampling
+float CosineSampleHemispherePdf(vec3 n, vec3 wi) {
+    float cosTheta = max(dot(n, wi), 0.0);
+    return cosTheta / PI;
 }
 
 // https://learnopengl.com/PBR/Theory
@@ -184,11 +187,6 @@ float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
     return (D * G1) / max((4.0 * nDotWo), 1e-4);
 }
 
-float CosineSamplePdf(vec3 n, vec3 wi) {
-    float nDotWi = max(dot(n, wi), 0.0);
-    return nDotWi / PI;
-}
-
 // https://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf
 float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta) {
     float nDotWo = abs(dot(n, wo));
@@ -312,9 +310,9 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
         if (specularMode == 0) {
             specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * lobeProbs.specular;
         } else if (specularMode == 1) {
-            specularPdf = CosineSamplePdf(ns, wi) * lobeProbs.specular;
+            specularPdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.specular;
         }
-        float diffusePdf = CosineSamplePdf(ns, wi) * lobeProbs.diffuse;
+        float diffusePdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.diffuse;
         float bsdfPdf = specularPdf + diffusePdf;
 
         bsdfSample.pdf = bsdfPdf;
@@ -384,9 +382,9 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 if (specularMode == 0) {
                     specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * lobeProbs.specular;
                 } else if (specularMode == 1) {
-                    specularPdf = CosineSamplePdf(ns, wi) * lobeProbs.specular;
+                    specularPdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.specular;
                 }
-                float diffusePdf = CosineSamplePdf(ns, wi) * lobeProbs.diffuse;
+                float diffusePdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.diffuse;
                 float bsdfPdf = specularPdf + diffusePdf;
 
                 bsdfSample.pdf = bsdfPdf;
@@ -443,9 +441,9 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             if (specularMode == 0) {
                 specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * lobeProbs.specular;
             } else if (specularMode == 1) {
-                specularPdf = CosineSamplePdf(ns, wi) * lobeProbs.specular;
+                specularPdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.specular;
             }
-            float diffusePdf = CosineSamplePdf(ns, wi) * lobeProbs.diffuse;
+            float diffusePdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.diffuse;
             float bsdfPdf = specularPdf + diffusePdf;
 
             bsdfSample.pdf = bsdfPdf;

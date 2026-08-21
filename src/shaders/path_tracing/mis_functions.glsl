@@ -155,9 +155,9 @@ vec3 EvaluateBrdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float brdfP
     if (specularMode == 0) {
         specularPdf = (D * G1) / max((4.0 * nsDotWo), 1e-4) * lobeProbs.specular;
     } else if (specularMode == 1) {
-        specularPdf = CosineSamplePdf(ns, wi) * lobeProbs.specular;
+        specularPdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.specular;
     }
-    float diffusePdf = CosineSamplePdf(ns, wi) * lobeProbs.diffuse;
+    float diffusePdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.diffuse;
     brdfPdf = specularPdf + diffusePdf;
 
     vec3 kS = F;
