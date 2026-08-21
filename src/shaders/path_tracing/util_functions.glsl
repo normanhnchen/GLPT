@@ -5,15 +5,23 @@
 #include "src/shaders/common.glsl"
 
 
-// PCG 3d hash randomization
-// http://www.jcgt.org/published/0009/03/02/
 vec3 Pcg3d(inout uvec3 rng) {
     rng = rng * 1664525u + 1013904223u;
     rng.x += rng.y*rng.z; rng.y += rng.z*rng.x; rng.z += rng.x*rng.y;
     rng ^= rng >> 16u;
     rng.x += rng.y*rng.z; rng.y += rng.z*rng.x; rng.z += rng.x*rng.y;
-    // Divide by 2^32 (uint32 limit) to convert to range [0, 1]
-    return vec3(rng) / 4294967295.0;
+    // Convert to range [0, 1)
+    return vec3(rng) / float(UINT32_MAX);
+}
+
+uvec3 InitRngState(ivec2 pixelCoords) {
+    uvec3 state = uvec3(
+        (pixelCoords.x) * 1512558u,
+        uint(pixelCoords.y) * 1029858u,
+        uint(totalSamples) * 739391335u
+    );
+    state ^= uvec3(1597334677u, 3812015801u, 2798796415u);
+    return state;
 }
 
 vec3 GetRayPoint(Ray ray, float t) {
@@ -64,18 +72,6 @@ vec3 EnsureValidReflection(vec3 ng, vec3 wo, vec3 ns) {
     } else {
         return ns;
     }
-}
-
-uvec3 InitRngState(ivec2 pixelCoords) {
-    uvec3 state = uvec3(
-        (pixelCoords.x) * 1512558u,
-        uint(pixelCoords.y) * 1029858u,
-        uint(totalSamples) * 739391335u
-    );
-
-    state ^= uvec3(1597334677u, 3812015801u, 2798796415u);
-
-    return state;
 }
 
 vec2 SampleUnitDisk(inout uvec3 rng) {
