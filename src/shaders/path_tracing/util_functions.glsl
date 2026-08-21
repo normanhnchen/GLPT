@@ -5,6 +5,8 @@
 #include "src/shaders/common.glsl"
 
 
+// Jarzynski & Olano, "Hash Functions for GPU Rendering," JCGT, vol. 9, no. 3, 2020.
+// http://jcgt.org/published/0009/03/02/
 vec3 Pcg3d(inout uvec3 rng) {
     rng = rng * 1664525u + 1013904223u;
     rng.x += rng.y*rng.z; rng.y += rng.z*rng.x; rng.z += rng.x*rng.y;
