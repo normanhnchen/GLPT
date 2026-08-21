@@ -97,15 +97,15 @@ vec3 GetBvhDepthColor(int currDepth, int maxDepth) {
     return col;
 }
 
-// HSB to RGB function from Iñigo Quiles
+// Adapted from Iñigo Quilez's HSB to RGB function
 // https://www.shadertoy.com/view/MsS3Wc
-vec3 HsbToRgb(in vec3 c){
-    vec3 rgb = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+vec3 HsbToRgb(in vec3 hsb){
+    vec3 rgb = clamp(abs(mod(hsb.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
     rgb = rgb * rgb * (3.0 - 2.0 * rgb);
-    return c.z * mix(vec3(1.0), rgb, c.y);
+    return hsb.z * mix(vec3(1.0), rgb, hsb.y);
 }
 
-vec3 GetBvhRgbColor(vec3 aabbMin, vec3 aabbMax) {
+vec3 GetBvhAngleColor(vec3 aabbMin, vec3 aabbMax) {
     vec3 center = (aabbMin + aabbMax) * 0.5;
     
     float theta = atan(center.z, center.x);
