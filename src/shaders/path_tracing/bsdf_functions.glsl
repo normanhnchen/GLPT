@@ -61,7 +61,8 @@ float GeometrySmith(vec3 n, vec3 wo, vec3 wi, float k) {
     return ggx1 * ggx2;
 }
 
-// https://schuttejoe.github.io/post/ggximportancesamplingpart2/
+// "Real Shading in Unreal Engine 4,"
+// https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
 float SmithGgxMasking(vec3 wi, vec3 wo, vec3 n, float alpha2) {
     float nDotWi = abs(dot(n, wi));
     float nDotWo = abs(dot(n, wo));
@@ -70,7 +71,8 @@ float SmithGgxMasking(vec3 wi, vec3 wo, vec3 n, float alpha2) {
     return 2.0 * nDotWo / denomC;
 }
 
-// https://schuttejoe.github.io/post/ggximportancesamplingpart2/
+// "Real Shading in Unreal Engine 4,"
+// https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
 float SmithGgxMaskingShadowing(vec3 wi, vec3 wo, vec3 n, float alpha2) {
     float nDotWi = abs(dot(n, wi));
     float nDotWo = abs(dot(n, wo));
@@ -81,7 +83,8 @@ float SmithGgxMaskingShadowing(vec3 wi, vec3 wo, vec3 n, float alpha2) {
     return 2.0 * nDotWi * nDotWo / (denomA + denomB);
 }
 
-// https://learnopengl.com/PBR/Theory
+// "Fresnel Incidence Effects," in Physically Based Rendering: From Theory to Implementation
+// https://pbr-book.org/3ed-2018/Reflection_Models/Fresnel_Incidence_Effects
 vec3 FresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
