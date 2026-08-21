@@ -76,11 +76,14 @@ vec3 EnsureValidReflection(vec3 ng, vec3 wo, vec3 ns) {
     }
 }
 
-vec2 SampleUnitDisk(inout uvec3 rng) {
-    vec3 r = Pcg3d(rng);
-    float theta = 2.0 * PI * r.x;
-    float radius = sqrt(r.y);
-    return vec2(radius * cos(theta), radius * sin(theta));
+vec2 UniformSampleUnitDisk(inout uvec3 rng) {
+    vec3 Xi = Pcg3d(rng);
+    float Xi1 = Xi.x;
+    float Xi2 = Xi.y;
+    
+    float r = sqrt(Xi1);
+    float theta = 2.0 * PI * Xi2;
+    return vec2(r * cos(theta), r * sin(theta));
 }
 
 vec3 GetBvhDepthColor(int currDepth, int maxDepth) {

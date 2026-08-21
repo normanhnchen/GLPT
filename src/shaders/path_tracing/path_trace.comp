@@ -335,7 +335,7 @@ void main() {
 
         vec3 focusPoint = Camera.pos + pinholeDir * Camera.focusDist;
 
-        vec2 rd = Camera.aperture * SampleUnitDisk(state);
+        vec2 rd = Camera.aperture * UniformSampleUnitDisk(state);
         vec3 offset = Camera.right * rd.x + Camera.up * rd.y;
 
         Ray ray;
