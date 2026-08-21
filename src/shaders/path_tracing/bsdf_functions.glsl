@@ -28,18 +28,19 @@ float CosineSampleHemispherePdf(vec3 n, vec3 wi) {
     return cosTheta / PI;
 }
 
-// https://learnopengl.com/PBR/Theory
-float DistributionGgx(vec3 n, vec3 wh, float alpha) {
+// Adaptation from "Average irregularity representation of a rough surface for ray reflection,"
+// https://doi.org/10.1364/JOSA.65.000531
+float TrowbridgeReitzGgx(vec3 n, vec3 wh, float alpha) {
     float alpha2  = alpha * alpha;
     float nDotWh  = max(dot(n, wh), 0.0);
     float nDotWh2 = nDotWh * nDotWh;
 	
-    float nom   = alpha2;
+    float numer = alpha2;
     float denom = nDotWh2 * (alpha2 - 1.0) + 1.0;
     denom       = PI * denom * denom;
 	
     // Clamp to prevent denom from clamping to 0.0 when underflowing (when roughness ~ 0.0)
-    return nom / max(denom, 1e-4);
+    return numer / max(denom, 1e-4);
 }
 
 // https://learnopengl.com/PBR/Theory
@@ -169,7 +170,7 @@ float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
     vec3 wh = normalize(wo + wi);
     float alpha2 = alpha * alpha;
 
-    float D = DistributionGgx(n, wh, alpha);
+    float D = TrowbridgeReitzGgx(n, wh, alpha);
 
     float G1;
     if (geometryMode == 0) {
@@ -195,7 +196,7 @@ float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta) {
     vec3 wh = normalize(wo + eta * wi);
     if (dot(n, wh) < 0.0) wh = -wh;
 
-    float D = DistributionGgx(n, wh, alpha);
+    float D = TrowbridgeReitzGgx(n, wh, alpha);
     
     float G1;
     if (geometryMode == 0) {
@@ -298,7 +299,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
         if (specularMode == 0) {
             specular = F * (G2 / max(G1, 1e-4));
         } else if (specularMode == 1) {
-            float D = DistributionGgx(ns, wh, alpha);
+            float D = TrowbridgeReitzGgx(ns, wh, alpha);
             float nDotWo = max(dot(ns, wo), 1e-4);
             float nDotWi = max(dot(ns, wi), 1e-4);
             specular = D * F * G2 * PI / (4.0 * nDotWo * nDotWi);
@@ -370,7 +371,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 if (specularMode == 0) {
                     specular = F * (G2 / max(G1, 1e-4));
                 } else if (specularMode == 1) {
-                    float D = DistributionGgx(ns, wh, alpha);
+                    float D = TrowbridgeReitzGgx(ns, wh, alpha);
                     float nDotWo = max(dot(ns, wo), 1e-4);
                     float nDotWi = max(dot(ns, wi), 1e-4);
                     specular = vec3(D) * F * G2 * PI / max((4.0 * nDotWo * nDotWi), 1e-4);
