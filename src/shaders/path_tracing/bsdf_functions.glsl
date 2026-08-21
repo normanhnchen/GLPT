@@ -44,19 +44,19 @@ float TrowbridgeReitzGgx(vec3 n, vec3 wh, float alpha) {
 }
 
 // https://learnopengl.com/PBR/Theory
-float GeometrySchlickGGX(float nDotWo, float k) {
-    float nom   = nDotWo;
+float GeometrySchlickGgx(float nDotWo, float k) {
+    float numer = nDotWo;
     float denom = nDotWo * (1.0 - k) + k;
-	
-    return nom / denom;
+
+    return numer / denom;
 }
 
 // https://learnopengl.com/PBR/Theory
 float GeometrySmith(vec3 n, vec3 wo, vec3 wi, float k) {
     float nDotWo = max(dot(n, wo), 0.0);
     float nDotWi = max(dot(n, wi), 0.0);
-    float ggx1 = GeometrySchlickGGX(nDotWo, k);
-    float ggx2 = GeometrySchlickGGX(nDotWi, k);
+    float ggx1 = GeometrySchlickGgx(nDotWo, k);
+    float ggx2 = GeometrySchlickGgx(nDotWi, k);
 	
     return ggx1 * ggx2;
 }
@@ -182,7 +182,7 @@ float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
         // --------------------------------
         float roughness = sqrt(alpha);
         float k = (roughness + 1.0) * (roughness + 1.0) / 8.0;
-        G1 = GeometrySchlickGGX(max(dot(n, wo), 1e-4), k);
+        G1 = GeometrySchlickGgx(max(dot(n, wo), 1e-4), k);
     }
 
     return (D * G1) / max((4.0 * nDotWo), 1e-4);
@@ -208,7 +208,7 @@ float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta) {
         // --------------------------------
         float roughness = sqrt(alpha);
         float k = (roughness + 1.0) * (roughness + 1.0) / 8.0;
-        G1 = GeometrySchlickGGX(max(dot(n, wo), 1e-4), k);
+        G1 = GeometrySchlickGgx(max(dot(n, wo), 1e-4), k);
     }
 
     float woDotWh = dot(wo, wh);
@@ -291,7 +291,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             // Schlick-GGX Approximation Method
             // --------------------------------
             float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-            G1 = GeometrySchlickGGX(max(dot(ns, wo), 1e-4), k);
+            G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
             G2 = GeometrySmith(ns, wo, wi, k);
         }
 
@@ -363,7 +363,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                     // Schlick-GGX Approximation Method
                     // --------------------------------
                     float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-                    G1 = GeometrySchlickGGX(max(dot(ns, wo), 1e-4), k);
+                    G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
                     G2 = GeometrySmith(ns, wo, wi, k);
                 }
 

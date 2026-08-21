@@ -28,7 +28,7 @@ vec3 EvaluateBrdf(vec3 wi, Ray ray, SurfaceInteraction si) {
     float alpha2 = alpha * alpha;
 
     vec3 F = FresnelSchlick(max(dot(wh, wo), 0.0), F0);
-    float D = DistributionGgx(ns, wh, alpha);
+    float D = TrowbridgeReitzGgx(ns, wh, alpha);
 
     float G;
     if (geometryMode == 0) {
@@ -80,7 +80,7 @@ vec3 EvaluateBtdf(vec3 wi, Ray ray, SurfaceInteraction si) {
     F0 = mix(F0, mat.baseCol, mat.metallic);
     vec3 F = FresnelSchlick(abs(woDotWh), F0);
 
-    float D = DistributionGgx(ns, wh, alpha);
+    float D = TrowbridgeReitzGgx(ns, wh, alpha);
 
     float G;
     if (geometryMode == 0) {
@@ -133,7 +133,7 @@ vec3 EvaluateBrdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float brdfP
     float nsDotWi = max(dot(ns, wi), 0.0);
 
     vec3 F = FresnelSchlick(max(dot(wh, wo), 0.0), F0);
-    float D = DistributionGgx(ns, wh, alpha);
+    float D = TrowbridgeReitzGgx(ns, wh, alpha);
 
     float G1, G2;
     if (geometryMode == 0) {
@@ -145,7 +145,7 @@ vec3 EvaluateBrdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float brdfP
         // Schlick-GGX Approximation Method
         // --------------------------------
         float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-        G1 = GeometrySchlickGGX(max(dot(ns, wo), 1e-4), k);
+        G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
         G2 = GeometrySmith(ns, wo, wi, k);
     }
 
@@ -195,7 +195,7 @@ vec3 EvaluateBtdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float btdfP
     F0 = mix(F0, mat.baseCol, mat.metallic);
     vec3 F = FresnelSchlick(abs(woDotWh), F0);
 
-    float D = DistributionGgx(ns, wh, alpha);
+    float D = TrowbridgeReitzGgx(ns, wh, alpha);
 
     float G1, G2;
     if (geometryMode == 0) {
@@ -207,7 +207,7 @@ vec3 EvaluateBtdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float btdfP
         // Schlick-GGX Approximation Method
         // --------------------------------
         float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-        G1 = GeometrySchlickGGX(max(dot(ns, wo), 1e-4), k);
+        G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
         G2 = GeometrySmith(ns, wo, wi, k);
     }
 
