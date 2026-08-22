@@ -96,35 +96,63 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-// https://schuttejoe.github.io/post/ggximportancesamplingpart2/
+// "Sampling the GGX Distribution of Visible Normals," Journal of Computer Graphics Techniques (JCGT)
+// http://jcgt.org/published/0007/04/01/
 vec3 ImportanceSampleGgxVndf(vec2 Xi, vec3 wo, float roughness) {
-    // Stretch the view
-    wo = normalize(vec3(
+    // Stretch the view into the hemisphere configuration
+    vec3 Vh = normalize(vec3(
         wo.x * roughness,
         wo.y * roughness,
         wo.z
     ));
 
-    // Orthonormal Basis
-    vec3 t1, t2;
-    ONB(wo, t1, t2);
+    // Orthonormal basis
+    // T1 must be the tangent plane orthogonal to Z = (0, 0, 1)
+    // so a typical ONB function doesn't necessarily work
+    float lensq = Vh.x * Vh.x + Vh.y * Vh.y;
+    vec3 t1 = (lensq > 0.0) ? vec3(-Vh.y, Vh.x, 0.0) * inversesqrt(lensq) : vec3(1.0, 0.0, 0.0);
+    vec3 t2 = cross(Vh, t1);
 
-    // Sample the half disks
-    float a = 1.0 / (1.0 + wo.z);
+    // Sample the projected area of the hemisphere
     float r = sqrt(Xi.x);
-    float phi = (Xi.y < a) ? (Xi.y / a) * PI : PI + (Xi.y - a) / (1.0 - a) * PI;
+    float phi = 2.0 * PI * Xi.y;
     float p1 = r * cos(phi);
-    float p2 = r * sin(phi) * ((Xi.y < a) ? 1.0 : wo.z);
+    float p2 = r * sin(phi);
+    float s = 0.5 * (1.0 + Vh.z);
+    p2 = (1.0 - s) * sqrt(1.0 - p1 * p1) + s * p2;
 
-    // Compute the normal
-    vec3 n = p1 * t1 + p2 * t2 + sqrt(max(0.0, 1.0 - p1 * p1 - p2 * p2)) * wo;
+    // Reproject onto the hemisphere
+    vec3 wm = p1 * t1 + p2 * t2 + sqrt(max(0.0, 1.0 - p1 * p1 - p2 * p2)) * Vh;
 
-    // Unstretch the normal
+    // Unstretch the normal back into the ellipsoid configuration
     return normalize(vec3(
-        roughness * n.x,
-        roughness * n.y,
-        max(0.0, n.z)
+        roughness * wm.x,
+        roughness * wm.y,
+        max(0.0, wm.z)
     ));
+}
+
+float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
+    float nDotWo = abs(dot(n, wo));
+    vec3 wh = normalize(wo + wi);
+    float alpha2 = alpha * alpha;
+
+    float D = TrowbridgeReitzGgx(n, wh, alpha);
+
+    float G1;
+    if (geometryMode == 0) {
+        // Smith-GGX Masking
+        // -----------------
+        G1 = SmithGgxMasking(wo, n, alpha2);
+    } else {
+        // Schlick-GGX
+        // -----------
+        float roughness = sqrt(alpha);ds
+        float k = (roughness + 1.0) * (roughness + 1.0) / 8.0;
+        G1 = GeometrySchlickGgx(max(dot(n, wo), 1e-4), k);
+    }
+
+    return (D * G1) / max((4.0 * nDotWo), 1e-4);
 }
 
 // Beer-Lambert law: light attenuates exponentially with distance traveled through a medium
@@ -171,29 +199,6 @@ LobeProbs ComputeLobeProbs(Material mat, float nsDotWo, vec3 F0) {
     lobeProbs.diffuse = 1.0 - lobeProbs.specular - lobeProbs.transmission;
 
     return lobeProbs;
-}
-
-float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
-    float nDotWo = abs(dot(n, wo));
-    vec3 wh = normalize(wo + wi);
-    float alpha2 = alpha * alpha;
-
-    float D = TrowbridgeReitzGgx(n, wh, alpha);
-
-    float G1;
-    if (geometryMode == 0) {
-        // Height-Correlated Smith Method
-        // ------------------------------
-        G1 = SmithGgxMasking(wo, n, alpha2);
-    } else {
-        // Schlick-GGX Approximation Method
-        // --------------------------------
-        float roughness = sqrt(alpha);
-        float k = (roughness + 1.0) * (roughness + 1.0) / 8.0;
-        G1 = GeometrySchlickGgx(max(dot(n, wo), 1e-4), k);
-    }
-
-    return (D * G1) / max((4.0 * nDotWo), 1e-4);
 }
 
 // https://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf
@@ -310,7 +315,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             float D = TrowbridgeReitzGgx(ns, wh, alpha);
             float nDotWo = max(dot(ns, wo), 1e-4);
             float nDotWi = max(dot(ns, wi), 1e-4);
-            specular = D * F * G2 * PI / (4.0 * nDotWo * nDotWi);
+            specular = D * F * G2 / (4.0 * nDotWo * nDotWi);
         }
         
         // Calculate the PDF for this lobe
@@ -382,7 +387,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                     float D = TrowbridgeReitzGgx(ns, wh, alpha);
                     float nDotWo = max(dot(ns, wo), 1e-4);
                     float nDotWi = max(dot(ns, wi), 1e-4);
-                    specular = vec3(D) * F * G2 * PI / max((4.0 * nDotWo * nDotWi), 1e-4);
+                    specular = vec3(D) * F * G2 / max((4.0 * nDotWo * nDotWi), 1e-4);
                 }
 
                 // Calculate the PDF for this lobe
