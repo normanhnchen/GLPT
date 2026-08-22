@@ -147,7 +147,7 @@ float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
     } else {
         // Schlick-GGX
         // -----------
-        float roughness = sqrt(alpha);ds
+        float roughness = sqrt(alpha);
         float k = (roughness + 1.0) * (roughness + 1.0) / 8.0;
         G1 = GeometrySchlickGgx(max(dot(n, wo), 1e-4), k);
     }
@@ -201,7 +201,8 @@ LobeProbs ComputeLobeProbs(Material mat, float nsDotWo, vec3 F0) {
     return lobeProbs;
 }
 
-// https://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf
+// "Microfacet models for refraction through rough surfaces"
+// https://dl.acm.org/doi/10.5555/2383847.2383874
 float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta) {
     float nDotWo = abs(dot(n, wo));
     float alpha2 = alpha * alpha;
@@ -394,15 +395,15 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 // -------------------------------
                 float specularPdf;
                 if (specularMode == 0) {
-                    specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * lobeProbs.specular;
+                    specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * (lobeProbs.specular + lobeProbs.specular);
                 } else if (specularMode == 1) {
-                    specularPdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.specular;
+                    specularPdf = CosineSampleHemispherePdf(ns, wi) * (lobeProbs.specular + lobeProbs.specular);
                 }
                 float diffusePdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.diffuse;
                 float bsdfPdf = specularPdf + diffusePdf;
 
                 bsdfSample.pdf = bsdfPdf;
-                bsdfSample.f = specular / lobeProbs.transmission;
+                bsdfSample.f = specular / (lobeProbs.specular + lobeProbs.transmission);
                 bsdfSample.wi = wi;
 
                 return bsdfSample;
