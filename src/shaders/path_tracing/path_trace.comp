@@ -146,10 +146,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         ns = EnsureValidReflection(si.ng, -ray.d, ns);
         si.ns = ns;
 
-        // Build an Orthonormal basis (ONB)
-        vec3 helper = abs(ns.z) > 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
-        dpdu = normalize(cross(helper, ns));
-        dpdv = cross(ns, dpdu);
+        ONB(ns, dpdu, dpdv);
 
         si.localToWorld = mat3(dpdu, dpdv, ns);
         si.worldToLocal = transpose(si.localToWorld);

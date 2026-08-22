@@ -98,30 +98,28 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0) {
 
 // https://schuttejoe.github.io/post/ggximportancesamplingpart2/
 vec3 ImportanceSampleGgxVndf(vec2 Xi, vec3 wo, float roughness) {
-    // Stretch the view vector as if roughness = 1
+    // Stretch the view
     wo = normalize(vec3(
         wo.x * roughness,
         wo.y * roughness,
         wo.z
     ));
 
-    // Build an orthonormal basis (ONB)
-    vec3 helper = abs(wo.z) > 0.999 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 0.0, 1.0);
-    vec3 t1 = normalize(cross(helper, wo));
-    vec3 t2 = cross(wo, t1);
+    // Orthonormal Basis
+    vec3 t1, t2;
+    ONB(wo, t1, t2);
 
-    // Choose a point on a disk with each half of the disk weighted
-    // proportionally to its projection onto direction wo
+    // Sample the half disks
     float a = 1.0 / (1.0 + wo.z);
     float r = sqrt(Xi.x);
     float phi = (Xi.y < a) ? (Xi.y / a) * PI : PI + (Xi.y - a) / (1.0 - a) * PI;
     float p1 = r * cos(phi);
     float p2 = r * sin(phi) * ((Xi.y < a) ? 1.0 : wo.z);
 
-    // Calculate the normal in stretched tangent space
+    // Compute the normal
     vec3 n = p1 * t1 + p2 * t2 + sqrt(max(0.0, 1.0 - p1 * p1 - p2 * p2)) * wo;
 
-    // Unstretch and normalize the normal
+    // Unstretch the normal
     return normalize(vec3(
         roughness * n.x,
         roughness * n.y,

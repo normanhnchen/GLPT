@@ -86,6 +86,16 @@ vec2 UniformSampleUnitDisk(inout uvec3 rng) {
     return vec2(r * cos(theta), r * sin(theta));
 }
 
+// "Building an Orthonormal Basis, Revisited," Journal of Computer Graphics Techniques (JCGT)
+// http://jcgt.org/published/0006/01/01/
+void ONB(vec3 n, out vec3 dpdu, out vec3 dpdv) {
+    float s = sign(n.z) == 0.0 ? 1.0 : sign(n.z);
+    float a = -1.0 / (s + n.z);
+    float b = n.x * n.y * a;
+    dpdu = vec3(1.0 + s * n.x * n.x * a, s * b, -s * n.x);
+    dpdv = vec3(b, s + n.y * n.y * a, -n.y);
+}
+
 vec3 GetBvhDepthColor(int currDepth, int maxDepth) {
     float t = clamp(float(currDepth) / float(maxDepth), 0.0, 1.0);
 
