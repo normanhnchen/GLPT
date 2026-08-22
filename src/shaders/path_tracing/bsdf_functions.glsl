@@ -43,7 +43,8 @@ float TrowbridgeReitzGgx(vec3 n, vec3 wh, float alpha) {
     return numer / max(denom, 1e-4);
 }
 
-// https://learnopengl.com/PBR/Theory
+// "Real Shading in Unreal Engine 4,"
+// https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
 float GeometrySchlickGgx(float nDotWo, float k) {
     float numer = nDotWo;
     float denom = nDotWo * (1.0 - k) + k;
@@ -51,7 +52,8 @@ float GeometrySchlickGgx(float nDotWo, float k) {
     return numer / denom;
 }
 
-// https://learnopengl.com/PBR/Theory
+// "Real Shading in Unreal Engine 4,"
+// https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
 float GeometrySmith(vec3 n, vec3 wo, vec3 wi, float k) {
     float nDotWo = max(dot(n, wo), 0.0);
     float nDotWi = max(dot(n, wi), 0.0);
@@ -61,18 +63,23 @@ float GeometrySmith(vec3 n, vec3 wo, vec3 wi, float k) {
     return ggx1 * ggx2;
 }
 
-// "Real Shading in Unreal Engine 4,"
-// https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
-float SmithGgxMasking(vec3 wi, vec3 wo, vec3 n, float alpha2) {
-    float nDotWi = abs(dot(n, wi));
+// "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs,"
+// Journal of Computer Graphics Techniques
+// https://jcgt.org/published/0003/02/03/
+// "Importance Sampling techniques for GGX with Smith Masking-Shadowing: Part 2," Joe Schutte's Blog,
+// https://schuttejoe.github.io/post/ggximportancesamplingpart2/.
+float SmithGgxMasking(vec3 wo, vec3 n, float alpha2) {
     float nDotWo = abs(dot(n, wo));
     float denomC = sqrt(alpha2 + (1.0 - alpha2) * nDotWo * nDotWo) + nDotWo;
 
     return 2.0 * nDotWo / denomC;
 }
 
-// "Real Shading in Unreal Engine 4,"
-// https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
+// "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs,"
+// Journal of Computer Graphics Techniques
+// https://jcgt.org/published/0003/02/03/
+// "Importance Sampling techniques for GGX with Smith Masking-Shadowing: Part 2," Joe Schutte's Blog,
+// https://schuttejoe.github.io/post/ggximportancesamplingpart2/.
 float SmithGgxMaskingShadowing(vec3 wi, vec3 wo, vec3 n, float alpha2) {
     float nDotWi = abs(dot(n, wi));
     float nDotWo = abs(dot(n, wo));
@@ -179,7 +186,7 @@ float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
     if (geometryMode == 0) {
         // Height-Correlated Smith Method
         // ------------------------------
-        G1 = SmithGgxMasking(wi, wo, n, alpha2);
+        G1 = SmithGgxMasking(wo, n, alpha2);
     } else {
         // Schlick-GGX Approximation Method
         // --------------------------------
@@ -205,7 +212,7 @@ float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta) {
     if (geometryMode == 0) {
         // Height-Correlated Smith Method
         // ------------------------------
-        G1 = SmithGgxMasking(wi, wo, n, alpha2);
+        G1 = SmithGgxMasking(wo, n, alpha2);
     } else {
         // Schlick-GGX Approximation Method
         // --------------------------------
@@ -288,7 +295,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
         if (geometryMode == 0) {
             // Height-Correlated Smith Method
             // ------------------------------
-            G1 = SmithGgxMasking(wi, wo, ns, alpha2);
+            G1 = SmithGgxMasking(wo, ns, alpha2);
             G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
         } else {
             // Schlick-GGX Approximation Method
@@ -360,7 +367,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 if (geometryMode == 0) {
                     // Height-Correlated Smith Method
                     // ------------------------------
-                    G1 = SmithGgxMasking(wi, wo, ns, alpha2);
+                    G1 = SmithGgxMasking(wo, ns, alpha2);
                     G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
                 } else {
                     // Schlick-GGX Approximation Method
