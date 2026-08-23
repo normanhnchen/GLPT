@@ -64,12 +64,13 @@ vec3 EvaluateBtdf(vec3 wi, Ray ray, SurfaceInteraction si) {
     Material mat = si.mat;
     vec3 ns = si.ns;
     vec3 wo = -ray.d;
-    float eta = si.eta;
+    float eta_i = si.eta_i;
+    float eta_t = si.eta_t;
 
     float alpha = mat.roughness * mat.roughness;
     float alpha2 = alpha * alpha;
 
-    vec3 wh = normalize(wo + eta * wi);
+    vec3 wh = normalize(eta_i * wo + eta_t * wi);
     if (dot(ns, wh) < 0.0) wh = -wh;
 
     float nsDotWo = abs(dot(ns, wo));
@@ -95,7 +96,7 @@ vec3 EvaluateBtdf(vec3 wi, Ray ray, SurfaceInteraction si) {
         G = GeometrySmith(ns, wo, wi, k);
     }
 
-    float denom = woDotWh + eta * wiDotWh;
+    float denom = eta_i * woDotWh + eta_t * wiDotWh;
     denom = max(denom * denom, 0.0001);
 
     float jacobian = abs(woDotWh * wiDotWh) / max(nsDotWo * nsDotWi, 0.0001);
@@ -179,12 +180,13 @@ vec3 EvaluateBtdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float btdfP
     Material mat = si.mat;
     vec3 ns = si.ns;
     vec3 wo = -ray.d;
-    float eta = si.eta;
+    float eta_i = si.eta_i;
+    float eta_t = si.eta_t;
 
     float alpha = mat.roughness * mat.roughness;
     float alpha2 = alpha * alpha;
 
-    vec3 wh = normalize(wo + eta * wi);
+    vec3 wh = normalize(eta_i * wo + eta_t * wi);
     if (dot(ns, wh) < 0.0) wh = -wh;
 
     float nsDotWo = abs(dot(ns, wo));
@@ -212,12 +214,12 @@ vec3 EvaluateBtdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float btdfP
         G2 = GeometrySmith(ns, wo, wi, k);
     }
 
-    float denom = woDotWh + eta * wiDotWh;
+    float denom = eta_i * woDotWh + eta_t * wiDotWh;
     denom = max(denom * denom, 0.0001);
 
     LobeProbs lobeProbs = ComputeLobeProbs(mat, nsDotWo, F0);
 
-    float dwh_dwi = abs((eta * eta * wiDotWh) / max(denom, 0.0001));
+    float dwh_dwi = abs((eta_t * eta_t * wiDotWh) / max(denom, 0.0001));
     btdfPdf = D * G1 * abs(woDotWh) / max(nsDotWo, 0.0001) * dwh_dwi;
     btdfPdf *= lobeProbs.transmission;
 

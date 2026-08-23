@@ -204,11 +204,11 @@ LobeProbs ComputeLobeProbs(Material mat, float nsDotWo, vec3 F0) {
 
 // "Microfacet models for refraction through rough surfaces"
 // https://dl.acm.org/doi/10.5555/2383847.2383874
-float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta) {
+float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta_i, float eta_t) {
     float nDotWo = abs(dot(n, wo));
     float alpha2 = alpha * alpha;
 
-    vec3 wh = normalize(wo + eta * wi);
+    vec3 wh = normalize(eta_i * wo + eta_t * wi);
     if (dot(n, wh) < 0.0) wh = -wh;
 
     float D = TrowbridgeReitzGgx(n, wh, alpha);
@@ -229,8 +229,8 @@ float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta) {
     float woDotWh = dot(wo, wh);
     float wiDotWh = dot(wi, wh);
 
-    float denom = woDotWh + eta * wiDotWh;
-    float dwh_dwi = abs((eta * eta * wiDotWh) / max(denom * denom, 0.0001));
+    float denom = eta_i * woDotWh + eta_t * wiDotWh;
+    float dwh_dwi = abs((eta_t * eta_t * wiDotWh) / max(denom * denom, 0.0001));
     return D * G1 * abs(woDotWh) / max(nDotWo, 0.0001) * dwh_dwi;
 }
 
@@ -357,7 +357,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             // Transform wh back to world space
             vec3 wh = normalize(si.localToWorld * whTangent);
 
-            vec3 wi = refract(ray.d, wh, si.eta);
+            vec3 wi = refract(ray.d, wh, si.eta_i / si.eta_t);
 
             // Total internal reflection (TIR)
             // -------------------------------
@@ -396,26 +396,53 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 // -------------------------------
                 float specularPdf;
                 if (specularMode == 0) {
-                    specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * (lobeProbs.specular + lobeProbs.specular);
+                    specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * lobeProbs.specular;
                 } else if (specularMode == 1) {
-                    specularPdf = CosineSampleHemispherePdf(ns, wi) * (lobeProbs.specular + lobeProbs.specular);
+                    specularPdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.specular;
                 }
                 float diffusePdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.diffuse;
                 float bsdfPdf = specularPdf + diffusePdf;
 
                 bsdfSample.pdf = bsdfPdf;
-                bsdfSample.f = specular / (lobeProbs.specular + lobeProbs.transmission);
+                bsdfSample.f = specular / lobeProbs.transmission;
                 bsdfSample.wi = wi;
 
                 return bsdfSample;
             }
 
+            float wiDotWh = abs(dot(wi, wh));
+            vec3 F = FresnelSchlick(wiDotWh, F0);
+
+            float G1, G2;
+            if (geometryMode == 0) {
+                // Height-Correlated Smith Method
+                // ------------------------------
+                G1 = SmithGgxMasking(wo, ns, alpha2);
+                G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
+            } else {
+                // Schlick-GGX Approximation Method
+                // --------------------------------
+                float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
+                G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
+                G2 = GeometrySmith(ns, wo, wi, k);
+            }
+
+            vec3 transmission;
+            if (specularMode == 0) {
+                transmission = (1.0 - F) * (G2 / max(G1, 1e-4));
+            } else if (specularMode == 1) {
+                float D = TrowbridgeReitzGgx(ns, wh, alpha);
+                float nDotWo = max(dot(ns, wo), 1e-4);
+                float nDotWi = max(dot(ns, wi), 1e-4);
+                transmission = vec3(D) * (1.0 - F) * G2 / max((4.0 * nDotWo * nDotWi), 1e-4);
+            }
+
             // Calculate the PDF for this lobe
             // -------------------------------
-            float bsdfPdf = BtdfPdf(ns, wo, wi, alpha, si.eta) * lobeProbs.transmission;
+            float bsdfPdf = BtdfPdf(ns, wo, wi, alpha, si.eta_i, si.eta_t) * lobeProbs.transmission;
 
             bsdfSample.pdf = bsdfPdf;
-            bsdfSample.f = vec3(1.0) / lobeProbs.transmission;
+            bsdfSample.f = transmission / lobeProbs.transmission;
             bsdfSample.wi = wi;
 
             return bsdfSample;

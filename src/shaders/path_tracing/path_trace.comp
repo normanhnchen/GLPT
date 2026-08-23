@@ -108,7 +108,15 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
         Material mat = materials[tri.matId];
 
-        float eta = isBackFace ? mat.ior / 1.0 : 1.0 / mat.ior;
+        if (isBackFace) {
+            // Exiting the object
+            si.eta_i = mat.ior;
+            si.eta_t = 1.0;
+        } else {
+            // Entering the object
+            si.eta_i = 1.0;
+            si.eta_t = mat.ior;
+        }
         
         si.p = GetRayPoint(ray, si.t);
         si.ng = ng;
@@ -116,7 +124,6 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         si.dpdu = dpdu;
         si.dpdv = dpdv;
         si.uv = texCoords;
-        si.eta = eta;
         si.isBackFace = isBackFace;
         si.area = tri.area;
 
