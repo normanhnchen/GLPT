@@ -52,8 +52,12 @@ vec3 OffsetRayOrigin(vec3 p, vec3 n) {
     );
 }
 
+float GetLuminance(vec3 col) {
+    return dot(col, vec3(0.2126, 0.7152, 0.0722));
+}
+
 vec3 ClampLuminance(vec3 col, float maxLum) {
-    float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    float lum = GetLuminance(col);
     if (lum > maxLum) {
         col *= maxLum / max(lum, 1e-4);
     }
