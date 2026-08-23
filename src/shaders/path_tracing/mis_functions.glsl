@@ -5,6 +5,7 @@
 #include "src/shaders/common.glsl"
 
 
+// "Importance Sampling," in Physically Based Rendering: From Theory to Implementation
 // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Importance_Sampling#MultipleImportanceSampling
 float PowerHeuristic(int nf, float fPdf, int ng, float gPdf) {
     float f = float(nf) * fPdf;
