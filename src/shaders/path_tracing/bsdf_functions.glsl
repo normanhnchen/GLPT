@@ -186,17 +186,18 @@ void BeerLambert(inout bool insideMedium, inout vec3 entryPoint, SurfaceInteract
 }
 
 LobeProbs ComputeLobeProbs(Material mat, float nsDotWo, vec3 F0) {
-    vec3 F_approx = FresnelSchlick(nsDotWo, F0);
+    vec3 F = FresnelSchlick(nsDotWo, F0);
+    float weight = GetLuminance(F);
 
-    // AI method: average the Fresnel approximation for a single float probability
-    float weight = (F_approx.r + F_approx.g + F_approx.b) / 3.0;
+    float pSpec = clamp(weight, 0.05, 0.95);
+    pSpec = mix(pSpec, 1.0, mat.metallic);
+    float pTrans = (1.0 - pSpec) * mat.transmission;
+    float pDiff = 1.0 - pSpec - pTrans;
     
     LobeProbs lobeProbs;
-    lobeProbs.specular = clamp(weight, 0.05, 0.95);
-    lobeProbs.transmission = mat.transmission * (1.0 - lobeProbs.specular);
-    // Fully metal objects cannot refract
-    lobeProbs.transmission *= (1.0 - mat.metallic);
-    lobeProbs.diffuse = 1.0 - lobeProbs.specular - lobeProbs.transmission;
+    lobeProbs.specular = pSpec;
+    lobeProbs.transmission = pTrans;
+    lobeProbs.diffuse = pDiff;
 
     return lobeProbs;
 }
