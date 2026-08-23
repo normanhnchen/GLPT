@@ -263,8 +263,11 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         ray.o = OffsetRayOrigin(si.p, offsetDir);
 
         // Russian Roulette
-        // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Russian_Roulette_and_Splitting
+        // ----------------
 
+        // "Russian Roulette and Splitting," in Physically Based Rendering: From Theory to Implementation
+        // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Russian_Roulette_and_Splitting
+        
         if (i > 3) {
             // Termination probability
             float q = 1.0 - max(throughput.r, max(throughput.g, throughput.b));
