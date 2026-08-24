@@ -10,7 +10,7 @@
 
 
 // https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
-int SampleRowCdf(float Xi, int height, out float rowHigh, out float rowLow, out float rowPdf) {
+int SampleRowCdf(float Xi, int height, out float rowHigh, out float rowLow, out float rowPmf) {
     // Binary search to find the correct row
     int lo = 0, hi = height - 1;
     while (lo < hi) {
@@ -25,12 +25,12 @@ int SampleRowCdf(float Xi, int height, out float rowHigh, out float rowLow, out 
     // Use lo as the chosen row index
     rowHigh = texelFetch(hdriRowCdf, ivec2(0, lo), 0).r;
     rowLow = lo > 0 ? texelFetch(hdriRowCdf, ivec2(0, lo - 1), 0).r : 0.0;
-    rowPdf = max(rowHigh - rowLow, 1e-8);
+    rowPmf = max(rowHigh - rowLow, 1e-8);
     return lo;
 }
 
 // https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
-int SampleColCdf(float Xi, int row, int width, out float colHigh, out float colLow, out float colPdf) {
+int SampleColCdf(float Xi, int row, int width, out float colHigh, out float colLow, out float colPmf) {
     // Binary search to find the correct column
     int lo = 0, hi = width - 1;
     while (lo < hi) {
@@ -44,7 +44,7 @@ int SampleColCdf(float Xi, int row, int width, out float colHigh, out float colL
     }
     colHigh = texelFetch(hdriColCdf, ivec2(lo, row), 0).r;
     colLow = lo > 0 ? texelFetch(hdriColCdf, ivec2(lo - 1, row), 0).r : 0.0;
-    colPdf = max(colHigh - colLow, 1e-8);
+    colPmf = max(colHigh - colLow, 1e-8);
     return lo;
 }
 
@@ -64,14 +64,14 @@ vec3 DirectSampleHdri(inout uvec3 rng, out vec3 d, out float hdriPdf) {
 
     vec3 Xi = Pcg3d(rng);
 
-    float rowHigh, rowLow, rowPdf;
-    int row = SampleRowCdf(Xi.x, height, rowHigh, rowLow, rowPdf);
-    float colHigh, colLow, colPdf;
-    int col = SampleColCdf(Xi.y, row, width, colHigh, colLow, colPdf);
+    float rowHigh, rowLow, rowPmf;
+    int row = SampleRowCdf(Xi.x, height, rowHigh, rowLow, rowPmf);
+    float colHigh, colLow, colPmf;
+    int col = SampleColCdf(Xi.y, row, width, colHigh, colLow, colPmf);
 
-    // Anti-aliasing sub-pixel jitter
-    float dv = (Xi.x - rowLow) / rowPdf;
-    float du = (Xi.y - colLow) / colPdf;
+    // Offsets to the row and column column to map it back to a continuous point
+    float dv = (Xi.x - rowLow) / rowPmf;
+    float du = (Xi.y - colLow) / colPmf;
 
     // Sampled continuous point in ranges [0, 1)
     float u = (float(col) + du) / float(width);
@@ -86,9 +86,9 @@ vec3 DirectSampleHdri(inout uvec3 rng, out vec3 d, out float hdriPdf) {
         sin(theta) * sin(phi)
     ));
 
-    float mapPdf = rowPdf * colPdf * float(width) * float(height);
+    float mapPdf = rowPmf * colPmf * float(width) * float(height);
     float sinTheta = sin(theta);
-    hdriPdf = sinTheta > 0.0 ?  mapPdf / (2.0 * PI * PI * sinTheta) : 0.0;
+    hdriPdf = sinTheta > 0.0 ? mapPdf / (2.0 * PI * PI * sinTheta) : 0.0;
 
     return texture(hdri, vec2(u, v)).rgb;
 }

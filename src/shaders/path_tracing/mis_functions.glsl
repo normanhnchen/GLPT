@@ -249,20 +249,20 @@ float HdriPdf(vec3 d) {
     // Convert to uv coordinates
     vec2 uv = vec2(phi / (2.0 * PI) + 0.5, theta / PI);
 
-    int col = int(uv.x * float(width));
-    int row = int(uv.y * float(height));
+    int col = min(int(uv.x * float(width)), width - 1);
+    int row = min(int(uv.y * float(height)), height - 1);
 
     float rowHigh = texelFetch(hdriRowCdf, ivec2(0, row), 0).r;
     float rowLow = row > 0 ? texelFetch(hdriRowCdf, ivec2(0, row - 1), 0).r : 0.0;
-    float rowPdf = max(rowHigh - rowLow, 1e-8);
+    float rowPmf = max(rowHigh - rowLow, 1e-8);
     
     float colHigh = texelFetch(hdriColCdf, ivec2(col, row), 0).r;
     float colLow = col > 0 ? texelFetch(hdriColCdf, ivec2(col - 1, row), 0).r : 0.0;
-    float colPdf = max(colHigh - colLow, 1e-8);
+    float colPmf = max(colHigh - colLow, 1e-8);
 
-    float mapPdf = rowPdf * colPdf * float(width) * float(height);
+    float mapPdf = rowPmf * colPmf * float(width) * float(height);
     float sinTheta = sin(theta);
-    return sinTheta > 0.0 ?  mapPdf / (2.0 * PI * PI * sinTheta) : 0.0;
+    return sinTheta > 0.0 ? mapPdf / (2.0 * PI * PI * sinTheta) : 0.0;
 }
 
 float AreaLightPdf(SurfaceInteraction si, Ray ray, vec3 prevPoint) {
