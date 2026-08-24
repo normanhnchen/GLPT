@@ -9,6 +9,7 @@
 #include "src/shaders/path_tracing/mis_functions.glsl"
 
 
+// "Sampling light sources," in Physically Based Rendering: From Theory to Implementation
 // https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
 int SampleRowCdf(float Xi, int height, out float rowHigh, out float rowLow, out float rowPmf) {
     // Binary search to find the correct row
@@ -29,6 +30,7 @@ int SampleRowCdf(float Xi, int height, out float rowHigh, out float rowLow, out 
     return lo;
 }
 
+// "Sampling light sources," in Physically Based Rendering: From Theory to Implementation
 // https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
 int SampleColCdf(float Xi, int row, int width, out float colHigh, out float colLow, out float colPmf) {
     // Binary search to find the correct column
@@ -57,6 +59,7 @@ vec3 SampleHdri(vec3 d) {
     return texture(hdri, uv).rgb;
 }
 
+// "Sampling light sources," in Physically Based Rendering: From Theory to Implementation
 // https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
 vec3 DirectSampleHdri(inout uvec3 rng, out vec3 d, out float hdriPdf) {
     ivec2 size = textureSize(hdri, 0);

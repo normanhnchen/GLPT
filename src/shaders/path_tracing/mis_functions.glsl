@@ -239,6 +239,8 @@ vec3 EvaluateBsdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float bsdfP
     }
 }
 
+// "Sampling light sources," in Physically Based Rendering: From Theory to Implementation
+// https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
 float HdriPdf(vec3 d) {
     ivec2 size = textureSize(hdri, 0);
     int width = size.x, height = size.y;
