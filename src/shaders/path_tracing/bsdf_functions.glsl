@@ -1,5 +1,5 @@
-#ifndef BSDF_FUNCTIONS_GLSL
-#define BSDF_FUNCTIONS_GLSL
+#ifndef BSDF_GLSL
+#define BSDF_GLSL
 
 
 #include "src/shaders/common.glsl"

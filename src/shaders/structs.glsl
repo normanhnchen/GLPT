@@ -133,6 +133,7 @@ struct SurfaceInteraction {
 struct VisibilityInteraction {
     float t;
     bool isBackFace;
+    bool isOccluded;
 };
 
 struct LobeProbs {

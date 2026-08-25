@@ -9,6 +9,18 @@
 #include "src/shaders/path_tracing/mis_functions.glsl"
 
 
+VisibilityInteraction ShadowRayTest(inout uvec3 rng, SurfaceInteraction si, float dist, vec3 wi) {
+    Ray shadowRay;
+    vec3 offsetDir = dot(si.ng, wi) < 0.0 ? -si.ng : si.ng;
+    shadowRay.o = OffsetRayOrigin(si.p, offsetDir);
+    shadowRay.d = wi;
+
+    VisibilityInteraction vi = TestVisibility(rng, shadowRay, dist);
+
+    return vi;
+}
+
+
 // "Sampling light sources," in Physically Based Rendering: From Theory to Implementation
 // https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
 int SampleRowCdf(float Xi, int height, out float rowHigh, out float rowLow, out float rowPmf) {
@@ -105,21 +117,16 @@ vec3 SampleHdriLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     vec3 ns = si.ns;
 
     float nsDotWi = dot(ns, wi);
+
+    float dist = INF;
     
     if (si.mat.transmission == 0.0 && nsDotWi <= 0.0) {
         return vec3(0.0);
     }
 
-    // Shadow ray
-    Ray shadowRay;
-    vec3 offsetDir = dot(si.ng, wi) < 0.0 ? -si.ng : si.ng;
-    shadowRay.o = OffsetRayOrigin(si.p, offsetDir);
-    shadowRay.d = wi;
-
-    VisibilityInteraction vi;
-    bool isOccluded = TestVisibility(rng, shadowRay, INF, vi);
-    if (isOccluded) {
-        return vec3(0.0); // Occluded
+    VisibilityInteraction vi = ShadowRayTest(rng, si, dist, wi);
+    if (vi.isOccluded) {
+        return vec3(0.0);
     }
 
     // Multiple Importance Sample (MIS)
@@ -196,16 +203,9 @@ vec3 SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) 
         return vec3(0.0);
     }
 
-    // Shadow ray
-    Ray shadowRay;
-    vec3 offsetDir = dot(si.ng, wi) < 0.0 ? -si.ng : si.ng;
-    shadowRay.o = OffsetRayOrigin(si.p, offsetDir);
-    shadowRay.d = wi;
-
-    VisibilityInteraction vi;
-    bool isOccluded = TestVisibility(rng, shadowRay, dist, vi);
-    if (isOccluded && vi.t < dist) {
-        return vec3(0.0); // Occluded
+    VisibilityInteraction vi = ShadowRayTest(rng, si, dist, wi);
+    if (vi.isOccluded) {
+        return vec3(0.0);
     }
 
     vec3 f = EvaluateBsdf(wi, ray, si);
@@ -229,16 +229,9 @@ vec3 SampleInfinitePunctualLight(SurfaceInteraction si, Ray ray, Light light, in
         return vec3(0.0);
     }
 
-    // Shadow ray
-    Ray shadowRay;
-    vec3 offsetDir = dot(si.ng, wi) < 0.0 ? -si.ng : si.ng;
-    shadowRay.o = OffsetRayOrigin(si.p, offsetDir);
-    shadowRay.d = wi;
-
-    VisibilityInteraction vi;
-    bool isOccluded = TestVisibility(rng, shadowRay, dist, vi);
-    if (isOccluded && vi.t < dist) {
-        return vec3(0.0); // Occluded
+    VisibilityInteraction vi = ShadowRayTest(rng, si, dist, wi);
+    if (vi.isOccluded) {
+        return vec3(0.0);
     }
 
     vec3 f = EvaluateBsdf(wi, ray, si);
@@ -324,10 +317,9 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     // Distance-scaled offset dynamic with how far away the light source is
     float distOffset = max(dist * 1e-4, 1e-4);
 
-    VisibilityInteraction vi;
-    bool isOccluded = TestVisibility(rng, shadowRay, dist - distOffset, vi);
-    if (isOccluded && vi.t < dist - distOffset) {
-        return vec3(0.0); // Occluded
+    VisibilityInteraction vi = ShadowRayTest(rng, si, dist, wi);
+    if (vi.isOccluded) {
+        return vec3(0.0);
     }
 
     float pdfPoint = (dist * dist) / (cosLight * tri.area);

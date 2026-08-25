@@ -189,7 +189,8 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
 
 // Adaptation from "How to Build a BVH – Part 2: Faster Rays,"
 // https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
-bool TestVisibility(inout uvec3 rng, Ray ray, float maxDist, inout VisibilityInteraction vi) {
+VisibilityInteraction TestVisibility(inout uvec3 rng, Ray ray, float maxDist) {
+    VisibilityInteraction vi;
     VisibilityInteraction tempVi;
     float closestT = maxDist;
 
@@ -212,7 +213,8 @@ bool TestVisibility(inout uvec3 rng, Ray ray, float maxDist, inout VisibilityInt
                     Triangle tri = triangles[triIndex];
                     if (ShadowRayTriangleIntersect(rng, ray, tri, triIndex, closestT, tempVi)) {
                         vi = tempVi;
-                        return true;
+                        vi.isOccluded = true;
+                        return vi;
                     }
                 }
             } else {
@@ -246,7 +248,8 @@ bool TestVisibility(inout uvec3 rng, Ray ray, float maxDist, inout VisibilityInt
         }
     }
 
-    return false;
+    vi.isOccluded = false;
+    return vi;
 }
 
 
