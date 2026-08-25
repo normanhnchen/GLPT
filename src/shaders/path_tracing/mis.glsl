@@ -1,5 +1,5 @@
-#ifndef MIS_FUNCTIONS_GLSL
-#define MIS_FUNCTIONS_GLSL
+#ifndef MIS_GLSL
+#define MIS_GLSL
 
 
 #include "src/shaders/common.glsl"

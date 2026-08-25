@@ -1,5 +1,5 @@
-#ifndef INTERSECT_FUNCTIONS_GLSL
-#define INTERSECT_FUNCTIONS_GLSL
+#ifndef INTERSECT_GLSL
+#define INTERSECT_GLSL
 
 
 #include "src/shaders/common.glsl"

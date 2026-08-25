@@ -1,5 +1,5 @@
-#ifndef UTIL_FUNCTIONS_GLSL
-#define UTIL_FUNCTIONS_GLSL
+#ifndef UTIL_GLSL
+#define UTIL_GLSL
 
 
 #include "src/shaders/common.glsl"

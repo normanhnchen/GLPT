@@ -9,7 +9,7 @@ out vec4 fragColor;
 
 
 #include "src/shaders/common.glsl"
-#include "src/shaders/path_tracing/util_functions.glsl"
+#include "src/shaders/path_tracing/util.glsl"
 
 
 void main() {

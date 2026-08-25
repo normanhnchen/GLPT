@@ -1,12 +1,12 @@
-#ifndef NEE_FUNCTIONS_GLSL
-#define NEE_FUNCTIONS_GLSL
+#ifndef NEE_GLSL
+#define NEE_GLSL
 
 
 #include "src/shaders/common.glsl"
-#include "src/shaders/path_tracing/util_functions.glsl"
-#include "src/shaders/path_tracing/bsdf_functions.glsl"
-#include "src/shaders/path_tracing/intersect_functions.glsl"
-#include "src/shaders/path_tracing/mis_functions.glsl"
+#include "src/shaders/path_tracing/util.glsl"
+#include "src/shaders/path_tracing/bsdf.glsl"
+#include "src/shaders/path_tracing/intersect.glsl"
+#include "src/shaders/path_tracing/mis.glsl"
 
 
 VisibilityInteraction ShadowRayTest(inout uvec3 rng, SurfaceInteraction si, float dist, vec3 wi) {
