@@ -131,12 +131,13 @@ vec3 SampleHdriLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     return (f * Li * hdriExposure) / lightPdf * misWeight;
 }
 
+// "The Alias Method," in Physically Based Rendering: From Theory to Implementation
 // https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable::Sample
 Light PowerFinitePunctualLightSample(float Xi, out float lightPdf) {
     // Sample from the precomputed alias table weighted by power
     // ---------------------------------------------------------
-    int offset = min(int(Xi.x * numFiniteLights), numFiniteLights - 1);
-    float up = min(Xi.x * numFiniteLights - offset, ONE_MINUS_EPSILON);
+    int offset = min(int(Xi * numFiniteLights), numFiniteLights - 1);
+    float up = min(Xi * numFiniteLights - offset, ONE_MINUS_EPSILON);
 
     FiniteLight flOffset = finiteLights[offset];
 
@@ -238,6 +239,7 @@ vec3 SampleInfinitePunctualLight(SurfaceInteraction si, Ray ray, Light light, in
     return f * Li;
 }
 
+// "The Alias Method," in Physically Based Rendering: From Theory to Implementation
 // https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable::Sample
 Triangle PowerEmissiveTriangleSample(float Xi, out float triPdf) {
     // Sample from the precomputed alias table weighted by power
