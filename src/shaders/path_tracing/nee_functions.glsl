@@ -268,6 +268,7 @@ Triangle PowerEmissiveTriangleSample(float Xi, out float triPdf) {
     return triangles[triId];
 }
 
+// "Sampling Light Sources," in Physically Based Rendering: From Theory to Implementation
 // https://pbr-book.org/4ed/Light_Sources/Light_Sampling#PowerLightSampler
 vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     if (numEmissiveTriangles == 0) {
@@ -280,15 +281,18 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     Triangle tri = PowerEmissiveTriangleSample(Xi.x, triPdf);
 
     // Uniformly sample random point on triangle
+    // "Triangle Meshes," in Physically Based Rendering: From Theory to Implementation
     // https://pbr-book.org/4ed/Shapes/Triangle_Meshes#Sampling
+    float Xi1 = Xi.y;
+    float Xi2 = Xi.z;
     float b0, b1, b2;
-    if (Xi.y < Xi.z) {
-        b0 = Xi.y / 2.0;
-        b1 = Xi.z - b0;
+    if (Xi1 < Xi2) {
+        b0 = Xi1 / 2.0;
+        b1 = Xi2 - b0;
         b2 = 1.0 - b0 - b1;
     } else {
-        b1 = Xi.z / 2.0;
-        b0 = Xi.y - b1;
+        b1 = Xi2 / 2.0;
+        b0 = Xi1 - b1;
         b2 = 1.0 - b0 - b1;
     }
     vec3 p = b0 * tri.v0.pos + b1 * tri.v1.pos + b2 * tri.v2.pos;
