@@ -154,8 +154,10 @@ Light PowerFinitePunctualLightSample(float Xi, out float lightPdf) {
     return lights[lightId];
 }
 
+// The Khronos Group, "KHR_lights_punctual," in glTF 2.0 Extensions
 // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md
-// https://www.pbr-book.org/4ed/Light_Sources/Point_Lights
+// "Light Sources," in Physically Based Rendering: From Theory to Implementation
+// https://www.pbr-book.org/4ed/Light_Sources/Point_Lights#
 vec3 SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     if (numFiniteLights == 0) {
         return vec3(0.0);
@@ -210,6 +212,10 @@ vec3 SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) 
     return f * Li / lightPdf;
 }
 
+// The Khronos Group, "KHR_lights_punctual," in glTF 2.0 Extensions
+// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md
+// "Light Sources," in Physically Based Rendering: From Theory to Implementation
+// https://www.pbr-book.org/4ed/Light_Sources/Point_Lights#
 vec3 SampleInfinitePunctualLight(SurfaceInteraction si, Ray ray, Light light, inout uvec3 rng) {
     vec3 wi = normalize(-light.d);
     float dist = INF;
