@@ -30,9 +30,8 @@ float CosineSampleHemispherePdf(vec3 n, vec3 wi) {
 
 // Adaptation from "Average irregularity representation of a rough surface for ray reflection,"
 // https://doi.org/10.1364/JOSA.65.000531
-float TrowbridgeReitzGgx(vec3 n, vec3 wh, float alpha) {
+float TrowbridgeReitzGgx(float nDotWh, float alpha) {
     float alpha2  = alpha * alpha;
-    float nDotWh  = max(dot(n, wh), 0.0);
     float nDotWh2 = nDotWh * nDotWh;
 	
     float numer = alpha2;
@@ -137,7 +136,9 @@ float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
     vec3 wh = normalize(wo + wi);
     float alpha2 = alpha * alpha;
 
-    float D = TrowbridgeReitzGgx(n, wh, alpha);
+    float nDotWh = dot(n, wh);
+
+    float D = TrowbridgeReitzGgx(nDotWh, alpha);
 
     float G1;
     if (geometryMode == 0) {

@@ -15,7 +15,9 @@ float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta_i, float eta_t) {
     vec3 wh = normalize(eta_i * wo + eta_t * wi);
     if (dot(n, wh) < 0.0) wh = -wh;
 
-    float D = TrowbridgeReitzGgx(n, wh, alpha);
+    float nDotWh = dot(n, wh);
+
+    float D = TrowbridgeReitzGgx(max(nDotWh, 0.0), alpha);
     
     float G1;
     if (geometryMode == 0) {
@@ -53,6 +55,7 @@ vec3 EvaluateBtdf(vec3 wi, Ray ray, SurfaceInteraction si) {
 
     float nsDotWo = abs(dot(ns, wo));
     float nsDotWi = abs(dot(ns, wi));
+    float nsDotWh = dot(ns, wh);
     float woDotWh = dot(wo, wh);
     float wiDotWh = dot(wi, wh);
 
@@ -60,7 +63,7 @@ vec3 EvaluateBtdf(vec3 wi, Ray ray, SurfaceInteraction si) {
     F0 = mix(F0, mat.baseCol, mat.metallic);
     vec3 F = FresnelSchlick(abs(woDotWh), F0);
 
-    float D = TrowbridgeReitzGgx(ns, wh, alpha);
+    float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
 
     float G;
     if (geometryMode == 0) {
@@ -99,6 +102,7 @@ vec3 EvaluateBtdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float btdfP
 
     float nsDotWo = abs(dot(ns, wo));
     float nsDotWi = abs(dot(ns, wi));
+    float nsDotWh = dot(ns, wh);
     float woDotWh = dot(wo, wh);
     float wiDotWh = dot(wi, wh);
 
@@ -106,7 +110,7 @@ vec3 EvaluateBtdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float btdfP
     F0 = mix(F0, mat.baseCol, mat.metallic);
     vec3 F = FresnelSchlick(abs(woDotWh), F0);
 
-    float D = TrowbridgeReitzGgx(ns, wh, alpha);
+    float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
 
     float G1, G2;
     if (geometryMode == 0) {

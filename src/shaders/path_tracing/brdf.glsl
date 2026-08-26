@@ -20,8 +20,10 @@ vec3 EvaluateBrdf(vec3 wi, Ray ray, SurfaceInteraction si) {
     float alpha = mat.roughness * mat.roughness;
     float alpha2 = alpha * alpha;
 
+    float nsDotWh = dot(ns, wh);
+
     vec3 F = FresnelSchlick(max(dot(wh, wo), 0.0), F0);
-    float D = TrowbridgeReitzGgx(ns, wh, alpha);
+    float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
 
     float G;
     if (geometryMode == 0) {
@@ -67,9 +69,10 @@ vec3 EvaluateBrdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float brdfP
 
     float nsDotWo = max(dot(ns, wo), 0.0);
     float nsDotWi = max(dot(ns, wi), 0.0);
+    float nsDotWh = dot(ns, wh);
 
     vec3 F = FresnelSchlick(max(dot(wh, wo), 0.0), F0);
-    float D = TrowbridgeReitzGgx(ns, wh, alpha);
+    float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
 
     float G1, G2;
     if (geometryMode == 0) {

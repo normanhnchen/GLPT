@@ -85,6 +85,8 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             G2 = GeometrySmith(ns, wo, wi, k);
         }
 
+        float nsDotWh = dot(ns, wh);
+
         vec3 specular;
         if (specularMode == 0) {
             /* GGX VNDF importance sampling */
@@ -93,7 +95,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
         } else if (specularMode == 1) {
             /* Cosine-weighted hemisphere sampling */
 
-            float D = TrowbridgeReitzGgx(ns, wh, alpha);
+            float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
             float nDotWo = max(dot(ns, wo), EPSILON);
             float nDotWi = max(dot(ns, wi), EPSILON);
             specular = D * F * G2 / (4.0 * nDotWo * nDotWi);
@@ -160,6 +162,8 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                     G2 = GeometrySmith(ns, wo, wi, k);
                 }
 
+                float nsDotWh = dot(ns, wh);
+
                 vec3 specular;
                 if (specularMode == 0) {
                     /* GGX VNDF importance sampling */
@@ -168,7 +172,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 } else if (specularMode == 1) {
                     /* Cosine-weighted hemisphere sampling */
 
-                    float D = TrowbridgeReitzGgx(ns, wh, alpha);
+                    float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
                     float nDotWo = max(dot(ns, wo), EPSILON);
                     float nDotWi = max(dot(ns, wi), EPSILON);
                     specular = vec3(D) * F * G2 / max((4.0 * nDotWo * nDotWi), EPSILON);
@@ -197,6 +201,8 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             float wiDotWh = abs(dot(wi, wh));
             vec3 F = FresnelSchlick(wiDotWh, F0);
 
+            float nsDotWh = dot(ns, wh);
+
             float G1, G2;
             if (geometryMode == 0) {
                 /* Height-correlated Smith method */
@@ -219,7 +225,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             } else if (specularMode == 1) {
                 /* Cosine-weighted hemisphere sampling */
 
-                float D = TrowbridgeReitzGgx(ns, wh, alpha);
+                float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
                 float nDotWo = max(dot(ns, wo), EPSILON);
                 float nDotWi = max(dot(ns, wi), EPSILON);
                 transmission = vec3(D) * (1.0 - F) * G2 / max((4.0 * nDotWo * nDotWi), EPSILON);
