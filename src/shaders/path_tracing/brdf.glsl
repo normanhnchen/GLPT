@@ -40,13 +40,12 @@ vec3 EvaluateBrdf(vec3 wi, Ray ray, SurfaceInteraction si) {
         G = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
     }
 
-    vec3 kS = F;
-    vec3 kD = vec3(1.0) - kS;
-    kD *= 1.0 - mat.metallic;
-    kD *= 1.0 - mat.transmission;
+    vec3 diffuse = vec3(1.0) - F;
+    diffuse *= 1.0 - mat.metallic;
+    diffuse *= 1.0 - mat.transmission;
 
     vec3 specular = (D * G * F) / max(4.0 * max(nsDotWo, 0.0) * max(nsDotWi, 0.0), EPSILON);
-    vec3 diffuse = kD * mat.baseCol / PI;
+    diffuse *= mat.baseCol / PI;
 
     vec3 brdf = (diffuse + specular) * max(nsDotWi, 0.0);
 
@@ -100,13 +99,12 @@ vec3 EvaluateBrdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float brdfP
     float diffusePdf = CosineSampleHemispherePdf(max(nsDotWi, 0.0)) * lobeProbs.diffuse;
     brdfPdf = specularPdf + diffusePdf;
 
-    vec3 kS = F;
-    vec3 kD = vec3(1.0) - kS;
-    kD *= 1.0 - mat.metallic;
-    kD *= 1.0 - mat.transmission;
+    vec3 diffuse = vec3(1.0) - F;
+    diffuse *= 1.0 - mat.metallic;
+    diffuse *= 1.0 - mat.transmission;
 
     vec3 specular = (D * G2 * F) / max(4.0 * max(nsDotWo, 0.0) * max(nsDotWi, 0.0), EPSILON);
-    vec3 diffuse = kD * mat.baseCol / PI;
+    diffuse *= mat.baseCol / PI;
 
     vec3 brdf = (diffuse + specular) * max(nsDotWi, 0.0);
 
