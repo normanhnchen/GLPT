@@ -13,7 +13,7 @@ Triangle PowerEmissiveTriangleSample(float Xi, out float triPdf) {
     /* Sample from the precomputed alias table*/
 
     int offset = min(int(Xi.x * numEmissiveTriangles), numEmissiveTriangles - 1);
-    float up = min(Xi.x * numEmissiveTriangles - offset, ONE_MINUS_EPSILON);
+    float up = min(Xi.x * numEmissiveTriangles - offset, 1.0 - EPSILON);
 
     EmissiveTriangle etOffset = emissiveTriangles[offset];
 

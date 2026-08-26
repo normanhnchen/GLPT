@@ -12,7 +12,7 @@ Light PowerFinitePunctualLightSample(float Xi, out float lightPdf) {
     /* Sample from the precomputed alias table */
     
     int offset = min(int(Xi * numFiniteLights), numFiniteLights - 1);
-    float up = min(Xi * numFiniteLights - offset, ONE_MINUS_EPSILON);
+    float up = min(Xi * numFiniteLights - offset, 1.0 - EPSILON);
 
     FiniteLight flOffset = finiteLights[offset];
 
