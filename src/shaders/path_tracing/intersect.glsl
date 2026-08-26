@@ -120,6 +120,11 @@ AabbHit AabbTest(Ray ray, vec3 invRayD, BvhNode node, float closestT) {
 // Adaptation from "How to Build a BVH – Part 2: Faster Rays,"
 // https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
 bool Intersect(Ray ray, inout SurfaceInteraction si) {
+    /*
+     * BVH traversal to find the closest ray-triangle intersection.
+     * Used for primary or bounce rays.
+     */
+
     SurfaceInteraction tempSi;
     bool didIntersect = false;
     float closestT = INF;
@@ -190,6 +195,11 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
 // Adaptation from "How to Build a BVH – Part 2: Faster Rays,"
 // https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
 VisibilityInteraction TestVisibility(inout uvec3 rng, Ray ray, float maxDist) {
+    /*
+     * BVH traversal to find if there is a ray-triangle intersection.
+     * Used for shadow rays in NEE to determine occlusion.
+     */
+    
     VisibilityInteraction vi;
     VisibilityInteraction tempVi;
     float closestT = maxDist;
