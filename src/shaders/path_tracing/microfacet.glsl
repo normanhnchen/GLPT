@@ -39,7 +39,7 @@ float TrowbridgeReitzGgx(vec3 n, vec3 wh, float alpha) {
     float denom = nDotWh2 * (alpha2 - 1.0) + 1.0;
     denom       = PI * denom * denom;
 	
-    // Clamp to prevent denom from clamping to 0.0 when underflowing (when roughness ~ 0.0)
+    // Clamp to prevent division by zero
     return numer / max(denom, 1e-4);
 }
 
