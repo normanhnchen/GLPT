@@ -37,7 +37,9 @@ float TrowbridgeReitzGgx(float nDotWh, float alpha) {
     float denom = nDotWh2 * (alpha2 - 1.0) + 1.0;
     denom       = PI * denom * denom;
 	
-    // Clamp to prevent division by zero
+    // Note that the denominator clamp is essential
+    // for surfaces with roughness ~ 0 because the
+    // denominator can underflow to 0.0
     return numer / max(denom, EPSILON);
 }
 
@@ -47,7 +49,7 @@ float GeometrySchlickGgx(float nDotWo, float k) {
     float numer = nDotWo;
     float denom = nDotWo * (1.0 - k) + k;
 
-    return numer / denom;
+    return numer / max(denom, EPSILON);
 }
 
 // "Real Shading in Unreal Engine 4,"
@@ -65,9 +67,9 @@ float GeometrySmith(float nDotWo, float nDotWi, float k) {
 // "Importance Sampling techniques for GGX with Smith Masking-Shadowing: Part 2," Joe Schutte's Blog,
 // https://schuttejoe.github.io/post/ggximportancesamplingpart2/.
 float SmithGgxMasking(float nDotWo, float alpha2) {
-    float denomC = sqrt(alpha2 + (1.0 - alpha2) * nDotWo * nDotWo) + nDotWo;
+    float denom = sqrt(alpha2 + (1.0 - alpha2) * nDotWo * nDotWo) + nDotWo;
 
-    return 2.0 * nDotWo / denomC;
+    return 2.0 * nDotWo / max(denom, EPSILON);
 }
 
 // "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs,"
@@ -79,13 +81,13 @@ float SmithGgxMaskingShadowing(float nDotWi, float nDotWo, float alpha2) {
     float denomA = nDotWo * sqrt(alpha2 + (1.0 - alpha2) * nDotWi * nDotWi);
     float denomB = nDotWi * sqrt(alpha2 + (1.0 - alpha2) * nDotWo * nDotWo);
 
-    return 2.0 * nDotWi * nDotWo / (denomA + denomB);
+    return 2.0 * nDotWi * nDotWo / max(denomA + denomB, EPSILON);
 }
 
 // "Fresnel Incidence Effects," in Physically Based Rendering: From Theory to Implementation
 // https://pbr-book.org/3ed-2018/Reflection_Models/Fresnel_Incidence_Effects
 vec3 FresnelSchlick(float cosTheta, vec3 F0) {
-    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+    return F0 + (1.0 - F0) * pow(1.0 - clamp(cosTheta, 0.0, 1.0), 5.0);
 }
 
 // "Sampling the GGX Distribution of Visible Normals," Journal of Computer Graphics Techniques (JCGT)
@@ -131,7 +133,7 @@ vec3 ImportanceSampleGgxVndf(SurfaceInteraction si, vec2 Xi, vec3 wo, float roug
 }
 
 float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
-    float nDotWo = abs(dot(n, wo));
+    float nDotWo = dot(n, wo);
     vec3 wh = normalize(wo + wi);
     float alpha2 = alpha * alpha;
 
@@ -152,7 +154,7 @@ float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
         G1 = GeometrySchlickGgx(max(dot(n, wo), EPSILON), k);
     }
 
-    return (D * G1) / max((4.0 * nDotWo), EPSILON);
+    return (D * G1) / max((4.0 * abs(nDotWo)), EPSILON);
 }
 
 LobeProbs ComputeLobeProbs(Material mat, float nsDotWo, vec3 F0) {
