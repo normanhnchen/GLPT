@@ -29,22 +29,22 @@ void main() {
     } else if (AgX) {
         color = TonemapAgX(hdrColor);
 
-        // Correct because gamma correction is baked in
+        // Gamma correction is baked into the tonemapper
         color = pow(color, vec3(2.2));
     } else if (AgXGolden) {
         color = TonemapAgXGolden(hdrColor);
 
-        // Correct because gamma correction is baked in
+        // Gamma correction is baked into the tonemapper
         color = pow(color, vec3(2.2));
     } else if (AgXPunchy) {
         color = TonemapAgXPunchy(hdrColor);
 
-        // Correct because gamma correction is baked in
+        // Gamma correction is baked into the tonemapper
         color = pow(color, vec3(2.2));
     } else if (Filmic) {
         color = TonemapFilmic(hdrColor);
 
-        // Correct because gamma correction is baked in
+        // Gamma correction is baked into the tonemapper
         color = pow(color, vec3(2.2));
     } else if (Lottes) {
         vec3 a = vec3(1.6);
@@ -87,7 +87,7 @@ void main() {
     } else if (Unreal) {
         color = TonemapUnreal(hdrColor);
 
-        // Correct because gamma correction is baked in
+        // Gamma correction is baked into the tonemapper
         color = pow(color, vec3(2.2));
     }
 
