@@ -12,7 +12,7 @@ vec3 Pcg3d(inout uvec3 rng) {
     rng.x += rng.y*rng.z; rng.y += rng.z*rng.x; rng.z += rng.x*rng.y;
     rng ^= rng >> 16u;
     rng.x += rng.y*rng.z; rng.y += rng.z*rng.x; rng.z += rng.x*rng.y;
-    // Convert to range [0, 1)
+    // Convert to range [0, 1)³
     return vec3(rng) / float(UINT32_MAX);
 }
 
@@ -67,15 +67,18 @@ vec3 ClampLuminance(vec3 col, float maxLum) {
 vec3 EnsureValidReflection(vec3 ng, vec3 wo, vec3 ns) {
     vec3 R = reflect(-wo, ns);
 
-    // Check if the reflection is above the surface
     float horizon = dot(ng, R);
     
     if (horizon < 0.0) {
+        /* Reflection below the surface */
+
         float blendFactor = clamp(abs(horizon) / dot(ng, wo) + 1e-4, 0.0, 1.0);
 
         // Blend the shading normal toward the geometric normal
         return normalize(mix(ns, ng, blendFactor));
     } else {
+        /* Reflection above the surface */
+
         return ns;
     }
 }
