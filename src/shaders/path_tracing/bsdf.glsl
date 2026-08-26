@@ -38,24 +38,18 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
         float alpha = mat.roughness * mat.roughness;
         float alpha2 = alpha * alpha;
 
-        vec3 wi, wh;
+        vec3 wi, wm;
         if (specularMode == 0) {
             /* GGX VNDF importance sampling */
 
-            // Convert wo to tangent space for the GGX VNDF importance sample
-            vec3 woTangent = si.worldToLocal * wo;
+            wm = ImportanceSampleGgxVndf(si, Xi.xy, wo, alpha);
 
-            vec3 whTangent = ImportanceSampleGgxVndf(Xi.xy, woTangent, alpha);
-
-            // Transform wh back to world space
-            wh = normalize(si.localToWorld * whTangent);
-
-            wi = reflect(-wo, wh);
+            wi = reflect(-wo, wm);
         } else if (specularMode == 1) {
             /* Cosine hemisphere sampling */
 
             wi = CosineSampleHemisphere(rng, si);
-            wh = normalize(wo + wi);
+            wm = normalize(wo + wi);
         }
 
         float nsDotWi = dot(ns, wi);
@@ -70,7 +64,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             return bsdfSample;
         }
 
-        float wiDotWh = dot(wi, wh);
+        float wiDotWh = dot(wi, wm);
         vec3 F = FresnelSchlick(wiDotWh, F0);
         
         float G1, G2;
@@ -87,7 +81,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             G2 = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
         }
 
-        float nsDotWh = dot(ns, wh);
+        float nsDotWm = dot(ns, wm);
 
         vec3 specular;
         if (specularMode == 0) {
@@ -97,7 +91,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
         } else if (specularMode == 1) {
             /* Cosine-weighted hemisphere sampling */
 
-            float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
+            float D = TrowbridgeReitzGgx(max(nsDotWm, 0.0), alpha);
             float nDotWo = max(dot(ns, wo), EPSILON);
             float nDotWi = max(dot(ns, wi), EPSILON);
             specular = D * F * G2 / (4.0 * nDotWo * nDotWi);
@@ -132,13 +126,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             float alpha = mat.roughness * mat.roughness;
             float alpha2 = alpha * alpha;
 
-            // Convert wo to tangent space for GGX VNDF importance sampling
-            vec3 woTangent = si.worldToLocal * wo;
-
-            vec3 whTangent = ImportanceSampleGgxVndf(Xi.xy, woTangent, alpha);
-
-            // Transform wh back to world space
-            vec3 wh = normalize(si.localToWorld * whTangent);
+            vec3 wh = ImportanceSampleGgxVndf(si, Xi.xy, wo, alpha);
 
             vec3 wi = refract(ray.d, wh, si.eta_i / si.eta_t);
 

@@ -90,12 +90,15 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0) {
 
 // "Sampling the GGX Distribution of Visible Normals," Journal of Computer Graphics Techniques (JCGT)
 // http://jcgt.org/published/0007/04/01/
-vec3 ImportanceSampleGgxVndf(vec2 Xi, vec3 wo, float roughness) {
+vec3 ImportanceSampleGgxVndf(SurfaceInteraction si, vec2 Xi, vec3 wo, float roughness) {
+    // Convert wo to tangent space for GGX VNDF importance sampling
+    vec3 woTangent = si.worldToLocal * wo;
+    
     // Stretch the view into the hemisphere configuration
     vec3 Vh = normalize(vec3(
-        wo.x * roughness,
-        wo.y * roughness,
-        wo.z
+        woTangent.x * roughness,
+        woTangent.y * roughness,
+        woTangent.z
     ));
 
     // Orthonormal basis
@@ -117,11 +120,14 @@ vec3 ImportanceSampleGgxVndf(vec2 Xi, vec3 wo, float roughness) {
     vec3 wm = p1 * t1 + p2 * t2 + sqrt(max(0.0, 1.0 - p1 * p1 - p2 * p2)) * Vh;
 
     // Unstretch the normal back into the ellipsoid configuration
-    return normalize(vec3(
+    wm = normalize(vec3(
         roughness * wm.x,
         roughness * wm.y,
         max(0.0, wm.z)
     ));
+
+    // Transform wm from tangent sapce back to world space
+    return normalize(si.localToWorld * wm);
 }
 
 float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
