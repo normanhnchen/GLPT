@@ -11,7 +11,8 @@
 // "Sampling light sources," in Physically Based Rendering: From Theory to Implementation
 // https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
 int SampleRowCdf(float Xi, int height, out float rowHigh, out float rowLow, out float rowPmf) {
-    // Binary search to find the correct row
+    /* Binary search to find the correct row */
+
     int lo = 0, hi = height - 1;
     while (lo < hi) {
         int mid = (hi + lo) / 2;
@@ -22,6 +23,7 @@ int SampleRowCdf(float Xi, int height, out float rowHigh, out float rowLow, out 
             hi = mid;
         }
     }
+
     // Use lo as the chosen row index
     rowHigh = texelFetch(hdriRowCdf, ivec2(0, lo), 0).r;
     rowLow = lo > 0 ? texelFetch(hdriRowCdf, ivec2(0, lo - 1), 0).r : 0.0;
@@ -32,7 +34,8 @@ int SampleRowCdf(float Xi, int height, out float rowHigh, out float rowLow, out 
 // "Sampling light sources," in Physically Based Rendering: From Theory to Implementation
 // https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
 int SampleColCdf(float Xi, int row, int width, out float colHigh, out float colLow, out float colPmf) {
-    // Binary search to find the correct column
+    /* Binary search to find the correct column */
+
     int lo = 0, hi = width - 1;
     while (lo < hi) {
         int mid = (hi + lo) / 2;
@@ -43,6 +46,8 @@ int SampleColCdf(float Xi, int row, int width, out float colHigh, out float colL
             hi = mid;
         }
     }
+
+    // Use (low, row) as the chosen (row, col) indices
     colHigh = texelFetch(hdriColCdf, ivec2(lo, row), 0).r;
     colLow = lo > 0 ? texelFetch(hdriColCdf, ivec2(lo - 1, row), 0).r : 0.0;
     colPmf = max(colHigh - colLow, 1e-8);
@@ -116,8 +121,8 @@ vec3 SampleHdriLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
         return vec3(0.0);
     }
 
-    // Multiple Importance Sample (MIS)
-    // --------------------------------
+    /* Multiple Importance Sample (MIS) */
+
     float bsdfPdf;
     vec3 f = EvaluateBsdfAndPdf(wi, ray, si, bsdfPdf);
     float misWeight = PowerHeuristic(1, lightPdf, 1, bsdfPdf);
