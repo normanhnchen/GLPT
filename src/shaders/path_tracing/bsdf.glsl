@@ -81,7 +81,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             /* Schlick-GGX approximation method */
 
             float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-            G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
+            G1 = GeometrySchlickGgx(max(dot(ns, wo), EPSILON), k);
             G2 = GeometrySmith(ns, wo, wi, k);
         }
 
@@ -89,13 +89,13 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
         if (specularMode == 0) {
             /* GGX VNDF importance sampling */
 
-            specular = F * (G2 / max(G1, 1e-4));
+            specular = F * (G2 / max(G1, EPSILON));
         } else if (specularMode == 1) {
             /* Cosine-weighted hemisphere sampling */
 
             float D = TrowbridgeReitzGgx(ns, wh, alpha);
-            float nDotWo = max(dot(ns, wo), 1e-4);
-            float nDotWi = max(dot(ns, wi), 1e-4);
+            float nDotWo = max(dot(ns, wo), EPSILON);
+            float nDotWi = max(dot(ns, wi), EPSILON);
             specular = D * F * G2 / (4.0 * nDotWo * nDotWi);
         }
         
@@ -156,7 +156,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                     /* Schlick-GGX approximation method */
 
                     float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-                    G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
+                    G1 = GeometrySchlickGgx(max(dot(ns, wo), EPSILON), k);
                     G2 = GeometrySmith(ns, wo, wi, k);
                 }
 
@@ -164,14 +164,14 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 if (specularMode == 0) {
                     /* GGX VNDF importance sampling */
 
-                    specular = F * (G2 / max(G1, 1e-4));
+                    specular = F * (G2 / max(G1, EPSILON));
                 } else if (specularMode == 1) {
                     /* Cosine-weighted hemisphere sampling */
 
                     float D = TrowbridgeReitzGgx(ns, wh, alpha);
-                    float nDotWo = max(dot(ns, wo), 1e-4);
-                    float nDotWi = max(dot(ns, wi), 1e-4);
-                    specular = vec3(D) * F * G2 / max((4.0 * nDotWo * nDotWi), 1e-4);
+                    float nDotWo = max(dot(ns, wo), EPSILON);
+                    float nDotWi = max(dot(ns, wi), EPSILON);
+                    specular = vec3(D) * F * G2 / max((4.0 * nDotWo * nDotWi), EPSILON);
                 }
 
                 float specularPdf;
@@ -207,7 +207,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 /* Schlick-GGX approximation method */
 
                 float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-                G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
+                G1 = GeometrySchlickGgx(max(dot(ns, wo), EPSILON), k);
                 G2 = GeometrySmith(ns, wo, wi, k);
             }
 
@@ -215,14 +215,14 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             if (specularMode == 0) {
                 /* GGX VNDF importance sampling */
 
-                transmission = (1.0 - F) * (G2 / max(G1, 1e-4));
+                transmission = (1.0 - F) * (G2 / max(G1, EPSILON));
             } else if (specularMode == 1) {
                 /* Cosine-weighted hemisphere sampling */
 
                 float D = TrowbridgeReitzGgx(ns, wh, alpha);
-                float nDotWo = max(dot(ns, wo), 1e-4);
-                float nDotWi = max(dot(ns, wi), 1e-4);
-                transmission = vec3(D) * (1.0 - F) * G2 / max((4.0 * nDotWo * nDotWi), 1e-4);
+                float nDotWo = max(dot(ns, wo), EPSILON);
+                float nDotWi = max(dot(ns, wi), EPSILON);
+                transmission = vec3(D) * (1.0 - F) * G2 / max((4.0 * nDotWo * nDotWi), EPSILON);
             }
 
             float bsdfPdf = BtdfPdf(ns, wo, wi, alpha, si.eta_i, si.eta_t) * lobeProbs.transmission;

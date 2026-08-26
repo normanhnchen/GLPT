@@ -59,7 +59,7 @@ float GetLuminance(vec3 col) {
 vec3 ClampLuminance(vec3 col, float maxLum) {
     float lum = GetLuminance(col);
     if (lum > maxLum) {
-        col *= maxLum / max(lum, 1e-4);
+        col *= maxLum / max(lum, EPSILON);
     }
     return col;
 }
@@ -72,7 +72,7 @@ vec3 EnsureValidReflection(vec3 ng, vec3 wo, vec3 ns) {
     if (horizon < 0.0) {
         /* Reflection below the surface */
 
-        float blendFactor = clamp(abs(horizon) / dot(ng, wo) + 1e-4, 0.0, 1.0);
+        float blendFactor = clamp(abs(horizon) / dot(ng, wo) + EPSILON, 0.0, 1.0);
 
         // Blend the shading normal toward the geometric normal
         return normalize(mix(ns, ng, blendFactor));

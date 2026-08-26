@@ -40,7 +40,7 @@ float TrowbridgeReitzGgx(vec3 n, vec3 wh, float alpha) {
     denom       = PI * denom * denom;
 	
     // Clamp to prevent division by zero
-    return numer / max(denom, 1e-4);
+    return numer / max(denom, EPSILON);
 }
 
 // "Real Shading in Unreal Engine 4,"
@@ -149,10 +149,10 @@ float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
         
         float roughness = sqrt(alpha);
         float k = (roughness + 1.0) * (roughness + 1.0) / 8.0;
-        G1 = GeometrySchlickGgx(max(dot(n, wo), 1e-4), k);
+        G1 = GeometrySchlickGgx(max(dot(n, wo), EPSILON), k);
     }
 
-    return (D * G1) / max((4.0 * nDotWo), 1e-4);
+    return (D * G1) / max((4.0 * nDotWo), EPSILON);
 }
 
 LobeProbs ComputeLobeProbs(Material mat, float nsDotWo, vec3 F0) {

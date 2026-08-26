@@ -27,8 +27,8 @@ void BeerLambert(inout bool insideMedium, inout vec3 entryPoint, SurfaceInteract
             if (transmissionMode == 0) {
                 /* Beer-Lambert */
 
-                float distTravelled = max(length(si.p - entryPoint), 1e-4);
-                vec3 absorption = -log(max(si.mat.baseCol, 1e-4));
+                float distTravelled = max(length(si.p - entryPoint), EPSILON);
+                vec3 absorption = -log(max(si.mat.baseCol, EPSILON));
                 transmittance = exp(-absorption * distTravelled);
             } else if (transmissionMode == 1) {
                 /*

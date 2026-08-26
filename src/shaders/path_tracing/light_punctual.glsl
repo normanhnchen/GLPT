@@ -49,17 +49,17 @@ vec3 SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) 
     if (light.type == 0) {
         /* Point light */
         
-        Li = light.col * light.intensity / max(dist * dist, 0.0001);
+        Li = light.col * light.intensity / max(dist * dist, EPSILON);
     } else if (light.type == 2) {
         /* Spotlight */
 
-        float lightAngleScale = 1.0 / max(0.001, cos(light.innerConeAngle) - cos(light.outerConeAngle));
+        float lightAngleScale = 1.0 / max(EPSILON, cos(light.innerConeAngle) - cos(light.outerConeAngle));
         float lightAngleOffset = -cos(light.outerConeAngle) * lightAngleScale;
 
         float cd = dot(normalize(-light.d), wi);
         float angularAttenuation = clamp(cd * lightAngleScale + lightAngleOffset, 0.0, 1.0);
         angularAttenuation *= angularAttenuation;
-        float attenuation = angularAttenuation / max(dist * dist, 0.0001);
+        float attenuation = angularAttenuation / max(dist * dist, EPSILON);
 
         Li = light.col * light.intensity * attenuation;
     }

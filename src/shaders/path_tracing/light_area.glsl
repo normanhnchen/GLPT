@@ -65,7 +65,7 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     }
 
     // Distance-scaled offset dynamic with how far away the light source is
-    float distOffset = max(dist * 1e-4, 1e-4);
+    float distOffset = max(dist * EPSILON, EPSILON);
 
     VisibilityInteraction vi = ShadowRayTest(rng, si, dist, wi);
     if (vi.isOccluded) {

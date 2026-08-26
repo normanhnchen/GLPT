@@ -43,7 +43,7 @@ vec3 EvaluateBrdf(vec3 wi, Ray ray, SurfaceInteraction si) {
     float nsDotWo = max(dot(ns, wo), 0.0);
     float nsDotWi = max(dot(ns, wi), 0.0);
 
-    vec3 specular = (D * G * F) / max(4.0 * nsDotWo * nsDotWi, 0.0001);
+    vec3 specular = (D * G * F) / max(4.0 * nsDotWo * nsDotWi, EPSILON);
     vec3 diffuse = kD * mat.baseCol / PI;
 
     vec3 brdf = (diffuse + specular) * nsDotWi;
@@ -81,7 +81,7 @@ vec3 EvaluateBrdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float brdfP
         /* Schlick-GGX approximation method */
         
         float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-        G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
+        G1 = GeometrySchlickGgx(max(dot(ns, wo), EPSILON), k);
         G2 = GeometrySmith(ns, wo, wi, k);
     }
 
@@ -89,7 +89,7 @@ vec3 EvaluateBrdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float brdfP
 
     float specularPdf;
     if (specularMode == 0) {
-        specularPdf = (D * G1) / max((4.0 * nsDotWo), 1e-4) * lobeProbs.specular;
+        specularPdf = (D * G1) / max((4.0 * nsDotWo), EPSILON) * lobeProbs.specular;
     } else if (specularMode == 1) {
         specularPdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.specular;
     }
@@ -101,7 +101,7 @@ vec3 EvaluateBrdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float brdfP
     kD *= 1.0 - mat.metallic;
     kD *= 1.0 - mat.transmission;
 
-    vec3 specular = (D * G2 * F) / max(4.0 * nsDotWo * nsDotWi, 0.0001);
+    vec3 specular = (D * G2 * F) / max(4.0 * nsDotWo * nsDotWi, EPSILON);
     vec3 diffuse = kD * mat.baseCol / PI;
 
     vec3 brdf = (diffuse + specular) * nsDotWi;
