@@ -17,16 +17,25 @@ void BeerLambert(inout bool insideMedium, inout vec3 entryPoint, SurfaceInteract
     // Only apply when the material is transmissive and the ray is exiting the medium
     if (isTransmission) {
         if (isEntering && !insideMedium) {
+            /* Entering medium */
+
             entryPoint = si.p;
             insideMedium = true;
         } else if (isExiting && didRefract && insideMedium) {
+            /* Exiting medium */
+
             if (transmissionMode == 0) {
-                // Beer-Lambert
-                // ------------
+                /* Beer-Lambert */
+
                 float distTravelled = max(length(si.p - entryPoint), 1e-4);
                 vec3 absorption = -log(max(si.mat.baseCol, 1e-4));
                 transmittance = exp(-absorption * distTravelled);
             } else if (transmissionMode == 1) {
+                /*
+                 * No Beer-Lambert
+                 * Default to base color
+                 */
+
                 transmittance = si.mat.baseCol;
             }
 
