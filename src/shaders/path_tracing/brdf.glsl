@@ -25,12 +25,12 @@ vec3 EvaluateBrdf(vec3 wi, Ray ray, SurfaceInteraction si) {
 
     float G;
     if (geometryMode == 0) {
-        // Height-Correlated Smith Method
-        // ------------------------------
+        /* Height-correlated Smith method */
+
         G = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
     } else {
-        // Schlick-GGX Approximation Method
-        // --------------------------------
+        /* Schlick-GGX approximation method */
+        
         float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
         G = GeometrySmith(ns, wo, wi, k);
     }
@@ -73,13 +73,13 @@ vec3 EvaluateBrdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float brdfP
 
     float G1, G2;
     if (geometryMode == 0) {
-        // Height-Correlated Smith Method
-        // ------------------------------
+        /* Height-correlated Smith method */
+
         G1 = SmithGgxMasking(wo, ns, alpha2);
         G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
     } else {
-        // Schlick-GGX Approximation Method
-        // --------------------------------
+        /* Schlick-GGX approximation method */
+        
         float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
         G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
         G2 = GeometrySmith(ns, wo, wi, k);
