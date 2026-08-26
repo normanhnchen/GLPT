@@ -90,6 +90,22 @@ vec2 UniformSampleUnitDisk(inout uvec3 rng) {
     return vec2(r * cos(theta), r * sin(theta));
 }
 
+// "Triangle Meshes," in Physically Based Rendering: From Theory to Implementation
+// https://pbr-book.org/4ed/Shapes/Triangle_Meshes#Sampling
+void UniformSampleTrianglePoint(vec2 Xi, out float b0, out float b1, out float b2) {
+    float Xi1 = Xi.x;
+    float Xi2 = Xi.y;
+    if (Xi1 < Xi2) {
+        b0 = Xi1 / 2.0;
+        b1 = Xi2 - b0;
+        b2 = 1.0 - b0 - b1;
+    } else {
+        b1 = Xi2 / 2.0;
+        b0 = Xi1 - b1;
+        b2 = 1.0 - b0 - b1;
+    }
+}
+
 // "Building an Orthonormal Basis, Revisited," Journal of Computer Graphics Techniques (JCGT)
 // http://jcgt.org/published/0006/01/01/
 void ONB(vec3 n, out vec3 dpdu, out vec3 dpdv) {
