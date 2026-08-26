@@ -52,7 +52,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         }
 
         if (!Intersect(ray, si)) {
-            // Ray has exited the scene
+            /* Ray exited the scene */
 
             if (i == 0) {
                 pathSample.depth = -1.0;
@@ -61,10 +61,12 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             vec3 envColor = SampleHdri(ray.d);
             if (misMode == 0) {
                 if (i == 0) {
+                    /* Add direct contribution */
+
                     directRadiance += throughput * envColor * hdriExposure;
                 } else {
-                    // Multiple Importance Sample (MIS)
-                    // --------------------------------
+                    /* Multiple importance sample (MIS) */
+
                     float lightPdf = HdriPdf(ray.d);
                     float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, lightPdf);
 
@@ -75,9 +77,15 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                     }
                 }
             } else if (misMode == 1) {
+                /* No Multiple importance sample (only BSDF samples) */
+
                 if (i == 0 || i == 1) {
+                    /* Add direct contribution */
+                    
                     directRadiance += throughput * envColor * hdriExposure;
                 } else {
+                    /* Add indirect contribution */
+                    
                     indirectRadiance += throughput * envColor * hdriExposure;
                 }
             }
@@ -111,11 +119,21 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         Material mat = materials[tri.matId];
 
         if (isBackFace) {
-            // Exiting the object
+            /*
+             * The ray is exiting the object
+             * travelling from the medium to the air.
+             */
+
             si.eta_i = mat.ior;
+            // Approximation for the IOR of air
             si.eta_t = 1.0;
         } else {
-            // Entering the object
+            /*
+             * The ray is entering the object
+             * travelling from air to the medium.
+             */
+
+            // Approximation for the IOR of air
             si.eta_i = 1.0;
             si.eta_t = mat.ior;
         }
@@ -130,21 +148,31 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         si.area = tri.area;
 
         if (mat.hasBaseColTex == 1) {
+            /* Sample base color texture */
+
             vec4 baseCol = texture(baseColorTextures, vec3(si.uv, mat.baseTexId));
             mat.baseCol = baseCol.rgb;
             mat.alpha = baseCol.w;
         }
         if (mat.hasEmissiveTex == 1) {
+            /* Sample emissive texture */
+
             mat.emissive = texture(emissiveTextures, vec3(si.uv, mat.emissiveTexId)).rgb;
         }
         if (mat.hasRoughTex == 1) {
+            /* Sample roughness texture */
+
             mat.roughness = texture(roughnessTextures, vec3(si.uv, mat.roughTexId)).r;
         }
         if (mat.hasMetalTex == 1) {
+            /* Sample metallic texture */
+
             mat.metallic = texture(metallicTextures, vec3(si.uv, mat.metalTexId)).r;
         }
         // https://learnopengl.com/Advanced-Lighting/Normal-Mapping
         if (mat.hasNormalTex == 1) {
+            /* Sample normal map texture */
+
             mat3 localToWorld = mat3(si.dpdu, si.dpdv, si.ns);
             // Get normal in world space
             vec3 texNormal = texture(normalTextures, vec3(si.uv, mat.normalTexId)).rgb;
@@ -161,7 +189,8 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         si.worldToLocal = transpose(si.localToWorld);
 
         if (mat.alphaMode == 1) {
-            // MASK
+            /* MASK */
+
             if (mat.alpha < mat.alphaCutoff) {
                 // Advance the ray and ignore the hit
                 ray.o = si.p + ray.d * EPSILON;
@@ -172,7 +201,8 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             }
         }
         if (mat.alphaMode == 2) {
-            // BLEND
+            /* BLEND */
+
             if (Pcg3d(rng).x > mat.alpha) {
                 // Advance the ray and ignore the hit
                 ray.o = si.p + ray.d * EPSILON;
@@ -183,18 +213,24 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             }
         }
 
-        // Prevent 0 roughness which results in NaN in many functions
+        // Prevent 0 roughness which can result in NaN
         mat.roughness = max(mat.roughness, 1e-2);
         si.mat = mat;
         
-        // Add light contribution
         if (mat.hasEmission == 1) {
             if (misMode == 0) {
+                /* Multiple importance sample (MIS) */
+
                 if (i == 0) {
+                    /* Add direct contribution */
+
                     directRadiance += throughput * mat.emissive * mat.emissiveStrength;
                 } else {
-                    // Multiple Importance Sample (MIS)
-                    // --------------------------------
+                    /*
+                     * Add indirect contribution
+                     * Multiple importance sample (MIS)
+                     */
+
                     float areaLightPdf = AreaLightPdf(si, ray, prevPoint);
                     float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, areaLightPdf);
                     vec3 indirect = mat.emissive * mat.emissiveStrength * misWeight;
@@ -202,6 +238,11 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                     indirectRadiance += throughput * indirect;
                 }
             } else if (misMode == 1) {
+                /*
+                 * Multiple importance sample (MIS)
+                 * (only BSDF samples)
+                 */
+                
                 if (i == 0) {
                     directRadiance += throughput * mat.emissive * mat.emissiveStrength;
                 } else {
@@ -211,6 +252,8 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         }
         
         if (misMode == 0) {
+            /* Multiple importance sample (MIS) on */
+
             vec3 direct = vec3(0.0);
             for (int i = 0; i < lights.length(); i++) {
                 if (lights[i].type == 1) {
@@ -224,8 +267,12 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             direct = ClampLuminance(direct, maxDirectLuminance);
 
             if (i == 0) {
+                /* Add direct contribution */
+                
                 directRadiance += throughput * direct;
             } else {
+                /* Add indirect contribution */
+                
                 indirectRadiance += throughput * direct;
             }
         }
@@ -233,21 +280,34 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         BsdfSample bsdfSample = SampleBsdf(rng, ray, si, bounceDepth);
 
         if (i == 0) {
+            /*
+             * Debug passes
+             * Add direct contribution
+             */
+            
             pathSample.baseCol = mat.baseCol;
             pathSample.normal = si.ns;
             pathSample.depth = tAccum + si.t;
 
-            if (debugMode == 1) { // Albedo
+            if (debugMode == 1) {
+                /* Albedo */
+
                 pathSample.combined = pathSample.baseCol;
                 break;
-            } else if (debugMode == 2) { // Normal
+            } else if (debugMode == 2) {
+                /* Normal */
+
                 // Encode to range [0, 1]
                 pathSample.combined = pathSample.normal * 0.5 + 0.5;
                 break;
-            } else if (debugMode == 3) { // Depth
+            } else if (debugMode == 3) {
+                /* Depth */
+
                 pathSample.combined = vec3(pathSample.depth);
                 break;
-            } else if (debugMode == 7) { // BVH Depth
+            } else if (debugMode == 7) {
+                /* BVH depth */
+
                 pathSample.combined = GetBvhDepthColor(si.nodesVisited, MAX_NODES_VISITED);
                 break;
             }
@@ -271,8 +331,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         vec3 offsetDir = didRefract ? -si.ng : si.ng;
         ray.o = OffsetRayOrigin(si.p, offsetDir);
 
-        // Russian Roulette
-        // ----------------
+        /* Russian Roulette */
 
         // "Russian Roulette and Splitting," in Physically Based Rendering: From Theory to Implementation
         // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Russian_Roulette_and_Splitting
@@ -291,13 +350,21 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         }
     }
     
-    if (debugMode == 0) { // Off
+    if (debugMode == 0) {
+        /* Off */
+
         pathSample.combined = directRadiance + indirectRadiance;
-    } else if (debugMode == 4) { // Direct
+    } else if (debugMode == 4) {
+        /* Direct */
+
         pathSample.combined = directRadiance;
-    } else if (debugMode == 5) { // Indirect
+    } else if (debugMode == 5) {
+        /* Indirect */
+
         pathSample.combined = indirectRadiance;
-    } else if (debugMode == 6) { // Demodulated
+    } else if (debugMode == 6) {
+        /* Demodulated */
+
         if (pathSample.depth < 0.0) {
             pathSample.combined = directRadiance + indirectRadiance;
         } else {
@@ -339,11 +406,14 @@ void main() {
         // Adjust for aspect ratio
         uv.x *= aspectRatio;
 
+        /* Pinhole camera direction */
+
         float tanHalfFov = tan(radians(Camera.fov) * 0.5);
         vec3 pinholeDir = normalize(Camera.front + (uv.x * Camera.right * tanHalfFov) + (uv.y * Camera.up * tanHalfFov));
+        
+        /* Depth of field (DOF) ray origin & direction offset */
 
         vec3 focusPoint = Camera.pos + pinholeDir * Camera.focusDist;
-
         vec2 rd = Camera.aperture * UniformSampleUnitDisk(state);
         vec3 offset = Camera.right * rd.x + Camera.up * rd.y;
 
@@ -354,6 +424,11 @@ void main() {
         PathSample pathSample = PathTrace(ray, state);
         
         if (any(isnan(pathSample.combined)) || any(isinf(pathSample.combined))) {
+            /*
+             * Remove any lingering NaN or Infs
+             * to prevent permanent artifacts in the render.
+             */
+            
             pathSample.combined = vec3(0.0);
         }
         
@@ -371,6 +446,8 @@ void main() {
     sampleBaseColor /= float(samplesPerPixel);
     sampleNormal /= float(samplesPerPixel);
     float sampleHitFraction = sampleHitCount / float(samplesPerPixel);
+    // Set the depth to be -1.0 if there were no hits so that the
+    // CPU side can correctly normalize the image by ignoring depth < 0.0
     sampleDepth = sampleHitCount > 0.0 ? sampleDepth / sampleHitCount : -1.0;
 
     vec3 oldCombined = imageLoad(combinedPass, pixelCoords).rgb;
@@ -387,14 +464,16 @@ void main() {
     float finalHitFraction;
 
     if (totalSamples == 0) {
-        // Ignore old color
-        // ----------------
+        /* Ignore old color */
+
         finalCombined = sampleCombined;
         finalBaseCol = sampleBaseColor;
         finalNormal = sampleNormal;
         finalDepth = sampleDepth;
         finalHitFraction = sampleHitFraction;
     } else {
+        /* Progressive accumulation */
+
         finalCombined = mix(oldCombined.rgb, sampleCombined, weight);
         finalBaseCol = mix(oldBaseColor.rgb, sampleBaseColor, weight);
         finalNormal = mix(oldNormal.rgb, sampleNormal, weight);
