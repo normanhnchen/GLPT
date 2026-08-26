@@ -10,13 +10,13 @@
  */
 
 
-// --- ACESFilm ---
+/*  ACESFilm */
 
 vec3 TonemapACESFilm(vec3 x, float a, float b, float c, float d, float e) {
     return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
 }
 
-// --- AgX ---
+/* AgX */
 
 const mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(
      1.6605, -0.1246, -0.0182,
@@ -91,7 +91,7 @@ vec3 TonemapAgXPunchy(vec3 color) {
     return TonemapAgXCdl(color, vec3(1.0), vec3(0.0), vec3(1.35), 1.4);
 }
 
-// --- Filmic ---
+/* Filmic */
 
 vec3 TonemapFilmic(vec3 x) {
     vec3 X = max(vec3(0.0), x - 0.004);
@@ -99,7 +99,7 @@ vec3 TonemapFilmic(vec3 x) {
     return pow(result, vec3(2.2));
 }
 
-// --- Lottes ---
+/* Lottes */
 
 vec3 TonemapLottes(vec3 x, vec3 a, vec3 d, vec3 hdrMax, vec3 midIn, vec3 midOut) {
     const vec3 b =
@@ -112,7 +112,7 @@ vec3 TonemapLottes(vec3 x, vec3 a, vec3 d, vec3 hdrMax, vec3 midIn, vec3 midOut)
     return pow(x, a) / (pow(x, a * d) * b + c);
 }
 
-// --- Neutral ---
+/* Neutral */
 
 vec3 TonemapNeutral(vec3 color) {
     const float startCompression = 0.8 - 0.04;
@@ -133,19 +133,19 @@ vec3 TonemapNeutral(vec3 color) {
     return mix(color, vec3(newPeak), g);
 }
 
-// --- Reinhard ---
+/* Reinhard */
 
 vec3 TonemapReinhard(vec3 x) {
     return x / (1.0 + x);
 }
 
-// --- Reinhard2 ---
+/* Reinhard2 */
 
 vec3 TonemapReinhard2(vec3 x, float Lwhite) {
     return (x * (1.0 + x / (Lwhite * Lwhite))) / (1.0 + x);
 }
 
-// --- Uchimura ---
+/* Uchimura */
 
 vec3 TonemapUchimura(vec3 x, float P, float a, float m, float l, float c, float b) {
     float l0 = ((P - m) * l) / a;
@@ -167,13 +167,13 @@ vec3 TonemapUchimura(vec3 x, float P, float a, float m, float l, float c, float 
     return T * w0 + L * w1 + S * w2;
 }
 
-// --- Uncharted2 ---
+/* Uncharted2 */
 
 vec3 TonemapUncharted2(vec3 x, float A, float B, float C, float D, float E, float F) {
     return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
 }
 
-// --- Unreal ---
+/* Unreal */
 
 vec3 TonemapUnreal(vec3 x) {
     return x / (x + 0.155) * 1.019;
