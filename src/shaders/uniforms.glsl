@@ -9,7 +9,7 @@
  */
 
 
-// --- path_trace.comp ---
+/* path_trace.comp */
 
 uniform float aspectRatio;
 // Top left corner of the current tile
@@ -43,7 +43,7 @@ uniform float maxDirectLuminance;
 uniform float maxIndirectLuminance;
 
 
-// --- final.fs ---
+/* final.fs */
 
 uniform sampler2D tex;
 
@@ -64,8 +64,8 @@ uniform bool Uncharted2;
 uniform bool Unreal;
 
 
-// --- bvh_bounds_debug.vs ---
-// --- bvh_bounds_debug.fs ---
+/* bvh_bounds_debug.vs */
+/* bvh_bounds_debug.fs */
 
 uniform int bvhViewLayer;
 uniform int bvhViewDepth;
@@ -80,15 +80,15 @@ uniform int bvhColorMode;
  */
 
 
-// --- pbr.fs ---
+/* pbr.fs */
 
 uniform int numLights;
 uniform vec3 cameraPos;
 
-// --- final.fs ---
+/* final.fs */
 
-// Uniforms previously defined
-// -----------------------------------
+/* Uniforms previously defined */
+
 // uniform sampler2D tex;
 // uniform float exposure;
 // uniform bool None;
