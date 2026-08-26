@@ -19,12 +19,12 @@ float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta_i, float eta_t) {
     
     float G1;
     if (geometryMode == 0) {
-        // Height-Correlated Smith Method
-        // ------------------------------
+        /* Height-correlated Smith method */
+
         G1 = SmithGgxMasking(wo, n, alpha2);
     } else {
-        // Schlick-GGX Approximation Method
-        // --------------------------------
+        /* Schlick-GGX approximation method */
+
         float roughness = sqrt(alpha);
         float k = (roughness + 1.0) * (roughness + 1.0) / 8.0;
         G1 = GeometrySchlickGgx(max(dot(n, wo), 1e-4), k);
@@ -64,12 +64,12 @@ vec3 EvaluateBtdf(vec3 wi, Ray ray, SurfaceInteraction si) {
 
     float G;
     if (geometryMode == 0) {
-        // Height-Correlated Smith Method
-        // ------------------------------
+        /* Height-Correlated Smith Method */
+
         G = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
     } else {
-        // Schlick-GGX Approximation Method
-        // --------------------------------
+        /* Schlick-GGX Approximation Method */
+        
         float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
         G = GeometrySmith(ns, wo, wi, k);
     }
@@ -110,13 +110,13 @@ vec3 EvaluateBtdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float btdfP
 
     float G1, G2;
     if (geometryMode == 0) {
-        // Height-Correlated Smith Method
-        // ------------------------------
+        /* Height-correlated smith method */
+
         G1 = SmithGgxMasking(wo, ns, alpha2);
         G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
     } else {
-        // Schlick-GGX Approximation Method
-        // --------------------------------
+        /* Schlick-GGX approximation method */
+
         float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
         G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
         G2 = GeometrySmith(ns, wo, wi, k);
