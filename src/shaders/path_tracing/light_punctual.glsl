@@ -9,8 +9,8 @@
 // "The Alias Method," in Physically Based Rendering: From Theory to Implementation
 // https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable::Sample
 Light PowerFinitePunctualLightSample(float Xi, out float lightPdf) {
-    // Sample from the precomputed alias table weighted by power
-    // ---------------------------------------------------------
+    /* Sample from the precomputed alias table */
+    
     int offset = min(int(Xi * numFiniteLights), numFiniteLights - 1);
     float up = min(Xi * numFiniteLights - offset, ONE_MINUS_EPSILON);
 
@@ -46,12 +46,13 @@ vec3 SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) 
     vec3 wi = normalize(light.pos - si.p);
     float dist = length(light.pos - si.p);
     vec3 Li;
-    // Point
     if (light.type == 0) {
+        /* Point light */
+        
         Li = light.col * light.intensity / max(dist * dist, 0.0001);
-    }
-    // Spot
-    else if (light.type == 2) {
+    } else if (light.type == 2) {
+        /* Spotlight */
+
         float lightAngleScale = 1.0 / max(0.001, cos(light.innerConeAngle) - cos(light.outerConeAngle));
         float lightAngleOffset = -cos(light.outerConeAngle) * lightAngleScale;
 
@@ -68,6 +69,7 @@ vec3 SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) 
     float nsDotWi = dot(ns, wi);
     
     if (si.mat.transmission == 0.0 && nsDotWi <= 0.0) {
+        // Light is blocked from passing through
         return vec3(0.0);
     }
 
@@ -94,6 +96,7 @@ vec3 SampleInfinitePunctualLight(SurfaceInteraction si, Ray ray, Light light, in
     float nsDotWi = dot(ns, wi);
     
     if (si.mat.transmission == 0.0 && nsDotWi <= 0.0) {
+        // Light is blocked from passing through
         return vec3(0.0);
     }
 
