@@ -31,7 +31,7 @@ vec3 EvaluateBrdf(vec3 wi, Ray ray, SurfaceInteraction si) {
     if (geometryMode == 0) {
         /* Height-correlated Smith method */
 
-        G = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
+        G = SmithGgxMaskingShadowing(abs(nsDotWi), abs(nsDotWo), alpha2);
     } else {
         /* Schlick-GGX approximation method */
         
@@ -78,7 +78,7 @@ vec3 EvaluateBrdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float brdfP
         /* Height-correlated Smith method */
 
         G1 = SmithGgxMasking(abs(nsDotWo), alpha2);
-        G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
+        G2 = SmithGgxMaskingShadowing(abs(nsDotWi), abs(nsDotWo), alpha2);
     } else {
         /* Schlick-GGX approximation method */
         

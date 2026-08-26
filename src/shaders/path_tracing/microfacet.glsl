@@ -75,10 +75,7 @@ float SmithGgxMasking(float nDotWo, float alpha2) {
 // https://jcgt.org/published/0003/02/03/
 // "Importance Sampling techniques for GGX with Smith Masking-Shadowing: Part 2," Joe Schutte's Blog,
 // https://schuttejoe.github.io/post/ggximportancesamplingpart2/.
-float SmithGgxMaskingShadowing(vec3 wi, vec3 wo, vec3 n, float alpha2) {
-    float nDotWi = abs(dot(n, wi));
-    float nDotWo = abs(dot(n, wo));
-
+float SmithGgxMaskingShadowing(float nDotWi, float nDotWo, float alpha2) {
     float denomA = nDotWo * sqrt(alpha2 + (1.0 - alpha2) * nDotWi * nDotWi);
     float denomB = nDotWi * sqrt(alpha2 + (1.0 - alpha2) * nDotWo * nDotWo);
 

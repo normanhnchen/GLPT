@@ -78,7 +78,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             /* Height-correlated Smith method */
 
             G1 = SmithGgxMasking(abs(nsDotWo), alpha2);
-            G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
+            G2 = SmithGgxMaskingShadowing(abs(nsDotWi), abs(nsDotWo), alpha2);
         } else {
             /* Schlick-GGX approximation method */
 
@@ -157,7 +157,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                     /* Height-correlated Smith method */
 
                     G1 = SmithGgxMasking(abs(nsDotWo), alpha2);
-                    G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
+                    G2 = SmithGgxMaskingShadowing(abs(nsDotWi), abs(nsDotWo), alpha2);
                 } else {
                     /* Schlick-GGX approximation method */
 
@@ -213,7 +213,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 /* Height-correlated Smith method */
 
                 G1 = SmithGgxMasking(abs(nsDotWo), alpha2);
-                G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
+                G2 = SmithGgxMaskingShadowing(abs(nsDotWi), abs(nsDotWo), alpha2);
             } else {
                 /* Schlick-GGX approximation method */
 
