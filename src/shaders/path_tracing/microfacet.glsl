@@ -64,8 +64,7 @@ float GeometrySmith(float nDotWo, float nDotWi, float k) {
 // https://jcgt.org/published/0003/02/03/
 // "Importance Sampling techniques for GGX with Smith Masking-Shadowing: Part 2," Joe Schutte's Blog,
 // https://schuttejoe.github.io/post/ggximportancesamplingpart2/.
-float SmithGgxMasking(vec3 wo, vec3 n, float alpha2) {
-    float nDotWo = abs(dot(n, wo));
+float SmithGgxMasking(float nDotWo, float alpha2) {
     float denomC = sqrt(alpha2 + (1.0 - alpha2) * nDotWo * nDotWo) + nDotWo;
 
     return 2.0 * nDotWo / denomC;
@@ -141,7 +140,7 @@ float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
     if (geometryMode == 0) {
         /* Height-correlated Smith method */
 
-        G1 = SmithGgxMasking(wo, n, alpha2);
+        G1 = SmithGgxMasking(abs(nDotWo), alpha2);
     } else {
         /* Schlick-GGX approximation method */
         
