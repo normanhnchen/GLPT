@@ -14,8 +14,12 @@ out vec4 fragColor;
 
 void main() {
     if (bvhColorMode == 0) {
+        /* BVH depth color */
+
         fragColor = vec4(GetBvhDepthColor(nodeDepth, bvhMaxNodeDepth), 1.0);
     } else if (bvhColorMode == 1) {
+        /* BVH angle color */
+
         fragColor = vec4(GetBvhAngleColor(nodeMin, nodeMax), 1.0);
     }
 }
