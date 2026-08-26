@@ -141,12 +141,12 @@ float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
 
     float G1;
     if (geometryMode == 0) {
-        // Smith-GGX Masking
-        // -----------------
+        /* Height-correlated Smith method */
+
         G1 = SmithGgxMasking(wo, n, alpha2);
     } else {
-        // Schlick-GGX
-        // -----------
+        /* Schlick-GGX approximation method */
+        
         float roughness = sqrt(alpha);
         float k = (roughness + 1.0) * (roughness + 1.0) / 8.0;
         G1 = GeometrySchlickGgx(max(dot(n, wo), 1e-4), k);
