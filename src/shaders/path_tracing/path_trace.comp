@@ -8,8 +8,10 @@ layout(local_size_x=16, local_size_y=16) in;
 #include "src/shaders/path_tracing/util.glsl"
 #include "src/shaders/path_tracing/bsdf.glsl"
 #include "src/shaders/path_tracing/intersect.glsl"
-#include "src/shaders/path_tracing/mis.glsl"
-#include "src/shaders/path_tracing/nee.glsl"
+#include "src/shaders/path_tracing/light_env.glsl"
+#include "src/shaders/path_tracing/light_punctual.glsl"
+#include "src/shaders/path_tracing/light_area.glsl"
+#include "src/shaders/path_tracing/volume.glsl"
 
 
 PathSample PathTrace(Ray ray, inout uvec3 rng) {

@@ -252,5 +252,16 @@ VisibilityInteraction TestVisibility(inout uvec3 rng, Ray ray, float maxDist) {
     return vi;
 }
 
+VisibilityInteraction ShadowRayTest(inout uvec3 rng, SurfaceInteraction si, float dist, vec3 wi) {
+    Ray shadowRay;
+    vec3 offsetDir = dot(si.ng, wi) < 0.0 ? -si.ng : si.ng;
+    shadowRay.o = OffsetRayOrigin(si.p, offsetDir);
+    shadowRay.d = wi;
+
+    VisibilityInteraction vi = TestVisibility(rng, shadowRay, dist);
+
+    return vi;
+}
+
 
 #endif

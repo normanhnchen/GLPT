@@ -100,6 +100,14 @@ void ONB(vec3 n, out vec3 dpdu, out vec3 dpdv) {
     dpdv = vec3(b, s + n.y * n.y * a, -n.y);
 }
 
+// "Importance Sampling," in Physically Based Rendering: From Theory to Implementation
+// https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Importance_Sampling#MultipleImportanceSampling
+float PowerHeuristic(int nf, float fPdf, int ng, float gPdf) {
+    float f = float(nf) * fPdf;
+    float g = float(ng) * gPdf;
+    return (f * f) / (f * f + g * g);
+}
+
 vec3 GetBvhDepthColor(int currDepth, int maxDepth) {
     float t = clamp(float(currDepth) / float(maxDepth), 0.0, 1.0);
 
