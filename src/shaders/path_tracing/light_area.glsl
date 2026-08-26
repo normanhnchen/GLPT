@@ -10,8 +10,8 @@
 // "The Alias Method," in Physically Based Rendering: From Theory to Implementation
 // https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable::Sample
 Triangle PowerEmissiveTriangleSample(float Xi, out float triPdf) {
-    // Sample from the precomputed alias table weighted by power
-    // ---------------------------------------------------------
+    /* Sample from the precomputed alias table*/
+
     int offset = min(int(Xi.x * numEmissiveTriangles), numEmissiveTriangles - 1);
     float up = min(Xi.x * numEmissiveTriangles - offset, ONE_MINUS_EPSILON);
 
@@ -52,9 +52,9 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
 
     vec3 ns = si.ns;
 
-    // Check if ray hit light's backface
     float cosLight = dot(lightNs, -wi);
     if (cosLight <= 0.0) {
+        // Ray hit the light's backface
         return vec3(0.0);
     }
     
@@ -63,12 +63,6 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     if (si.mat.transmission == 0.0 && nsDotWi <= 0.0) {
         return vec3(0.0);
     }
-
-    // Shadow ray
-    Ray shadowRay;
-    vec3 offsetDir = dot(si.ng, wi) < 0.0 ? -si.ng : si.ng;
-    shadowRay.o = OffsetRayOrigin(si.p, offsetDir);
-    shadowRay.d = wi;
 
     // Distance-scaled offset dynamic with how far away the light source is
     float distOffset = max(dist * 1e-4, 1e-4);
@@ -83,8 +77,8 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
 
     Material lightMat = materials[tri.matId];
 
-    // Multiple Importance Sample (MIS)
-    // --------------------------------
+    /* Multiple Importance Sample (MIS) */
+
     float bsdfPdf;
     vec3 f = EvaluateBsdfAndPdf(wi, ray, si, bsdfPdf);
     float misWeight = PowerHeuristic(1, lightPdf, 1, bsdfPdf);
@@ -97,9 +91,9 @@ float AreaLightPdf(SurfaceInteraction si, Ray ray, vec3 prevPoint) {
     vec3 wi = normalize(si.p - prevPoint);
     float dist = length(si.p - prevPoint);
 
-    // Check if ray hit light's backface
     float cosLight = dot(si.ns, -wi);
     if (cosLight <= 0.0) {
+        // Ray hit the light's backface
         return 0.0;
     }
 
