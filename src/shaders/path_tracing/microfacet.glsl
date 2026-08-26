@@ -23,9 +23,8 @@ vec3 CosineSampleHemisphere(inout uvec3 rng, SurfaceInteraction si) {
 
 // Adaptation from "Cosine-Weighted Hemisphere Sampling," Physically Based Rendering: From Theory to Implementation
 // https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#Cosine-WeightedHemisphereSampling
-float CosineSampleHemispherePdf(vec3 n, vec3 wi) {
-    float cosTheta = max(dot(n, wi), 0.0);
-    return cosTheta / PI;
+float CosineSampleHemispherePdf(float nDotWi) {
+    return nDotWi / PI;
 }
 
 // Adaptation from "Average irregularity representation of a rough surface for ray reflection,"

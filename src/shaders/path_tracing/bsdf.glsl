@@ -100,6 +100,8 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             float nDotWi = max(dot(ns, wi), EPSILON);
             specular = D * F * G2 / (4.0 * nDotWo * nDotWi);
         }
+
+        float nsDotWi = dot(ns, wi);
         
         float specularPdf;
         if (specularMode == 0) {
@@ -109,9 +111,9 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
         } else if (specularMode == 1) {
             /* Cosine-weighted hemisphere sampling */
 
-            specularPdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.specular;
+            specularPdf = CosineSampleHemispherePdf(max(nsDotWi, 0.0)) * lobeProbs.specular;
         }
-        float diffusePdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.diffuse;
+        float diffusePdf = CosineSampleHemispherePdf(max(nsDotWi, 0.0)) * lobeProbs.diffuse;
         float bsdfPdf = specularPdf + diffusePdf;
 
         bsdfSample.pdf = bsdfPdf;
@@ -178,6 +180,8 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                     specular = vec3(D) * F * G2 / max((4.0 * nDotWo * nDotWi), EPSILON);
                 }
 
+                float nsDotWi = dot(ns, wi);
+
                 float specularPdf;
                 if (specularMode == 0) {
                     /* GGX VNDF importance sampling */
@@ -186,9 +190,9 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 } else if (specularMode == 1) {
                     /* Cosine-weighted hemisphere sampling */
 
-                    specularPdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.specular;
+                    specularPdf = CosineSampleHemispherePdf(max(nsDotWi, 0.0)) * lobeProbs.specular;
                 }
-                float diffusePdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.diffuse;
+                float diffusePdf = CosineSampleHemispherePdf(max(nsDotWi, 0.0)) * lobeProbs.diffuse;
                 float bsdfPdf = specularPdf + diffusePdf;
 
                 bsdfSample.pdf = bsdfPdf;
@@ -268,6 +272,8 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
             float alpha = mat.roughness * mat.roughness;
 
+            float nsDotWi = dot(ns, wi);
+
             float specularPdf;
             if (specularMode == 0) {
                 /* GGX VNDF importance sampling */
@@ -276,9 +282,9 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             } else if (specularMode == 1) {
                 /* Cosine-weighted hemisphere sampling */
 
-                specularPdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.specular;
+                specularPdf = CosineSampleHemispherePdf(max(nsDotWi, 0.0)) * lobeProbs.specular;
             }
-            float diffusePdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.diffuse;
+            float diffusePdf = CosineSampleHemispherePdf(max(nsDotWi, 0.0)) * lobeProbs.diffuse;
             float bsdfPdf = specularPdf + diffusePdf;
 
             bsdfSample.pdf = bsdfPdf;
