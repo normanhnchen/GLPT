@@ -31,8 +31,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
     BsdfSample bsdfSample;
 
     if (Xi.z < lobeProbs.specular) {
-        // Specular lobe
-        // -------------
+        /* Specular lobe */
 
         bounceDepth.specular++;
 
@@ -41,8 +40,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
         vec3 wi, wh;
         if (specularMode == 0) {
-            // GGX VNDF Importance Sampling
-            // ----------------------------
+            /* GGX VNDF importance sampling */
 
             // Convert wo to tangent space for the GGX VNDF importance sample
             vec3 woTangent = si.worldToLocal * wo;
@@ -51,16 +49,18 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
             // Transform wh back to world space
             wh = normalize(si.localToWorld * whTangent);
+
             wi = reflect(-wo, wh);
         } else if (specularMode == 1) {
-            // Cosine Hemisphere Sampling
-            // --------------------------
+            /* Cosine hemisphere sampling */
+
             wi = CosineSampleHemisphere(rng, si);
             wh = normalize(wo + wi);
         }
 
-        // Below the surface
         if (dot(ns, wi) <= 0.0) {
+            // wi is below the hemisphere
+            
             bsdfSample.f = vec3(0.0);
             bsdfSample.wi = wi;
             bsdfSample.pdf = 0.0;
@@ -73,13 +73,13 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
         
         float G1, G2;
         if (geometryMode == 0) {
-            // Height-Correlated Smith Method
-            // ------------------------------
+            /* Height-correlated Smith method */
+
             G1 = SmithGgxMasking(wo, ns, alpha2);
             G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
         } else {
-            // Schlick-GGX Approximation Method
-            // --------------------------------
+            /* Schlick-GGX approximation method */
+
             float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
             G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
             G2 = GeometrySmith(ns, wo, wi, k);
@@ -87,20 +87,26 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
         vec3 specular;
         if (specularMode == 0) {
+            /* GGX VNDF importance sampling */
+
             specular = F * (G2 / max(G1, 1e-4));
         } else if (specularMode == 1) {
+            /* Cosine-weighted hemisphere sampling */
+
             float D = TrowbridgeReitzGgx(ns, wh, alpha);
             float nDotWo = max(dot(ns, wo), 1e-4);
             float nDotWi = max(dot(ns, wi), 1e-4);
             specular = D * F * G2 / (4.0 * nDotWo * nDotWi);
         }
         
-        // Calculate the PDF for this lobe
-        // -------------------------------
         float specularPdf;
         if (specularMode == 0) {
+            /* GGX VNDF importance sampling */
+
             specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * lobeProbs.specular;
         } else if (specularMode == 1) {
+            /* Cosine-weighted hemisphere sampling */
+
             specularPdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.specular;
         }
         float diffusePdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.diffuse;
@@ -112,19 +118,17 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
         return bsdfSample;
     } else {
-        // Transmission/Diffuse lobe
-        // -------------------------
+        /* Transmission & diffuse lobe */
 
         if (Xi.z < lobeProbs.specular + lobeProbs.transmission) {
-            // Transmission lobe
-            // -----------------
+            /* Transmission lobe */
 
             bounceDepth.transmission++;
 
             float alpha = mat.roughness * mat.roughness;
             float alpha2 = alpha * alpha;
 
-            // Convert wo to tangent space for the GGX VNDF importance sample
+            // Convert wo to tangent space for GGX VNDF importance sampling
             vec3 woTangent = si.worldToLocal * wo;
 
             vec3 whTangent = ImportanceSampleGgxVndf(Xi.xy, woTangent, alpha);
@@ -134,8 +138,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
             vec3 wi = refract(ray.d, wh, si.eta_i / si.eta_t);
 
-            // Total internal reflection (TIR)
-            // -------------------------------
+            /* Total internal reflection (TIR) */
 
             // GLSL refract function returns vec3(0.0) on TIR
             if (wi == vec3(0.0)) {
@@ -145,13 +148,13 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
                 float G1, G2;
                 if (geometryMode == 0) {
-                    // Height-Correlated Smith Method
-                    // ------------------------------
+                    /* Height-correlated Smith method */
+
                     G1 = SmithGgxMasking(wo, ns, alpha2);
                     G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
                 } else {
-                    // Schlick-GGX Approximation Method
-                    // --------------------------------
+                    /* Schlick-GGX approximation method */
+
                     float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
                     G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
                     G2 = GeometrySmith(ns, wo, wi, k);
@@ -159,20 +162,26 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
                 vec3 specular;
                 if (specularMode == 0) {
+                    /* GGX VNDF importance sampling */
+
                     specular = F * (G2 / max(G1, 1e-4));
                 } else if (specularMode == 1) {
+                    /* Cosine-weighted hemisphere sampling */
+
                     float D = TrowbridgeReitzGgx(ns, wh, alpha);
                     float nDotWo = max(dot(ns, wo), 1e-4);
                     float nDotWi = max(dot(ns, wi), 1e-4);
                     specular = vec3(D) * F * G2 / max((4.0 * nDotWo * nDotWi), 1e-4);
                 }
 
-                // Calculate the PDF for this lobe
-                // -------------------------------
                 float specularPdf;
                 if (specularMode == 0) {
+                    /* GGX VNDF importance sampling */
+
                     specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * lobeProbs.specular;
                 } else if (specularMode == 1) {
+                    /* Cosine-weighted hemisphere sampling */
+
                     specularPdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.specular;
                 }
                 float diffusePdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.diffuse;
@@ -190,13 +199,13 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
             float G1, G2;
             if (geometryMode == 0) {
-                // Height-Correlated Smith Method
-                // ------------------------------
+                /* Height-correlated Smith method */
+
                 G1 = SmithGgxMasking(wo, ns, alpha2);
                 G2 = SmithGgxMaskingShadowing(wi, wo, ns, alpha2);
             } else {
-                // Schlick-GGX Approximation Method
-                // --------------------------------
+                /* Schlick-GGX approximation method */
+
                 float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
                 G1 = GeometrySchlickGgx(max(dot(ns, wo), 1e-4), k);
                 G2 = GeometrySmith(ns, wo, wi, k);
@@ -204,16 +213,18 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
             vec3 transmission;
             if (specularMode == 0) {
+                /* GGX VNDF importance sampling */
+
                 transmission = (1.0 - F) * (G2 / max(G1, 1e-4));
             } else if (specularMode == 1) {
+                /* Cosine-weighted hemisphere sampling */
+
                 float D = TrowbridgeReitzGgx(ns, wh, alpha);
                 float nDotWo = max(dot(ns, wo), 1e-4);
                 float nDotWi = max(dot(ns, wi), 1e-4);
                 transmission = vec3(D) * (1.0 - F) * G2 / max((4.0 * nDotWo * nDotWi), 1e-4);
             }
 
-            // Calculate the PDF for this lobe
-            // -------------------------------
             float bsdfPdf = BtdfPdf(ns, wo, wi, alpha, si.eta_i, si.eta_t) * lobeProbs.transmission;
 
             bsdfSample.pdf = bsdfPdf;
@@ -222,15 +233,15 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
             return bsdfSample;
         } else {
-            // Diffuse lobe
-            // ------------
+            /* Diffuse lobe */
 
             bounceDepth.diffuse++;
 
             vec3 wi = CosineSampleHemisphere(rng, si);
 
-            // Below surface
             if (dot(ns, wi) <= 0.0) {
+                // wi is below the hemisphere
+
                 bsdfSample.f = vec3(0.0);
                 bsdfSample.wi = wi;
                 bsdfSample.pdf = 0.0;
@@ -244,21 +255,21 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
             vec3 F = FresnelSchlick(woDotWh, F0);
 
-            vec3 kS = F;
-            vec3 kD = vec3(1.0) - kS;
-            kD *= 1.0 - mat.metallic;
-            kD *= 1.0 - mat.transmission;
-
-            vec3 diffuse = kD * mat.baseCol;
+            vec3 diffuse = vec3(1.0) - F;
+            diffuse *= 1.0 - mat.metallic;
+            diffuse *= 1.0 - mat.transmission;
+            diffuse *= mat.baseCol;
 
             float alpha = mat.roughness * mat.roughness;
 
-            // Calculate the PDF for this lobe
-            // -------------------------------
             float specularPdf;
             if (specularMode == 0) {
+                /* GGX VNDF importance sampling */
+
                 specularPdf = GgxVndfPdf(ns, wo, wi, alpha) * lobeProbs.specular;
             } else if (specularMode == 1) {
+                /* Cosine-weighted hemisphere sampling */
+
                 specularPdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.specular;
             }
             float diffusePdf = CosineSampleHemispherePdf(ns, wi) * lobeProbs.diffuse;
@@ -277,8 +288,12 @@ vec3 EvaluateBsdf(vec3 wi, Ray ray, SurfaceInteraction si) {
     vec3 ns = si.ns;
     float nsDotWi = dot(ns, wi);
     if (nsDotWi > 0.0) {
+        /* Sample the BRDF */
+
         return EvaluateBrdf(wi, ray, si);
     } else {
+        /* Sample the BTDF */
+
         return EvaluateBtdf(wi, ray, si);
     }
 }
@@ -286,8 +301,12 @@ vec3 EvaluateBsdf(vec3 wi, Ray ray, SurfaceInteraction si) {
 vec3 EvaluateBsdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float bsdfPdf) {
     float nsDotWi = dot(si.ns, wi);
     if (nsDotWi > 0.0) {
+        /* Sample the BRDF */
+
         return EvaluateBrdfAndPdf(wi, ray, si, bsdfPdf);
     } else {
+        /* Sample the BTDF */
+
         return EvaluateBtdfAndPdf(wi, ray, si, bsdfPdf);
     }
 }
