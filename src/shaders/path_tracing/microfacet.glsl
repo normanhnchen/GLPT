@@ -52,9 +52,7 @@ float GeometrySchlickGgx(float nDotWo, float k) {
 
 // "Real Shading in Unreal Engine 4,"
 // https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
-float GeometrySmith(vec3 n, vec3 wo, vec3 wi, float k) {
-    float nDotWo = max(dot(n, wo), 0.0);
-    float nDotWi = max(dot(n, wi), 0.0);
+float GeometrySmith(float nDotWo, float nDotWi, float k) {
     float ggx1 = GeometrySchlickGgx(nDotWo, k);
     float ggx2 = GeometrySchlickGgx(nDotWi, k);
 	

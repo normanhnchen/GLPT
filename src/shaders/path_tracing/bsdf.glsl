@@ -21,12 +21,12 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
     vec3 Xi = Pcg3d(rng);
 
-    float nsDotWo = abs(dot(ns, wo));
+    float nsDotWo = dot(ns, wo);
 
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, mat.baseCol, mat.metallic);
     
-    LobeProbs lobeProbs = ComputeLobeProbs(mat, nsDotWo, F0);
+    LobeProbs lobeProbs = ComputeLobeProbs(mat, abs(nsDotWo), F0);
 
     BsdfSample bsdfSample;
 
@@ -58,7 +58,9 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             wh = normalize(wo + wi);
         }
 
-        if (dot(ns, wi) <= 0.0) {
+        float nsDotWi = dot(ns, wi);
+
+        if (nsDotWi <= 0.0) {
             // wi is below the hemisphere
             
             bsdfSample.f = vec3(0.0);
@@ -82,7 +84,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
             float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
             G1 = GeometrySchlickGgx(max(dot(ns, wo), EPSILON), k);
-            G2 = GeometrySmith(ns, wo, wi, k);
+            G2 = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
         }
 
         float nsDotWh = dot(ns, wh);
@@ -100,8 +102,6 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             float nDotWi = max(dot(ns, wi), EPSILON);
             specular = D * F * G2 / (4.0 * nDotWo * nDotWi);
         }
-
-        float nsDotWi = dot(ns, wi);
         
         float specularPdf;
         if (specularMode == 0) {
@@ -148,6 +148,8 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             if (wi == vec3(0.0)) {
                 wi = reflect(ray.d, wh);
 
+                float nsDotWi = dot(ns, wi);
+
                 vec3 F = vec3(1.0);
 
                 float G1, G2;
@@ -161,7 +163,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
                     float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
                     G1 = GeometrySchlickGgx(max(dot(ns, wo), EPSILON), k);
-                    G2 = GeometrySmith(ns, wo, wi, k);
+                    G2 = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
                 }
 
                 float nsDotWh = dot(ns, wh);
@@ -179,8 +181,6 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                     float nDotWi = max(dot(ns, wi), EPSILON);
                     specular = vec3(D) * F * G2 / max((4.0 * nDotWo * nDotWi), EPSILON);
                 }
-
-                float nsDotWi = dot(ns, wi);
 
                 float specularPdf;
                 if (specularMode == 0) {
@@ -206,6 +206,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             vec3 F = FresnelSchlick(wiDotWh, F0);
 
             float nsDotWh = dot(ns, wh);
+            float nsDotWi = dot(ns, wi);
 
             float G1, G2;
             if (geometryMode == 0) {
@@ -218,7 +219,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
                 float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
                 G1 = GeometrySchlickGgx(max(dot(ns, wo), EPSILON), k);
-                G2 = GeometrySmith(ns, wo, wi, k);
+                G2 = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
             }
 
             vec3 transmission;

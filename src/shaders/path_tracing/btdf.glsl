@@ -53,8 +53,8 @@ vec3 EvaluateBtdf(vec3 wi, Ray ray, SurfaceInteraction si) {
     vec3 wh = normalize(eta_i * wo + eta_t * wi);
     if (dot(ns, wh) < 0.0) wh = -wh;
 
-    float nsDotWo = abs(dot(ns, wo));
-    float nsDotWi = abs(dot(ns, wi));
+    float nsDotWo = dot(ns, wo);
+    float nsDotWi = dot(ns, wi);
     float nsDotWh = dot(ns, wh);
     float woDotWh = dot(wo, wh);
     float wiDotWh = dot(wi, wh);
@@ -74,13 +74,13 @@ vec3 EvaluateBtdf(vec3 wi, Ray ray, SurfaceInteraction si) {
         /* Schlick-GGX Approximation Method */
         
         float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-        G = GeometrySmith(ns, wo, wi, k);
+        G = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
     }
 
     float denom = eta_i * woDotWh + eta_t * wiDotWh;
     denom = max(denom * denom, EPSILON);
 
-    float jacobian = abs(woDotWh * wiDotWh) / max(nsDotWo * nsDotWi, EPSILON);
+    float jacobian = abs(woDotWh * wiDotWh) / max(abs(nsDotWo) * abs(nsDotWi), EPSILON);
 
     vec3 btdf = (vec3(1.0) - F) * D * G * jacobian / denom;
 
@@ -100,8 +100,8 @@ vec3 EvaluateBtdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float btdfP
     vec3 wh = normalize(eta_i * wo + eta_t * wi);
     if (dot(ns, wh) < 0.0) wh = -wh;
 
-    float nsDotWo = abs(dot(ns, wo));
-    float nsDotWi = abs(dot(ns, wi));
+    float nsDotWo = dot(ns, wo);
+    float nsDotWi = dot(ns, wi);
     float nsDotWh = dot(ns, wh);
     float woDotWh = dot(wo, wh);
     float wiDotWh = dot(wi, wh);
@@ -123,19 +123,19 @@ vec3 EvaluateBtdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float btdfP
 
         float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
         G1 = GeometrySchlickGgx(max(dot(ns, wo), EPSILON), k);
-        G2 = GeometrySmith(ns, wo, wi, k);
+        G2 = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
     }
 
     float denom = eta_i * woDotWh + eta_t * wiDotWh;
     denom = max(denom * denom, EPSILON);
 
-    LobeProbs lobeProbs = ComputeLobeProbs(mat, nsDotWo, F0);
+    LobeProbs lobeProbs = ComputeLobeProbs(mat, abs(nsDotWo), F0);
 
     float dwh_dwi = abs((eta_t * eta_t * wiDotWh) / max(denom, EPSILON));
-    btdfPdf = D * G1 * abs(woDotWh) / max(nsDotWo, EPSILON) * dwh_dwi;
+    btdfPdf = D * G1 * abs(woDotWh) / max(abs(nsDotWo), EPSILON) * dwh_dwi;
     btdfPdf *= lobeProbs.transmission;
 
-    float jacobian = abs(woDotWh * wiDotWh) / max(nsDotWo * nsDotWi, EPSILON);
+    float jacobian = abs(woDotWh * wiDotWh) / max(abs(nsDotWo) * abs(nsDotWi), EPSILON);
 
     vec3 btdf = (vec3(1.0) - F) * D * G2 * jacobian / denom;
 
