@@ -65,6 +65,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
         }
 
         float wiDotWh = dot(wi, wm);
+
         vec3 F = FresnelSchlick(wiDotWh, F0);
         
         float G1, G2;
@@ -77,7 +78,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             /* Schlick-GGX approximation method */
 
             float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-            G1 = GeometrySchlickGgx(max(dot(ns, wo), EPSILON), k);
+            G1 = GeometrySchlickGgx(max(nsDotWo, EPSILON), k);
             G2 = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
         }
 
@@ -92,9 +93,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             /* Cosine-weighted hemisphere sampling */
 
             float D = TrowbridgeReitzGgx(max(nsDotWm, 0.0), alpha);
-            float nDotWo = max(dot(ns, wo), EPSILON);
-            float nDotWi = max(dot(ns, wi), EPSILON);
-            specular = D * F * G2 / (4.0 * nDotWo * nDotWi);
+            specular = D * F * G2 / (4.0 * max(nsDotWo, EPSILON) * max(nsDotWi, EPSILON));
         }
         
         float specularPdf;
@@ -150,7 +149,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                     /* Schlick-GGX approximation method */
 
                     float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-                    G1 = GeometrySchlickGgx(max(dot(ns, wo), EPSILON), k);
+                    G1 = GeometrySchlickGgx(max(nsDotWo, EPSILON), k);
                     G2 = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
                 }
 
@@ -165,9 +164,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                     /* Cosine-weighted hemisphere sampling */
 
                     float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
-                    float nDotWo = max(dot(ns, wo), EPSILON);
-                    float nDotWi = max(dot(ns, wi), EPSILON);
-                    specular = vec3(D) * F * G2 / max((4.0 * nDotWo * nDotWi), EPSILON);
+                    specular = vec3(D) * F * G2 / max((4.0 * max(nsDotWo, EPSILON) * max(nsDotWi, EPSILON)), EPSILON);
                 }
 
                 float specularPdf;
@@ -190,11 +187,11 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 return bsdfSample;
             }
 
-            float wiDotWh = abs(dot(wi, wh));
-            vec3 F = FresnelSchlick(wiDotWh, F0);
-
+            float wiDotWh = dot(wi, wh);
             float nsDotWh = dot(ns, wh);
             float nsDotWi = dot(ns, wi);
+
+            vec3 F = FresnelSchlick(abs(wiDotWh), F0);
 
             float G1, G2;
             if (geometryMode == 0) {
@@ -206,7 +203,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 /* Schlick-GGX approximation method */
 
                 float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-                G1 = GeometrySchlickGgx(max(dot(ns, wo), EPSILON), k);
+                G1 = GeometrySchlickGgx(max(nsDotWo, EPSILON), k);
                 G2 = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
             }
 
@@ -219,9 +216,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 /* Cosine-weighted hemisphere sampling */
 
                 float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
-                float nDotWo = max(dot(ns, wo), EPSILON);
-                float nDotWi = max(dot(ns, wi), EPSILON);
-                transmission = vec3(D) * (1.0 - F) * G2 / max((4.0 * nDotWo * nDotWi), EPSILON);
+                transmission = vec3(D) * (1.0 - F) * G2 / max((4.0 * max(nsDotWo, EPSILON) * max(nsDotWi, EPSILON)), EPSILON);
             }
 
             float bsdfPdf = BtdfPdf(ns, wo, wi, alpha, si.eta_i, si.eta_t) * lobeProbs.transmission;
@@ -238,7 +233,9 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
             vec3 wi = CosineSampleHemisphere(rng, si);
 
-            if (dot(ns, wi) <= 0.0) {
+            float nsDotWi = dot(ns, wi);
+
+            if (nsDotWi <= 0.0) {
                 // wi is below the hemisphere
 
                 bsdfSample.f = vec3(0.0);
@@ -260,8 +257,6 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             diffuse *= mat.baseCol;
 
             float alpha = mat.roughness * mat.roughness;
-
-            float nsDotWi = dot(ns, wi);
 
             float specularPdf;
             if (specularMode == 0) {

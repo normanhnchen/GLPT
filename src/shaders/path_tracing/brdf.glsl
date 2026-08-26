@@ -23,8 +23,9 @@ vec3 EvaluateBrdf(vec3 wi, Ray ray, SurfaceInteraction si) {
     float nsDotWh = dot(ns, wh);
     float nsDotWo = dot(ns, wo);
     float nsDotWi = dot(ns, wi);
+    float whDotWo = dot(wh, wo);
 
-    vec3 F = FresnelSchlick(max(dot(wh, wo), 0.0), F0);
+    vec3 F = FresnelSchlick(max(whDotWo, 0.0), F0);
     float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
 
     float G;
@@ -69,8 +70,9 @@ vec3 EvaluateBrdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float brdfP
     float nsDotWo = dot(ns, wo);
     float nsDotWi = dot(ns, wi);
     float nsDotWh = dot(ns, wh);
+    float whDotWo = dot(wh, wo);
 
-    vec3 F = FresnelSchlick(max(dot(wh, wo), 0.0), F0);
+    vec3 F = FresnelSchlick(max(whDotWo, 0.0), F0);
     float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
 
     float G1, G2;
@@ -83,7 +85,7 @@ vec3 EvaluateBrdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float brdfP
         /* Schlick-GGX approximation method */
         
         float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-        G1 = GeometrySchlickGgx(max(dot(ns, wo), EPSILON), k);
+        G1 = GeometrySchlickGgx(max(nsDotWo, EPSILON), k);
         G2 = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
     }
 

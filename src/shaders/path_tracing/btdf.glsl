@@ -9,13 +9,15 @@
 // "Microfacet models for refraction through rough surfaces"
 // https://dl.acm.org/doi/10.5555/2383847.2383874
 float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta_i, float eta_t) {
-    float nDotWo = abs(dot(n, wo));
     float alpha2 = alpha * alpha;
 
     vec3 wh = normalize(eta_i * wo + eta_t * wi);
     if (dot(n, wh) < 0.0) wh = -wh;
 
+    float nDotWo = dot(n, wo);
     float nDotWh = dot(n, wh);
+    float woDotWh = dot(wo, wh);
+    float wiDotWh = dot(wi, wh);
 
     float D = TrowbridgeReitzGgx(max(nDotWh, 0.0), alpha);
     
@@ -29,11 +31,8 @@ float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta_i, float eta_t) {
 
         float roughness = sqrt(alpha);
         float k = (roughness + 1.0) * (roughness + 1.0) / 8.0;
-        G1 = GeometrySchlickGgx(max(dot(n, wo), EPSILON), k);
+        G1 = GeometrySchlickGgx(max(nDotWo, EPSILON), k);
     }
-
-    float woDotWh = dot(wo, wh);
-    float wiDotWh = dot(wi, wh);
 
     float denom = eta_i * woDotWh + eta_t * wiDotWh;
     float dwh_dwi = abs((eta_t * eta_t * wiDotWh) / max(denom * denom, EPSILON));
@@ -122,7 +121,7 @@ vec3 EvaluateBtdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float btdfP
         /* Schlick-GGX approximation method */
 
         float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-        G1 = GeometrySchlickGgx(max(dot(ns, wo), EPSILON), k);
+        G1 = GeometrySchlickGgx(max(nsDotWo, EPSILON), k);
         G2 = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
     }
 
