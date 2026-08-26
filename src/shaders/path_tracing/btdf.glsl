@@ -35,8 +35,8 @@ float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta_i, float eta_t) {
     }
 
     float denom = eta_i * woDotWh + eta_t * wiDotWh;
-    float dwh_dwi = abs((eta_t * eta_t * wiDotWh) / max(denom * denom, EPSILON));
-    return D * G1 * abs(woDotWh) / max(nDotWo, EPSILON) * dwh_dwi;
+    float jacobian = abs((eta_t * eta_t * wiDotWh) / max(denom * denom, EPSILON));
+    return D * G1 * abs(woDotWh) / max(nDotWo, EPSILON) * jacobian;
 }
 
 vec3 EvaluateBtdf(vec3 wi, Ray ray, SurfaceInteraction si) {

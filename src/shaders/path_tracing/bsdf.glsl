@@ -93,7 +93,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             /* Cosine-weighted hemisphere sampling */
 
             float D = TrowbridgeReitzGgx(max(nsDotWm, 0.0), alpha);
-            specular = D * F * G2 / (4.0 * max(nsDotWo, EPSILON) * max(nsDotWi, EPSILON));
+            specular = D * F * G2 / max((4.0 * max(nsDotWo, 0.0) * max(nsDotWi, 0.0)), EPSILON);
         }
         
         float specularPdf;
@@ -164,7 +164,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                     /* Cosine-weighted hemisphere sampling */
 
                     float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
-                    specular = vec3(D) * F * G2 / max((4.0 * max(nsDotWo, EPSILON) * max(nsDotWi, EPSILON)), EPSILON);
+                    specular = vec3(D) * F * G2 / max((4.0 * max(nsDotWo, 0.0) * max(nsDotWi, 0.0)), EPSILON);
                 }
 
                 float specularPdf;
@@ -216,7 +216,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 /* Cosine-weighted hemisphere sampling */
 
                 float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
-                transmission = vec3(D) * (1.0 - F) * G2 / max((4.0 * max(nsDotWo, EPSILON) * max(nsDotWi, EPSILON)), EPSILON);
+                transmission = vec3(D) * (1.0 - F) * G2 / max((4.0 * max(nsDotWo, 0.0) * max(nsDotWi, 0.0)), EPSILON);
             }
 
             float bsdfPdf = BtdfPdf(ns, wo, wi, alpha, si.eta_i, si.eta_t) * lobeProbs.transmission;
