@@ -66,7 +66,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
 
         float wiDotWh = dot(wi, wm);
 
-        vec3 F = FresnelSchlick(wiDotWh, F0);
+        vec3 F = FresnelSchlick(abs(wiDotWh), F0);
         
         float G1, G2;
         if (geometryMode == 0) {

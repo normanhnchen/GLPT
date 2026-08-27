@@ -71,9 +71,9 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                     float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, lightPdf);
 
                     if (i == 1) {
-                        directRadiance += throughput * envColor * hdriExposure * misWeight;
+                        directRadiance += ClampLuminance(throughput * envColor * hdriExposure * misWeight, maxDirectLuminance);
                     } else {
-                        indirectRadiance += throughput * envColor * hdriExposure * misWeight;
+                        indirectRadiance += ClampLuminance(throughput * envColor * hdriExposure * misWeight, maxIndirectLuminance);
                     }
                 }
             } else if (misMode == 1) {
@@ -82,11 +82,11 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                 if (i == 0 || i == 1) {
                     /* Add direct contribution */
                     
-                    directRadiance += throughput * envColor * hdriExposure;
+                    directRadiance += ClampLuminance(throughput * envColor * hdriExposure, maxDirectLuminance);
                 } else {
                     /* Add indirect contribution */
                     
-                    indirectRadiance += throughput * envColor * hdriExposure;
+                    indirectRadiance += ClampLuminance(throughput * envColor * hdriExposure, maxIndirectLuminance);
                 }
             }
 
@@ -234,8 +234,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                     float areaLightPdf = AreaLightPdf(si, ray, prevPoint);
                     float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, areaLightPdf);
                     vec3 indirect = mat.emissive * mat.emissiveStrength * misWeight;
-                    indirect = ClampLuminance(indirect, maxIndirectLuminance);
-                    indirectRadiance += throughput * indirect;
+                    indirectRadiance += ClampLuminance(throughput * indirect, maxIndirectLuminance);
                 }
             } else if (misMode == 1) {
                 /*
@@ -246,7 +245,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                 if (i == 0) {
                     directRadiance += throughput * mat.emissive * mat.emissiveStrength;
                 } else {
-                    indirectRadiance += throughput * mat.emissive * mat.emissiveStrength;
+                    indirectRadiance += ClampLuminance(throughput * mat.emissive * mat.emissiveStrength, maxIndirectLuminance);
                 }
             }
         }
