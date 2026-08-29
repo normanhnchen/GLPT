@@ -36,7 +36,7 @@ float BtdfPdf(vec3 n, vec3 wo, vec3 wi, float alpha, float eta_i, float eta_t) {
 
     float denom = eta_i * woDotWh + eta_t * wiDotWh;
     float jacobian = abs((eta_t * eta_t * wiDotWh) / max(denom * denom, EPSILON));
-    return D * G1 * abs(woDotWh) / max(nDotWo, EPSILON) * jacobian;
+    return D * G1 * abs(woDotWh) / max(abs(nDotWo), EPSILON) * jacobian;
 }
 
 vec3 EvaluateBtdf(vec3 wi, Ray ray, SurfaceInteraction si) {
@@ -64,16 +64,16 @@ vec3 EvaluateBtdf(vec3 wi, Ray ray, SurfaceInteraction si) {
 
     float D = TrowbridgeReitzGgx(max(nsDotWh, 0.0), alpha);
 
-    float G;
+    float G2;
     if (geometryMode == 0) {
         /* Height-Correlated Smith Method */
 
-        G = SmithGgxMaskingShadowing(abs(nsDotWi), abs(nsDotWo), alpha2);
+        G2 = SmithGgxMaskingShadowing(abs(nsDotWi), abs(nsDotWo), alpha2);
     } else {
         /* Schlick-GGX Approximation Method */
         
         float k = (mat.roughness + 1.0) * (mat.roughness + 1.0) / 8.0;
-        G = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
+        G2 = GeometrySmith(max(nsDotWo, 0.0), max(nsDotWi, 0.0), k);
     }
 
     float denom = eta_i * woDotWh + eta_t * wiDotWh;
@@ -81,7 +81,7 @@ vec3 EvaluateBtdf(vec3 wi, Ray ray, SurfaceInteraction si) {
 
     float jacobian = abs(woDotWh * wiDotWh) / max(abs(nsDotWo) * abs(nsDotWi), EPSILON);
 
-    vec3 btdf = (vec3(1.0) - F) * D * G * jacobian / denom;
+    vec3 btdf = (vec3(1.0) - F) * D * G2 * jacobian * (eta_t * eta_t) / denom;
 
     return btdf;
 }
@@ -136,7 +136,7 @@ vec3 EvaluateBtdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float btdfP
 
     float jacobian = abs(woDotWh * wiDotWh) / max(abs(nsDotWo) * abs(nsDotWi), EPSILON);
 
-    vec3 btdf = (vec3(1.0) - F) * D * G2 * jacobian / denom;
+    vec3 btdf = (vec3(1.0) - F) * D * G2 * jacobian * (eta_t * eta_t) / denom;
 
     return btdf;
 }
