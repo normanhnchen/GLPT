@@ -117,7 +117,7 @@ class DenoiseDataset(Dataset):
         return x, target
 
 
-def _compress(x, target):
+def _preprocess(x, target):
     combined = x[:, :3]
     albedo = x[:, 3:6]
     normal = x[:, 6:9]
@@ -155,11 +155,9 @@ try:
     denoiser.load_state_dict(checkpoint["model_state_dict"])
     optim.load_state_dict(checkpoint["optimizer_state_dict"])
     starting_epoch = checkpoint["epoch"] + 1
-    best_val_loss = checkpoint.get("best_val_loss", torch.inf)
     print(f"Resumed from epoch {starting_epoch}")
 
 except FileNotFoundError:
-    best_val_loss = torch.inf
     starting_epoch = 0
 
 
@@ -171,7 +169,7 @@ for epoch in range(starting_epoch, epochs):
     for x, target in train_loader:
         x = x.to(AI_DEVICE)
         target = target.to(AI_DEVICE)
-        x, target = _compress(x, target)
+        x, target = _preprocess(x, target)
         combined = x[:, :3].to(AI_DEVICE)
 
         optim.zero_grad()
@@ -190,7 +188,7 @@ for epoch in range(starting_epoch, epochs):
         for x, target in val_loader:
             x = x.to(AI_DEVICE)
             target = target.to(AI_DEVICE)
-            x, target = _compress(x, target)
+            x, target = _preprocess(x, target)
             combined = x[:, :3].to(AI_DEVICE)
 
             prediction = denoiser(x, combined)
@@ -203,8 +201,7 @@ for epoch in range(starting_epoch, epochs):
         "epoch": epoch,
         "model_state_dict": denoiser.state_dict(),
         "optimizer_state_dict": optim.state_dict(),
-        "loss": epoch_loss,
-        "best_val_loss": best_val_loss,
+        "loss": epoch_loss
     }
 
     save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.checkpoint)
