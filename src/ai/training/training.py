@@ -109,14 +109,6 @@ class DenoiseDataset(Dataset):
         return x, target
 
     def _augment(self, x, target):
-        if random.random() < 0.5:
-            # Horizontal flip
-            x = x.flip(2)
-            target = target.flip(2)
-        if random.random() < 0.5:
-            # Vertical flip
-            x = x.flip(1)
-            target = target.flip(1)
         k = random.randint(0, 3)
         if k > 0:
             x = torch.rot90(x, k, dims=[1, 2])
@@ -156,10 +148,10 @@ denoiser = KPCN().to(AI_DEVICE)
 optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
 criterion = nn.L1Loss()
 
-epochs = 100
+epochs = 300
 
 try:
-    checkpoint = torch.load(settings.file_paths.denoiser.last_checkpoint, map_location=AI_DEVICE)
+    checkpoint = torch.load(settings.file_paths.denoiser.checkpoint, map_location=AI_DEVICE)
     denoiser.load_state_dict(checkpoint["model_state_dict"])
     optim.load_state_dict(checkpoint["optimizer_state_dict"])
     starting_epoch = checkpoint["epoch"] + 1
@@ -215,9 +207,4 @@ for epoch in range(starting_epoch, epochs):
         "best_val_loss": best_val_loss,
     }
 
-    if val_loss < best_val_loss:
-        best_val_loss = val_loss
-        curr_checkpoint["best_val_loss"] = best_val_loss
-        save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.checkpoint)
-
-    save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.last_checkpoint)
+    save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.checkpoint)
