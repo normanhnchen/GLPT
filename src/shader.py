@@ -14,6 +14,7 @@ def _load_shader_source(path, is_root=True):
                         include_path = stripped.split('"')[1]
                         file_path = ROOT_DIR / include_path
                         shader_source += _load_shader_source(file_path, is_root=False)
+                        shader_source += "\n"
 
                     elif stripped.startswith("#version"):
                         if is_root and not version:

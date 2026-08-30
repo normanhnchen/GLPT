@@ -329,6 +329,7 @@ class FinalOutputState:
         return arr
 
 
+# See 9.4 Rendering
 class ExportState:
     def __init__(self, pt_state, final_output_state):
         self.pt_state = pt_state
@@ -535,6 +536,7 @@ class BVHState:
             self.buffers_created = True
 
 
+# See 9.4 Rendering
 class CameraCaptureState:
     def __init__(self, scene_state, camera):
         self.scene_state = scene_state

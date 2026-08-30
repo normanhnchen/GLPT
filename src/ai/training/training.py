@@ -8,9 +8,6 @@ from src.settings import *
 from src.ai.denoiser.network import *
 
 
-# https://dl.acm.org/doi/10.1145/3072959.3073708
-
-
 # Required as OpenCV disables EXR support by default
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 
@@ -37,6 +34,7 @@ def exr_to_tensor(exr_img, keep_channels=None):
     return t
 
 
+# See 9.5 Training
 def save_checkpoint(checkpoint, path):
     """
     Saves to the checkpoing temp file then replaces the actual checkpoint file.
@@ -56,6 +54,7 @@ def save_checkpoint(checkpoint, path):
         raise
 
 
+# See 9.5 Training
 class DenoiseDataset(Dataset):
     def __init__(self, renders_path, patch_size=256):
         self.combined_path = renders_path / "combined/"
@@ -117,6 +116,7 @@ class DenoiseDataset(Dataset):
         return x, target
 
 
+# See 9.5 Training
 def _preprocess(x, target):
     combined = x[:, :3]
     albedo = x[:, 3:6]
@@ -133,6 +133,8 @@ def _preprocess(x, target):
     return x, target
 
 
+# See 9.5 Training
+# ----------------
 full_dataset = DenoiseDataset(settings.file_paths.ai_training.renders)
 # Split 10% of the dataset to be validation cases
 val_size = max(1, int(0.1 * len(full_dataset)))
@@ -150,6 +152,8 @@ criterion = nn.L1Loss()
 
 epochs = 300
 
+# See 9.5 Training
+# ----------------
 try:
     checkpoint = torch.load(settings.file_paths.denoiser.checkpoint, map_location=AI_DEVICE)
     denoiser.load_state_dict(checkpoint["model_state_dict"])
@@ -163,7 +167,8 @@ except FileNotFoundError:
 
 for epoch in range(starting_epoch, epochs):
     # Training loop
-    # -------------
+    # See 9.5 Training
+    # ----------------
     denoiser.train()
     epoch_loss = 0
     for x, target in train_loader:
