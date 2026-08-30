@@ -400,11 +400,15 @@ class ExportState:
         normal_array = np.flipud(normal_array)
         depth_array = np.flipud(depth_array)
         
-        renders_dir = Path(settings.file_paths.ai_training.renders)
-        combined_path = self._get_next_exr_path(renders_dir / "combined", "combined")
-        albedo_path = self._get_next_exr_path(renders_dir / "albedo", "albedo")
-        normal_path = self._get_next_exr_path(renders_dir / "normal", "normal")
-        depth_path = self._get_next_exr_path(renders_dir / "depth", "depth")
+        combined_dir = Path(settings.file_paths.ai_training.combined_renders)
+        albedo_dir = Path(settings.file_paths.ai_training.albedo_renders)
+        normal_dir = Path(settings.file_paths.ai_training.normal_renders)
+        depth_dir = Path(settings.file_paths.ai_training.depth_renders)
+
+        combined_path = self._get_next_exr_path(combined_dir, "combined")
+        albedo_path = self._get_next_exr_path(albedo_dir, "albedo")
+        normal_path = self._get_next_exr_path(normal_dir, "normal")
+        depth_path = self._get_next_exr_path(depth_dir, "depth")
 
         # Save to .exr files
         self._export_exr(combined_path, combined_array)
@@ -419,8 +423,8 @@ class ExportState:
         # OpenGL is bottom-up, EXR is top-down
         target_array = np.flipud(target_array)
         
-        renders_dir = Path(settings.file_paths.ai_training.renders)
-        target_path = self._get_next_exr_path(renders_dir / "target", "target")
+        targets_dir = Path(settings.file_paths.ai_training.target_renders)
+        target_path = self._get_next_exr_path(targets_dir, "target")
 
         # Save to .exr file
         self._export_exr(target_path, target_array)

@@ -296,15 +296,39 @@ class ShaderGroup:
                 setattr(self, attr, root_dir)
 
 
-def _resolve(path):
+def _resolve_folder(path):
     if path:
         path = Path(path)
 
         if path.is_absolute():
-            return path
+            resolved = path
+        else:
+            # File lives inside of the project root
+            resolved = ROOT_DIR / path
 
-        # File lives inside of the project root
-        return ROOT_DIR / path
+        # Create the directory if it doesn't exist
+        resolved.mkdir(parents=True, exist_ok=True)
+
+        return resolved
+
+    # This case is for when there is no HDRI selected
+    return path
+
+
+def _resolve_file(path):
+    if path:
+        path = Path(path)
+
+        if path.is_absolute():
+            resolved = path
+        else:
+            # File lives inside of the project root
+            resolved = ROOT_DIR / path
+
+        # Create the directory if it doesn't exist
+        resolved.parent.mkdir(parents=True, exist_ok=True)
+
+        return resolved
 
     # This case is for when there is no HDRI selected
     return path
@@ -320,15 +344,25 @@ class FilePathSettings:
             self._load_user()
 
         def _load_internal(self):
-            self.scenes = _resolve(self.internal_config["scenes"])
-            self.hdris = _resolve(self.internal_config["hdris"])
-            self.renders = _resolve(self.internal_config["renders"])
-            self.camera_capture_states = _resolve(self.internal_config["camera_capture_states"])
+            self.scenes = _resolve_folder(self.internal_config["scenes"])
+            self.hdris = _resolve_folder(self.internal_config["hdris"])
+            self.camera_capture_states = _resolve_file(self.internal_config["camera_capture_states"])
+            self.renders = _resolve_folder(self.internal_config["renders"])
+            self.combined_renders = _resolve_folder(self.renders / "combined")
+            self.albedo_renders = _resolve_folder(self.renders / "albedo")
+            self.normal_renders = _resolve_folder(self.renders / "normal")
+            self.depth_renders = _resolve_folder(self.renders / "depth")
+            self.target_renders = _resolve_folder(self.renders / "target")
 
         def _load_user(self):
-            self.scenes = _resolve(self.user_config["scenes"])
-            self.hdris = _resolve(self.user_config["hdris"])
-            self.renders = _resolve(self.user_config["renders"])
+            self.scenes = _resolve_folder(self.user_config["scenes"])
+            self.hdris = _resolve_folder(self.user_config["hdris"])
+            self.renders = _resolve_folder(self.internal_config["renders"])
+            self.combined_renders = _resolve_folder(self.renders / "combined")
+            self.albedo_renders = _resolve_folder(self.renders / "albedo")
+            self.normal_renders = _resolve_folder(self.renders / "normal")
+            self.depth_renders = _resolve_folder(self.renders / "depth")
+            self.target_renders = _resolve_folder(self.renders / "target")
 
     class Denoiser:
         def __init__(self, internal_config):
@@ -337,8 +371,7 @@ class FilePathSettings:
             self._load_internal()
 
         def _load_internal(self):
-            self.checkpoint = _resolve(self.internal_config["checkpoint"])
-            self.last_checkpoint = _resolve(self.internal_config["last_checkpoint"])
+            self.checkpoint = _resolve_file(self.internal_config["checkpoint"])
 
     class Cache:
         def __init__(self, internal_config):
@@ -347,8 +380,8 @@ class FilePathSettings:
             self._load_internal()
 
         def _load_internal(self):
-            self.scenes = _resolve(self.internal_config["scenes"])
-            self.bvhs = _resolve(self.internal_config["bvhs"])
+            self.scenes = _resolve_folder(self.internal_config["scenes"])
+            self.bvhs = _resolve_folder(self.internal_config["bvhs"])
             
     def __init__(self, internal_settings, user_settings):
         self.internal_config = internal_settings["file_paths"]
@@ -358,12 +391,12 @@ class FilePathSettings:
         self._load_user()
 
     def _load_internal(self):
-        self.scene = _resolve(self.internal_config["scene"])
-        self.hdri = _resolve(self.internal_config["hdri"])
-        self.renders = _resolve(self.internal_config["renders"])
+        self.scene = _resolve_file(self.internal_config["scene"])
+        self.hdri = _resolve_file(self.internal_config["hdri"])
+        self.renders = _resolve_folder(self.internal_config["renders"])
 
-        self.scenes = _resolve(self.internal_config["scenes"])
-        self.hdris = _resolve(self.internal_config["hdris"])
+        self.scenes = _resolve_folder(self.internal_config["scenes"])
+        self.hdris = _resolve_folder(self.internal_config["hdris"])
 
         self.ai_training = self.AITraining(self.internal_config["ai_training"], self.user_config["ai_training"])
         self.denoiser = self.Denoiser(self.internal_config["denoiser"])
@@ -376,12 +409,9 @@ class FilePathSettings:
         self.cache = self.Cache(self.internal_config["cache"])
 
     def _load_user(self):
-        self.scene = _resolve(self.user_config["scene"])
-        self.hdri = _resolve(self.user_config["hdri"])
-        self.renders = _resolve(self.user_config["renders"])
-
-        self.scenes = _resolve(self.internal_config["scenes"])
-        self.hdris = _resolve(self.internal_config["hdris"])
+        self.scene = _resolve_file(self.user_config["scene"])
+        self.hdri = _resolve_file(self.user_config["hdri"])
+        self.renders = _resolve_folder(self.user_config["renders"])
 
         self.ai_training = self.AITraining(self.internal_config["ai_training"], self.user_config["ai_training"])
 
