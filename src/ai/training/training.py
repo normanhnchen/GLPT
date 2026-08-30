@@ -261,7 +261,7 @@ class WorkerThread(QThread):
         # See 9.5 Training
         # ----------------
         try:
-            checkpoint = torch.load(settings.file_paths.denoiser.checkpoint, map_location=AI_DEVICE)
+            checkpoint = torch.load(settings.file_paths.denoiser.checkpoint, map_location=settings.pytorch_device)
             denoiser.load_state_dict(checkpoint["model_state_dict"])
             optim.load_state_dict(checkpoint["optimizer_state_dict"])
             starting_epoch = checkpoint["epoch"] + 1
@@ -300,10 +300,10 @@ class WorkerThread(QThread):
                 if self.should_close:
                     break
                 
-                x = x.to(AI_DEVICE)
-                target = target.to(AI_DEVICE)
+                x = x.to(settings.pytorch_device)
+                target = target.to(settings.pytorch_device)
                 x, target = _preprocess(x, target)
-                combined = x[:, :3].to(AI_DEVICE)
+                combined = x[:, :3].to(settings.pytorch_device)
 
                 optim.zero_grad()
                 prediction = denoiser(x, combined)
@@ -343,11 +343,11 @@ class WorkerThread(QThread):
                     k = min(NUM_VAL_SAMPLES_PER_IMAGE, num_patches)
                     patch_indices = torch.randperm(num_patches)[:k]
  
-                    x = x_grid[patch_indices].to(AI_DEVICE)
-                    target = target_grid[patch_indices].to(AI_DEVICE)
+                    x = x_grid[patch_indices].to(settings.pytorch_device)
+                    target = target_grid[patch_indices].to(settings.pytorch_device)
  
                     x, target = _preprocess(x, target)
-                    combined = x[:, :3].to(AI_DEVICE)
+                    combined = x[:, :3].to(settings.pytorch_device)
  
                     prediction = denoiser(x, combined)
  
@@ -502,7 +502,7 @@ class Launcher(QMainWindow):
 
 
 # Initialize globally so the dataset can access it
-denoiser = KPCN().to(AI_DEVICE)
+denoiser = KPCN().to(settings.pytorch_device)
 optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
 criterion = nn.L1Loss()
 

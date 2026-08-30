@@ -1,6 +1,4 @@
 import json
-import numpy as np
-import glm
 from pathlib import Path
 import torch
 import random
@@ -292,7 +290,7 @@ class ShaderGroup:
                 setattr(self, attr, ShaderGroup(rel_dir))
 
             else:
-                root_dir = ROOT_DIR / rel_dir
+                root_dir = _ROOT_DIR / rel_dir
                 setattr(self, attr, root_dir)
 
 
@@ -304,7 +302,7 @@ def _resolve_folder(path):
             resolved = path
         else:
             # File lives inside of the project root
-            resolved = ROOT_DIR / path
+            resolved = _ROOT_DIR / path
 
         # Create the directory if it doesn't exist
         resolved.mkdir(parents=True, exist_ok=True)
@@ -323,7 +321,7 @@ def _resolve_file(path):
             resolved = path
         else:
             # File lives inside of the project root
-            resolved = ROOT_DIR / path
+            resolved = _ROOT_DIR / path
 
         # Create the directory if it doesn't exist
         resolved.parent.mkdir(parents=True, exist_ok=True)
@@ -423,8 +421,8 @@ class FilePathSettings:
             if path:
                 path = Path(path)
 
-                if path.is_relative_to(ROOT_DIR):
-                    return str(path.relative_to(ROOT_DIR))
+                if path.is_relative_to(_ROOT_DIR):
+                    return str(path.relative_to(_ROOT_DIR))
                 
                 # File lives outside of the project root
                 return str(path)
@@ -552,22 +550,43 @@ class CacheFingerprintSettings:
 
 
 class Settings:
-    def __init__(self, internal_settings, user_settings):
-        self.screen = ScreenSettings(internal_settings, user_settings)
-        self.camera = CameraSettings(internal_settings, user_settings)
-        self.path_tracing = PathTracingSettings(internal_settings, user_settings)
-        self.bvh = BVHSettings(internal_settings, user_settings)
-        self.debug = DebugSettings(internal_settings, user_settings)
-        self.post_processing = PostProcessingSettings(internal_settings, user_settings)
-        self.file_paths = FilePathSettings(internal_settings, user_settings)
-        self.rendering = RenderingSettings(internal_settings, user_settings)
-        self.ai_training = AI_Training(internal_settings)
-        self.cache_fingerprints = CacheFingerprintSettings(internal_settings)
+    def __init__(self):
+        self.root_dir = Path(__file__).resolve().parent.parent
+
+        with open(self.root_dir / "src/settings/internal.json") as f:
+            self.internal_settings = json.load(f)
+
+        with open(self.root_dir / "src/settings/user.json") as f:
+            self.user_settings = json.load(f)
+
+        self._load_subsettings()
+        self._load_other()
+    
+    def _load_subsettings(self):
+        self.screen = ScreenSettings(self.internal_settings, self.user_settings)
+        self.camera = CameraSettings(self.internal_settings, self.user_settings)
+        self.path_tracing = PathTracingSettings(self.internal_settings, self.user_settings)
+        self.bvh = BVHSettings(self.internal_settings, self.user_settings)
+        self.debug = DebugSettings(self.internal_settings, self.user_settings)
+        self.post_processing = PostProcessingSettings(self.internal_settings, self.user_settings)
+        self.file_paths = FilePathSettings(self.internal_settings, self.user_settings)
+        self.rendering = RenderingSettings(self.internal_settings, self.user_settings)
+        self.ai_training = AI_Training(self.internal_settings)
+        self.cache_fingerprints = CacheFingerprintSettings(self.internal_settings)
 
         self._groups = [
             self.screen, self.camera, self.path_tracing, self.bvh, self.debug,
             self.post_processing, self.file_paths, self.rendering
         ]
+
+    def _load_other(self):
+        # glTF KHR_lights_punctual defines intensity in photometric units
+        # Convert to radiometric units matching Blender's export constant
+        self.lumens_to_watts = 1 / 683
+
+        self.pytorch_device = torch.device("cpu")
+        if torch.cuda.is_available():
+            self.pytorch_device = torch.device("cuda")
 
     def export_user_settings(self):
         merged = {}
@@ -581,21 +600,6 @@ class Settings:
         for group in self._groups:
             group.reset()
 
+settings = Settings()
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-
-with open(ROOT_DIR / "src/settings/internal.json") as f:
-    internal_settings = json.load(f)
-
-with open(ROOT_DIR / "src/settings/user.json") as f:
-    user_settings = json.load(f)
-
-# glTF KHR_lights_punctual defines intensity in photometric units
-# Convert to radiometric units matching Blender's export constant
-LUMENS_TO_WATTS = 1 / 683
-
-AI_DEVICE = torch.device("cpu")
-if torch.cuda.is_available():
-    AI_DEVICE = torch.device("cuda")
-
-settings = Settings(internal_settings, user_settings)
+_ROOT_DIR = Path(__file__).resolve().parent.parent

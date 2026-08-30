@@ -12,8 +12,8 @@ class ConvBlock(nn.Module):
 
         # 3x3 convolutions
         # Padding of 1 to keep the output the same size
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, device=AI_DEVICE)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, device=AI_DEVICE)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, device=settings.pytorch_device)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, device=settings.pytorch_device)
         # inplace=true to overwrite tensor; optimization
         self.relu1 = nn.ReLU(inplace=True)
         self.relu2 = nn.ReLU(inplace=True)
@@ -48,7 +48,7 @@ class DecoderBlock(nn.Module):
         super().__init__()
 
         # kernel_size=2 and stride=2 to upsample by 2 times
-        self.up = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2, device=AI_DEVICE)
+        self.up = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2, device=settings.pytorch_device)
         self.conv = ConvBlock(in_channels, out_channels)
     
     def forward(self, x, skip_connection):
@@ -80,7 +80,7 @@ class UNet(nn.Module):
         self.d4 = DecoderBlock(128, 64)
 
         # kernel_size=1 to reduce the 64 feature channels without reducing the image size
-        self.conv_out = nn.Conv2d(64, out_channels, kernel_size=1, device=AI_DEVICE)
+        self.conv_out = nn.Conv2d(64, out_channels, kernel_size=1, device=settings.pytorch_device)
     
     def forward(self, x):
         x0 = self.conv_in(x)
@@ -153,7 +153,7 @@ class KPCN(nn.Module):
         # (B, 3, H, W) -> # (B, 3, H+2*pad, W+2*pad)
         padded = pad(combined)
 
-        output = torch.zeros([B, 3, K * K, H, W], device=AI_DEVICE, dtype=torch.float32)
+        output = torch.zeros([B, 3, K * K, H, W], device=settings.pytorch_device, dtype=torch.float32)
         # (B, 3, H+2*pad, W+2*pad) -> (B, 3, K*K, H, W)
         idx = 0
         for i in range(K):
@@ -210,7 +210,7 @@ class KPCN(nn.Module):
         # Add batch dimension at index 0 (C, H, W) -> (1, C, H, W)
         t = t.unsqueeze(0)
 
-        return t.to(AI_DEVICE)
+        return t.to(settings.pytorch_device)
     
     def _tensor_to_tex(self, tensor, denoised_tex):
         # Reshape to OpenGL texture data (H, W, C)

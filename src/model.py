@@ -701,7 +701,7 @@ class Scene:
             return
 
         col = self.lights["col"][finite_indices]
-        intensity = self.lights["intensity"][finite_indices] * LUMENS_TO_WATTS
+        intensity = self.lights["intensity"][finite_indices] * settings.lumens_to_watts
         luminance = (col[:, 0] * 0.2126 + col[:, 1] * 0.7152 + col[:, 2] * 0.0722) * intensity
 
         # https://www.pbr-book.org/3ed-2018/Light_Sources/Point_Lights#
@@ -815,7 +815,7 @@ class Scene:
             type_id = {"point": 0, "directional": 1, "spot": 2}[light_type_str]
             spot = light_def.get("spot", {})
 
-            intensity = light_def.get("intensity", 1) * LUMENS_TO_WATTS
+            intensity = light_def.get("intensity", 1) * settings.lumens_to_watts
 
             lights.append((
                 light_def.get("color", [1, 1, 1]),

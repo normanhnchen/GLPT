@@ -1,4 +1,3 @@
-from pathlib import Path
 from src.settings import *
 from src.dtypes import *
 
@@ -12,7 +11,7 @@ def _load_shader_source(path, is_root=True):
                     stripped = line.strip()
                     if stripped.startswith("#include"):
                         include_path = stripped.split('"')[1]
-                        file_path = ROOT_DIR / include_path
+                        file_path = settings.root_dir / include_path
                         shader_source += _load_shader_source(file_path, is_root=False)
                         shader_source += "\n"
 
