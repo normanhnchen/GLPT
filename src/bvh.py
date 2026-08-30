@@ -4,11 +4,6 @@ from numba import njit, prange
 from src.settings import *
 
 
-# https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
-# https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
-# https://jacco.ompf2.com/2022/04/21/how-to-build-a-bvh-part-3-quick-builds/
-
-
 # See 4.2 Construction
 class BVH:
     def __init__(self, scene):
