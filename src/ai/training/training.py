@@ -46,6 +46,8 @@ QPushButton:hover {
 }
 """
 
+MENU_WIDTH = 300
+
 
 def load_exr(path, nan=0, posinf=0, neginf=0):
     img = cv2.imread(str(path), cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
@@ -294,24 +296,34 @@ class Launcher(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("AI Training")
-        self.resize(400, 400)
+        self.resize(1080, 720)
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
 
         self.main_layout = QVBoxLayout(self.central_widget)
+        self.main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.title = QLabel("AI Training")
+        self.title.setObjectName("titleLabel")
 
         self.start_button = QPushButton("Start")
         self.start_button.clicked.connect(self.on_start)
+        self.start_button.setFixedWidth(MENU_WIDTH)
 
-        self.main_layout.addWidget(self.start_button)
+        self.main_layout.addWidget(self.title, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.main_layout.addWidget(self.start_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.worker = None
 
     def on_start(self):
-        # Remove the start button
+        # Remove widgets
+        # --------------
+        self.main_layout.removeWidget(self.title)
         self.main_layout.removeWidget(self.start_button)
         # Remove from memory
+        # ------------------
+        self.title.deleteLater()
         self.start_button.deleteLater()
 
         status_label = QLabel("Preparing dataset...")
