@@ -496,19 +496,38 @@ class RenderingSettings:
         }
 
 
-class AITrainingSettings:
+class AI_Training:
+    class Rendering:
+        def __init__(self, internal_config):
+            self.internal_config = internal_config
+
+            self._load_internal()
+
+        def _load_internal(self):
+            self.mode = self.internal_config["mode"]
+            self.target_samples = self.internal_config["target_samples"]
+            self.noisy_samples_list = self.internal_config["noisy_samples_list"]
+            self.noisy_samples = random.choice(self.noisy_samples_list)
+            self.num_pass_throughs = self.internal_config["num_pass_throughs"]
+
+    class Training:
+        def __init__(self, internal_config):
+            self.internal_config = internal_config
+
+            self._load_internal()
+
+        def _load_internal(self):
+            self.epochs = self.internal_config["epochs"]
+    
     def __init__(self, internal_settings):
-        self.internal_config = internal_settings["ai_training"]
+        self.internal_config = internal_settings["ai"]
 
         self._load_internal()
 
     def _load_internal(self):
         self.enable_launcher_buttons = self.internal_config["enable_launcher_buttons"]
-        self.mode = self.internal_config["mode"]
-        self.target_samples = self.internal_config["target_samples"]
-        self.noisy_samples_list = self.internal_config["noisy_samples_list"]
-        self.noisy_samples = random.choice(self.noisy_samples_list)
-        self.num_pass_throughs = self.internal_config["num_pass_throughs"]
+        self.rendering = self.Rendering(self.internal_config["rendering"])
+        self.training = self.Training(self.internal_config["training"])
 
     def get_new_noisy_samples(self):
         self.noisy_samples = random.choice(self.noisy_samples_list)
@@ -542,7 +561,7 @@ class Settings:
         self.post_processing = PostProcessingSettings(internal_settings, user_settings)
         self.file_paths = FilePathSettings(internal_settings, user_settings)
         self.rendering = RenderingSettings(internal_settings, user_settings)
-        self.ai_training = AITrainingSettings(internal_settings)
+        self.ai_training = AI_Training(internal_settings)
         self.cache_fingerprints = CacheFingerprintSettings(internal_settings)
 
         self._groups = [

@@ -340,7 +340,7 @@ class ExportState:
     def auto_save_training_renders(self):
         total_samples = self.pt_state.rendering.total_samples
 
-        if self.noisy is None and total_samples >= settings.ai_training.noisy_samples:
+        if self.noisy is None and total_samples >= settings.ai_training.rendering.noisy_samples:
             self.noisy = {
                 "combined": self.pt_state.framebuffers.get_ndarray_combined(),
                 "albedo": self.pt_state.framebuffers.get_ndarray_albedo(),

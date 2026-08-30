@@ -203,10 +203,8 @@ class WorkerThread(QThread):
         train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False)
 
-        epochs = 300
-
-        # Tell the progress bar that 300 is the maximum value
-        self.setup_progress.emit(epochs)
+        # Tell the progress bar the maximum epoch value
+        self.setup_progress.emit(settings.ai_training.training.epochs)
 
         # See 9.5 Training
         # ----------------
@@ -222,7 +220,7 @@ class WorkerThread(QThread):
         except FileNotFoundError:
             starting_epoch = 0
 
-        for epoch in range(starting_epoch, epochs):
+        for epoch in range(starting_epoch, settings.ai_training.training.epochs):
             if self.should_close:
                 break
 
@@ -326,19 +324,22 @@ class Launcher(QMainWindow):
         self.title.deleteLater()
         self.start_button.deleteLater()
 
-        status_label = QLabel("Preparing dataset...")
+        self.status_label = QLabel("Preparing dataset...")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_label.setObjectName("defaultLabel")
         
-        progress_bar = QProgressBar()
-        progress_bar.setValue(0)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setValue(0)
+        self.progress_bar.setFixedHeight(50)
 
-        self.main_layout.addWidget(status_label)
-        self.main_layout.addWidget(progress_bar)
+        self.main_layout.addWidget(self.status_label)
+        self.main_layout.addWidget(self.progress_bar)
 
         self.worker = WorkerThread()
 
-        self.worker.status.connect(status_label.setText)
-        self.worker.progress.connect(progress_bar.setValue)
-        self.worker.setup_progress.connect(progress_bar.setMaximum)
+        self.worker.status.connect(self.status_label.setText)
+        self.worker.progress.connect(self.progress_bar.setValue)
+        self.worker.setup_progress.connect(self.progress_bar.setMaximum)
 
         self.worker.start()
 

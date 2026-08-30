@@ -1,10 +1,15 @@
 {
-    "ai_training": {
-        "enable_launcher_buttons": false,
-        "mode": "off",
-        "target_samples": 4096,
-        "noisy_samples_list": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-        "num_pass_throughs": 2
+    "ai": {
+        "enable_launcher_buttons": true,
+        "training": {
+            "epochs": 300
+        },
+        "rendering": {
+            "mode": "off",
+            "target_samples": 4096,
+            "noisy_samples_list": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            "num_pass_throughs": 2
+        }
     },
     "bvh": {
         "max_depth": 32,

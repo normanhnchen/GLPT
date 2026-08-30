@@ -402,12 +402,12 @@ class AITrainingDialog(QDialog):
         buttons_layout.addWidget(auto_rendering_button)
 
     def run_camera_setup(self):
-        settings.ai_training.mode = "camera_setup"
+        settings.ai_training.rendering.mode = "camera_setup"
         settings.rendering.mode = "rasterization"
         QApplication.instance().quit()
 
     def run_auto_render(self):
-        settings.ai_training.mode = "render"
+        settings.ai_training.rendering.mode = "render"
         settings.rendering.mode = "path_tracing"
         QApplication.instance().quit()
 
@@ -499,7 +499,7 @@ class Launcher(QMainWindow):
         self.stacked_widget.addWidget(self.loading_widget)
 
     def run(self):
-        settings.ai_training.mode = "off"
+        settings.ai_training.rendering.mode = "off"
         self.save_user_settings()
 
         self.progress_bar.setValue(0)
@@ -573,7 +573,7 @@ def main():
         scene, ai_denoiser, camera, buffers = launcher.pending_run_data
         renderer.run_app(scene, ai_denoiser, camera, buffers)
 
-    if settings.ai_training.mode == "camera_setup" or settings.ai_training.mode == "render":
+    if settings.ai_training.rendering.mode == "camera_setup" or settings.ai_training.rendering.mode == "render":
         ai_training_renderer.run_app()
 
 
