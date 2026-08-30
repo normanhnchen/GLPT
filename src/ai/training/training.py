@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader, Subset
 import cv2
 import os
 import random
@@ -93,7 +93,7 @@ def save_checkpoint(checkpoint, path):
 
 # See 9.5 Training
 class DenoiseDataset(Dataset):
-    def __init__(self, renders_path, patch_size=256):
+    def __init__(self, renders_path, patch_size=256, is_validation=False):
         self.combined_path = renders_path / "combined/"
         self.albedo_path = renders_path / "albedo/"
         self.normal_path = renders_path / "normal/"
@@ -102,6 +102,8 @@ class DenoiseDataset(Dataset):
 
         self.num_samples = sum(1 for item in self.combined_path.iterdir() if item.is_file())
         self.patch_size = patch_size
+
+        self.is_validation = is_validation
 
     def __len__(self):
         return self.num_samples
@@ -128,19 +130,43 @@ class DenoiseDataset(Dataset):
 
         x = torch.cat([combined, albedo, normal, depth])
 
-        # Get random image patch
-        # ----------------------
-        _, h, w = x.shape
+        if self.is_validation:
+            x_patches = []
+            target_patches = []
 
-        top = random.randint(0, h - self.patch_size)
-        bottom = top + self.patch_size
-        left = random.randint(0, w - self.patch_size)
-        right = left + self.patch_size
+            _, h, w = x.shape
 
-        x = x[:, top:bottom, left:right]
-        target = target[:, top:bottom, left:right]
+            # Loop across the image vertically and horizontally in patch_size steps
+            # Split the image into a grid of patch_size chunks for parallelized
+            # validation across image patches
+            for y in range(0, h - self.patch_size + 1, self.patch_size):
+                for x_coord in range(0, w - self.patch_size + 1, self.patch_size):
 
-        x, target = self._augment(x, target)
+                    # Crop current image patch
+                    x_crop = x[:, y : y + self.patch_size, x_coord : x_coord + self.patch_size]
+                    t_crop = target[:, y : y + self.patch_size, x_coord : x_coord + self.patch_size]
+                    
+                    x_patches.append(x_crop)
+                    target_patches.append(t_crop)
+
+            # shape: (num patches, channels, batch_size, batch_size)
+            x = torch.stack(x_patches)
+            target = torch.stack(target_patches)
+
+        else:
+            # Get random image patch
+            # ----------------------
+            _, h, w = x.shape
+
+            top = random.randint(0, h - self.patch_size)
+            bottom = top + self.patch_size
+            left = random.randint(0, w - self.patch_size)
+            right = left + self.patch_size
+
+            x = x[:, top:bottom, left:right]
+            target = target[:, top:bottom, left:right]
+
+            x, target = self._augment(x, target)
 
         return x, target
 
@@ -193,18 +219,20 @@ class WorkerThread(QThread):
     def train(self):
         # See 9.5 Training
         # ----------------
-        full_dataset = DenoiseDataset(settings.file_paths.ai_training.renders)
+        full_dataset_train = DenoiseDataset(settings.file_paths.ai_training.renders, is_validation=False)
+        full_dataset_val = DenoiseDataset(settings.file_paths.ai_training.renders, is_validation=True)
+
         # Split 10% of the dataset to be validation cases
-        val_size = max(1, int(0.1 * len(full_dataset)))
-        # Split the rest of the dataset to be train cases
-        train_size = len(full_dataset) - val_size
+        val_size = max(1, int(0.1 * len(full_dataset_val)))
 
         gen = torch.Generator().manual_seed(999)
+        indices = torch.randperm(len(full_dataset_train), generator=gen).tolist()
 
-        train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size], generator=gen)
+        train_dataset = Subset(full_dataset_train, indices[val_size:])
+        val_dataset = Subset(full_dataset_val, indices[:val_size])
 
         train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False)
+        val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
 
         # Tell the progress bar the maximum epoch value
         self.setup_progress.emit(settings.ai_training.training.epochs)
@@ -246,6 +274,7 @@ class WorkerThread(QThread):
             # ----------------
             denoiser.train()
             epoch_loss = 0
+            total_train_samples = 0
             for x, target in train_loader:
                 if self.should_close:
                     break
@@ -261,31 +290,60 @@ class WorkerThread(QThread):
                 loss.backward()
                 optim.step()
 
+                # Multiply the loss value by the number of batches
                 epoch_loss += loss.item() * x.size(0)
+                
+                total_train_samples += x.size(0)
 
             if self.should_close:
                 break
+
+            # Divide by the total samples processed across all batches
+            epoch_loss = epoch_loss / max(1, total_train_samples)
             
             # Validation loop
             # ---------------
             denoiser.eval()
             val_loss = 0
+            total_val_patches = 0
             with torch.no_grad():
-                for x, target in val_loader:
+                for x_grid, target_grid in val_loader:
                     if self.should_close:
                         break
-                
-                    x = x.to(AI_DEVICE)
-                    target = target.to(AI_DEVICE)
-                    x, target = _preprocess(x, target)
-                    combined = x[:, :3].to(AI_DEVICE)
 
-                    prediction = denoiser(x, combined)
-                    
-                    val_loss += criterion(prediction, target).item() * x.size(0)
+                    # Remove batch dimension
+                    # (num batches, num patches, channels, batch_size, batch_size)
+                    # -> (num patches, channels, batch_size, batch_size)
+                    x_grid = x_grid.squeeze(0)
+                    target_grid = target_grid.squeeze(0)
+
+                    # Number of image patches the device will process at a time
+                    max_val_batch = 16
+
+                    for i in range(0, x_grid.size(0), max_val_batch):
+                        if self.should_close:
+                            break
+
+                        x = x_grid[i : i + max_val_batch].to(AI_DEVICE)
+                        target = target_grid[i : i + max_val_batch].to(AI_DEVICE)
+
+                        x = x.to(AI_DEVICE)
+                        target = target.to(AI_DEVICE)
+                        x, target = _preprocess(x, target)
+                        combined = x[:, :3].to(AI_DEVICE)
+
+                        prediction = denoiser(x, combined)
+
+                        # Multiply the validation loss by the number of batches
+                        val_loss += criterion(prediction, target).item() * x.size(0)
+
+                        total_val_patches += x.size(0)
             
             if self.should_close:
                 break
+
+            # Divide by the total patches processed across all validation images
+            val_loss = val_loss / max(1, total_val_patches)
 
             # Update the text label
             status_text = f"Epoch: {epoch} / {settings.ai_training.training.epochs}"
