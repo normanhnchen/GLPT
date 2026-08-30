@@ -395,6 +395,9 @@ class AITrainingDialog(QDialog):
         auto_rendering_button.setFixedWidth(AI_TRAINING_WIDTH)
         auto_rendering_button.clicked.connect(self.run_auto_render)
 
+        ai_training_button = QPushButton("AI Training")
+        ai_training_button.setFixedWidth(AI_TRAINING_WIDTH)
+
         buttons_layout.addWidget(camera_setup_button)
         buttons_layout.addWidget(auto_rendering_button)
 
@@ -406,6 +409,9 @@ class AITrainingDialog(QDialog):
     def run_auto_render(self):
         settings.ai_training.mode = "render"
         settings.rendering.mode = "path_tracing"
+        QApplication.instance().quit()
+
+    def run_ai_training(self):
         QApplication.instance().quit()
 
 

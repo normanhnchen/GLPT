@@ -3,6 +3,13 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import cv2
 import os
 import random
+import sys
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QProgressBar, QScrollArea,
+    QHBoxLayout, QLabel, QPushButton, QSlider, QCheckBox, QStackedWidget, QSpinBox,
+    QDialog, QListWidget, QListWidgetItem, QFileDialog, QLineEdit, QToolButton, QComboBox
+)
+from PySide6.QtCore import Qt, QThread, Signal
 
 from src.settings import *
 from src.ai.denoiser.network import *
@@ -133,80 +140,134 @@ def _preprocess(x, target):
     return x, target
 
 
-# See 9.5 Training
-# ----------------
-full_dataset = DenoiseDataset(settings.file_paths.ai_training.renders)
-# Split 10% of the dataset to be validation cases
-val_size = max(1, int(0.1 * len(full_dataset)))
-# Split the rest of the dataset to be train cases
-train_size = len(full_dataset) - val_size
+class WorkerThread(QThread):
+    progress = Signal(int)
+    setup_progress = Signal(int)
+    status = Signal(str)
+    error = Signal(str)
 
-train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
+    def run(self):
+        try:
+            self.train()
+        except Exception as e:
+            self.error.emit(str(e))
 
-train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False)
+    def train(self):
+        # See 9.5 Training
+        # ----------------
+        full_dataset = DenoiseDataset(settings.file_paths.ai_training.renders)
+        # Split 10% of the dataset to be validation cases
+        val_size = max(1, int(0.1 * len(full_dataset)))
+        # Split the rest of the dataset to be train cases
+        train_size = len(full_dataset) - val_size
 
+        train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
+
+        train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False)
+
+        epochs = 300
+
+        # Tell the progress bar that 300 is the maximum value
+        self.setup_progress.emit(epochs)
+
+        # See 9.5 Training
+        # ----------------
+        try:
+            checkpoint = torch.load(settings.file_paths.denoiser.checkpoint, map_location=AI_DEVICE)
+            denoiser.load_state_dict(checkpoint["model_state_dict"])
+            optim.load_state_dict(checkpoint["optimizer_state_dict"])
+            starting_epoch = checkpoint["epoch"] + 1
+
+            self.progress.emit(starting_epoch) 
+            self.status.emit(f"Resumed from epoch {starting_epoch}...")
+
+        except FileNotFoundError:
+            starting_epoch = 0
+
+        for epoch in range(starting_epoch, epochs):
+            # Training loop
+            # See 9.5 Training
+            # ----------------
+            denoiser.train()
+            epoch_loss = 0
+            for x, target in train_loader:
+                x = x.to(AI_DEVICE)
+                target = target.to(AI_DEVICE)
+                x, target = _preprocess(x, target)
+                combined = x[:, :3].to(AI_DEVICE)
+
+                optim.zero_grad()
+                prediction = denoiser(x, combined)
+                loss = criterion(prediction, target)
+                loss.backward()
+                optim.step()
+
+                epoch_loss += loss.item() / len(train_loader)
+            
+            # Validation loop
+            # ---------------
+            denoiser.eval()
+            val_loss = 0
+            with torch.no_grad():
+                for x, target in val_loader:
+                    x = x.to(AI_DEVICE)
+                    target = target.to(AI_DEVICE)
+                    x, target = _preprocess(x, target)
+                    combined = x[:, :3].to(AI_DEVICE)
+
+                    prediction = denoiser(x, combined)
+                    
+                    val_loss += criterion(prediction, target).item() / len(val_loader)
+
+            # Update the text label
+            status_text = f"Epoch: {epoch} | Epoch Loss: {epoch_loss:.6f} | Val Loss: {val_loss:.6f}"
+            self.status.emit(status_text)
+
+            # Update the progress bar (epoch + 1 to fill the progress bar completely on the last one)
+            self.progress.emit(epoch + 1)
+            
+            curr_checkpoint = {
+                "epoch": epoch,
+                "model_state_dict": denoiser.state_dict(),
+                "optimizer_state_dict": optim.state_dict(),
+                "loss": epoch_loss
+            }
+
+            save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.checkpoint)
+
+        self.status.emit("Training Complete!")
+
+
+# Initialize globally so the dataset can access it
 denoiser = KPCN().to(AI_DEVICE)
 optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
 criterion = nn.L1Loss()
-
-epochs = 150
-
-# See 9.5 Training
-# ----------------
-try:
-    checkpoint = torch.load(settings.file_paths.denoiser.checkpoint, map_location=AI_DEVICE)
-    denoiser.load_state_dict(checkpoint["model_state_dict"])
-    optim.load_state_dict(checkpoint["optimizer_state_dict"])
-    starting_epoch = checkpoint["epoch"] + 1
-    print(f"Resumed from epoch {starting_epoch}")
-
-except FileNotFoundError:
-    starting_epoch = 0
-
-
-for epoch in range(starting_epoch, epochs):
-    # Training loop
-    # See 9.5 Training
-    # ----------------
-    denoiser.train()
-    epoch_loss = 0
-    for x, target in train_loader:
-        x = x.to(AI_DEVICE)
-        target = target.to(AI_DEVICE)
-        x, target = _preprocess(x, target)
-        combined = x[:, :3].to(AI_DEVICE)
-
-        optim.zero_grad()
-        prediction = denoiser(x, combined)
-        loss = criterion(prediction, target)
-        loss.backward()
-        optim.step()
-
-        epoch_loss += loss.item() / len(train_loader)
     
-    # Validation loop
-    # ---------------
-    denoiser.eval()
-    val_loss = 0
-    with torch.no_grad():
-        for x, target in val_loader:
-            x = x.to(AI_DEVICE)
-            target = target.to(AI_DEVICE)
-            x, target = _preprocess(x, target)
-            combined = x[:, :3].to(AI_DEVICE)
+app = QApplication(sys.argv)
 
-            prediction = denoiser(x, combined)
-            
-            val_loss += criterion(prediction, target).item() / len(val_loader)
+window = QWidget()
+window.setWindowTitle("AI Training")
+window.resize(400, 400)
 
-    print(f"Epoch: {epoch} | Epoch Loss: {epoch_loss:.6f} | Val Loss: {val_loss:.6f}")
-    
-    curr_checkpoint = {
-        "epoch": epoch,
-        "model_state_dict": denoiser.state_dict(),
-        "optimizer_state_dict": optim.state_dict(),
-        "loss": epoch_loss
-    }
+layout = QVBoxLayout()
 
-    save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.checkpoint)
+status_label = QLabel("Preparing dataset...")
+layout.addWidget(status_label)
+
+progress_bar = QProgressBar()
+progress_bar.setValue(0)
+layout.addWidget(progress_bar)
+
+window.setLayout(layout)
+
+worker = WorkerThread()
+
+worker.status.connect(status_label.setText)
+worker.progress.connect(progress_bar.setValue)
+worker.setup_progress.connect(progress_bar.setMaximum)
+
+worker.start()
+
+window.show()
+app.exec()
