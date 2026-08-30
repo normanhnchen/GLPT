@@ -19,6 +19,34 @@ from src.ai.denoiser.network import *
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 
 
+APP_STYLESHEET = """
+QWidget {
+    background-color: #1e1f22;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+QLabel#titleLabel {
+    font-size: 96px;
+}
+
+QLabel#defaultLabel {
+    font-size: 16px;
+}
+
+QPushButton {
+    background-color: #4c79a6;
+    font-size: 36px;
+    border-radius: 8px;
+    padding: 16px 4px;
+}
+
+QPushButton:hover {
+    background-color: #7ca4cc;
+}
+"""
+
+
 def load_exr(path, nan=0, posinf=0, neginf=0):
     img = cv2.imread(str(path), cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
     # OpenCV loads as BGR, so convert to RGB
@@ -278,6 +306,8 @@ class Launcher(QMainWindow):
 
         self.main_layout.addWidget(self.start_button)
 
+        self.worker = None
+
     def on_start(self):
         # Remove the start button
         self.main_layout.removeWidget(self.start_button)
@@ -305,7 +335,7 @@ class Launcher(QMainWindow):
         Called automatically when the user closes the window.
         Safely terminates worker threads when terminating the program before they finish.
         """
-        if self.worker.isRunning():
+        if self.worker and self.worker.isRunning():
             # Break the training loop
             self.worker.stop()
             # Block until the thread finishes shutting down
@@ -321,6 +351,7 @@ criterion = nn.L1Loss()
 
 def run_app():
     app = QApplication(sys.argv)
+    app.setStyleSheet(APP_STYLESHEET)
 
     launcher = Launcher()
     launcher.show()
@@ -330,6 +361,7 @@ def run_app():
 
 def main():
     app = QApplication(sys.argv)
+    app.setStyleSheet(APP_STYLESHEET)
 
     launcher = Launcher()
     launcher.show()
