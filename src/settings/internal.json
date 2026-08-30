@@ -1,5 +1,6 @@
 {
-    "ai": {
+    "ai_training": {
+        "mode": "training",
         "enable_launcher_buttons": true,
         "training": {
             "epochs": 300

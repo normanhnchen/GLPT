@@ -11,6 +11,7 @@ from src.settings import *
 from src.model import *
 import src.renderer as renderer
 import src.ai.training.renderer as ai_training_renderer
+import src.ai.training.training as ai_training
 
 
 APP_STYLESHEET = """
@@ -397,21 +398,24 @@ class AITrainingDialog(QDialog):
 
         ai_training_button = QPushButton("AI Training")
         ai_training_button.setFixedWidth(AI_TRAINING_WIDTH)
+        ai_training_button.clicked.connect(self.run_ai_training)
 
         buttons_layout.addWidget(camera_setup_button)
         buttons_layout.addWidget(auto_rendering_button)
+        buttons_layout.addWidget(ai_training_button)
 
     def run_camera_setup(self):
-        settings.ai_training.rendering.mode = "camera_setup"
+        settings.ai_training.mode = "camera_setup"
         settings.rendering.mode = "rasterization"
         QApplication.instance().quit()
 
     def run_auto_render(self):
-        settings.ai_training.rendering.mode = "render"
+        settings.ai_training.mode = "render"
         settings.rendering.mode = "path_tracing"
         QApplication.instance().quit()
 
     def run_ai_training(self):
+        settings.ai_training.mode = "training"
         QApplication.instance().quit()
 
 
@@ -499,7 +503,7 @@ class Launcher(QMainWindow):
         self.stacked_widget.addWidget(self.loading_widget)
 
     def run(self):
-        settings.ai_training.rendering.mode = "off"
+        settings.ai_training.mode = "off"
         self.save_user_settings()
 
         self.progress_bar.setValue(0)
@@ -573,7 +577,10 @@ def main():
         scene, ai_denoiser, camera, buffers = launcher.pending_run_data
         renderer.run_app(scene, ai_denoiser, camera, buffers)
 
-    if settings.ai_training.rendering.mode == "camera_setup" or settings.ai_training.rendering.mode == "render":
+    elif settings.ai_training.mode == "training":
+        ai_training.run_app()
+    
+    elif settings.ai_training.mode == "camera_setup" or settings.ai_training.mode == "render":
         ai_training_renderer.run_app()
 
 

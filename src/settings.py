@@ -504,7 +504,6 @@ class AI_Training:
             self._load_internal()
 
         def _load_internal(self):
-            self.mode = self.internal_config["mode"]
             self.target_samples = self.internal_config["target_samples"]
             self.noisy_samples_list = self.internal_config["noisy_samples_list"]
             self.noisy_samples = random.choice(self.noisy_samples_list)
@@ -520,12 +519,13 @@ class AI_Training:
             self.epochs = self.internal_config["epochs"]
     
     def __init__(self, internal_settings):
-        self.internal_config = internal_settings["ai"]
+        self.internal_config = internal_settings["ai_training"]
 
         self._load_internal()
 
     def _load_internal(self):
         self.enable_launcher_buttons = self.internal_config["enable_launcher_buttons"]
+        self.mode = self.internal_config["mode"]
         self.rendering = self.Rendering(self.internal_config["rendering"])
         self.training = self.Training(self.internal_config["training"])
 
