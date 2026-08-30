@@ -33,9 +33,9 @@
             "renders": "src\\assets\\renders\\ai_training",
             "scenes": "src\\assets\\models\\ai_training"
         },
-        "hdri": "src\\assets\\hdris\\ai_training\\DayEnvironmentHDRI042_4K_HDR.exr",
+        "hdri": "src\\assets\\hdris\\day_sky_hdri.exr",
         "renders": "src\\assets\\renders\\images",
-        "scene": "src\\assets\\models\\scene_0 copy.glb",
+        "scene": "src\\assets\\models\\dragon_scene.glb",
         "scenes": "src\\assets\\models"
     },
     "path_tracing": {

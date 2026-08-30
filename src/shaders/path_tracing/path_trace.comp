@@ -362,7 +362,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
         bool didRefract = dot(bsdfSample.wi, si.ng) < 0.0;
 
-        // See 6.2 Beer-Lambert
+        // See 6.2 Beer-Lambert Law
         vec3 transmittance;
         BeerLambert(isInsideMedium, entryPoint, si, transmittance, didRefract);
 

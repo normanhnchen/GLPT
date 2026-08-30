@@ -150,7 +150,7 @@ denoiser = KPCN().to(AI_DEVICE)
 optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
 criterion = nn.L1Loss()
 
-epochs = 300
+epochs = 150
 
 # See 9.5 Training
 # ----------------

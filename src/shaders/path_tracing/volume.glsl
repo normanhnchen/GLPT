@@ -5,7 +5,7 @@
 #include "src/shaders/common.glsl"
 
 
-// See 6.2 Beer-Lambert
+// See 6.2 Beer-Lambert Law
 void BeerLambert(inout bool insideMedium, inout vec3 entryPoint, SurfaceInteraction si, out vec3 transmittance, bool didRefract) {
     transmittance = vec3(1.0);
 
