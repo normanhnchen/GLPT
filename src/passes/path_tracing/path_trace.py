@@ -1,5 +1,5 @@
 from src.dtypes import *
-from src.settings import *
+from src.settings import settings
 
 
 def _compute_uniforms(scene, camera, pt_state):

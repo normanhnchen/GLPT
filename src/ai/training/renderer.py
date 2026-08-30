@@ -1,23 +1,21 @@
-import numpy as np
 from glfw.GLFW import *
 import moderngl
-import sys
-import time
-from imgui_bundle import imgui
-from imgui_bundle.python_backends.glfw_backend import GlfwRenderer
 
-from src.settings import *
+from src.settings import settings
 from src.dtypes import *
 from src.shader import *
 from src.camera import *
-from src.model import *
-from src.render_state import *
-from src.buffer_loading import *
-from src.bvh_builder import *
-from src.settings_ui import *
-from src.ai.denoiser.network import *
-from src.pipelines.path_tracing import *
-from src.pipelines.rasterization import *
+from src.scene.caching import remove_stale_cache, load_scene, load_bvh
+from src.scene.hdri import HDRI
+from src.buffer_loading import CameraBuffer, MaterialBuffer, TriangleBuffer, LightBuffer, EmissiveTrianglesBuffer, FiniteLightsBuffer, BVHNodeBuffer, TriangleIndicesBuffer
+from src.settings_ui import SettingsUI
+from src.pipelines.path_tracing import PathTracingPipeline
+from src.pipelines.rasterization import RasterizationPipeline
+from src.states.render import PTState, RasterState, FinalOutputState
+from src.states.window import GlfwWindow, InputState, ImguiState, GlfwCallbackState, UIState
+from src.states.scene import SceneState, BVHState, CameraCaptureState
+from src.states.export import ExportState
+from src.states.stats import FrameStatsState
 
 
 camera = Camera()
@@ -104,7 +102,9 @@ def run_app():
                 finite_lights_buffer = FiniteLightsBuffer(scene)
 
                 if settings.ai_training.mode != "camera_setup":
-                    scene.build_bvh()
+                    bvh = load_bvh(scene)
+                    scene.bvh = bvh
+                    scene.num_bvh_nodes = bvh.nodes_used
                     bvh_node_buffer = BVHNodeBuffer(scene)
                     tri_indices_buffer = TriangleIndicesBuffer(scene)
                     bvh_node_buffer.bind(ctx, 4)

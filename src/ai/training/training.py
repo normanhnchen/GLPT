@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader, Subset
+import torch.nn as nn
 import cv2
 import os
 import random
@@ -10,9 +11,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QThread, Signal
 import pyqtgraph as pg
 import numpy as np
+from pathlib import Path
 
-from src.settings import *
-from src.ai.denoiser.network import *
+from src.settings import settings
+from src.ai.denoiser.network import KPCN
 
 
 # Required as OpenCV disables EXR support by default

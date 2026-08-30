@@ -1,7 +1,7 @@
 import moderngl
 
 from src.dtypes import *
-from src.settings import *
+from src.settings import settings
 
 
 def _compute_uniforms(camera):

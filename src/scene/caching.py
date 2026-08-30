@@ -224,18 +224,18 @@ def load_scene(scene_path):
     return scene
 
 
-def load_bvh(self):
+def load_bvh(scene):
+    cache_path = get_cache_path(scene.scene_path, "bvh")
+
     try:
-        cache_path = get_cache_path(self.scene_path, "bvh")
-
-        self.bvh = load_bvh_data(cache_path)
-        self.num_bvh_nodes = self.bvh.nodes_used
+        bvh = load_bvh_data(cache_path)
+    
     except:
-        bvh = BVH(self)
-        self.bvh = bvh
-        self.num_bvh_nodes = self.bvh.nodes_used
+        bvh = BVH()
 
-        save_bvh_data(bvh, self.bvh_cache_path)
+        save_bvh_data(bvh, cache_path)
+
+    return bvh
 
 
 def import_model(src_path):

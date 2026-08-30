@@ -600,6 +600,7 @@ class Settings:
         for group in self._groups:
             group.reset()
 
-settings = Settings()
 
 _ROOT_DIR = Path(__file__).resolve().parent.parent
+
+settings = Settings()

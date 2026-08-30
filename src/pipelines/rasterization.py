@@ -1,6 +1,6 @@
-from src.passes.rasterization.background import *
-from src.passes.rasterization.pbr import *
-from src.passes.rasterization.final import *
+from src.passes.rasterization.background import BackgroundPass
+from src.passes.rasterization.pbr import PBRPass
+from src.passes.rasterization.final import FinalPass
 
 
 class RasterizationPipeline:

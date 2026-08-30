@@ -6,6 +6,7 @@ import json
 from src.settings import settings
 from src.bvh_builder import BVHBackgroundBuilder
 from src.buffer_loading import BVHNodeBuffer, TriangleIndicesBuffer, BVHDepthsBuffer
+from src.scene.caching import load_bvh
 
 
 class SceneState:
@@ -71,7 +72,10 @@ class BVHState:
     def build(self):
         build_start_time = time.perf_counter()
 
-        self.scene.build_bvh()
+        bvh = load_bvh(self.scene)
+        self.scene.bvh = bvh
+        self.scene.num_bvh_nodes = bvh.nodes_used
+
         self.bvh_built = True
 
         build_end_time = time.perf_counter()

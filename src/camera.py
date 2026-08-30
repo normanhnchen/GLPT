@@ -1,6 +1,6 @@
 import glm
 
-from src.settings import *
+from src.settings import settings
 
 
 # Defines several possible options for camera movement

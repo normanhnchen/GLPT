@@ -238,4 +238,3 @@ def find_best_split(centroids, vertices, bins):
 def get_aabb_area(aabb_min, aabb_max):
     e = aabb_max - aabb_min
     return e[0] * e[1] + e[1] * e[2] + e[2] * e[0]
-

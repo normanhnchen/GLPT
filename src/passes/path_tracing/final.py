@@ -1,5 +1,5 @@
-from src.settings import *
-from src.fullscreen_quad import *
+from src.settings import settings
+from src.fullscreen_quad import FullScreenQuad
 
 
 def _compute_uniforms():

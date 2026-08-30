@@ -1,4 +1,4 @@
-from src.settings import *
+from src.settings import settings
 from src.dtypes import *
 
 

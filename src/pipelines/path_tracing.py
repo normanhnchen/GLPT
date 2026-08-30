@@ -1,7 +1,7 @@
-from src.passes.path_tracing.path_trace import *
-from src.passes.path_tracing.final import *
-from src.passes.path_tracing.depth_debug import *
-from src.passes.path_tracing.bvh_bounds_debug import *
+from src.passes.path_tracing.path_trace import PathTracePass
+from src.passes.path_tracing.final import FinalPass
+from src.passes.path_tracing.depth_debug import DepthDebugPass
+from src.passes.path_tracing.bvh_bounds_debug import BVHBoundsDebugPass
 
 
 class PathTracingPipeline:

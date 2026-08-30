@@ -1,14 +1,13 @@
 import sys
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QProgressBar, QScrollArea,
-    QHBoxLayout, QLabel, QPushButton, QSlider, QCheckBox, QStackedWidget, QSpinBox,
-    QDialog, QListWidget, QListWidgetItem, QFileDialog, QLineEdit, QToolButton, QComboBox
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QProgressBar,
+    QHBoxLayout, QLabel, QPushButton, QStackedWidget, QSpinBox,
+    QDialog, QListWidget, QFileDialog, QToolButton, QComboBox
 )
 from PySide6.QtCore import Qt, QThread, Signal
-from pathlib import Path
 
-from src.settings import *
-from src.model import *
+from src.settings import settings
+from src.scene.caching import import_model
 import src.renderer as renderer
 import src.ai.training.renderer as ai_training_renderer
 import src.ai.training.training as ai_training

@@ -1,6 +1,7 @@
 from imgui_bundle import imgui
 from glfw.GLFW import *
-from src.settings import *
+
+from src.settings import settings
 
 
 is_settings_changed = False

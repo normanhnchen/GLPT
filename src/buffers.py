@@ -1,7 +1,6 @@
 import numpy as np
 
 from src.dtypes import *
-from src.settings import *
 
 
 camera_dtype = np.dtype([

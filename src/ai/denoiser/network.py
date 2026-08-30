@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from src.dtypes import *
-from src.settings import *
+from src.settings import settings
 
 
 # See 9.2 The U-Net
