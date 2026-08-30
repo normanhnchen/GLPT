@@ -146,6 +146,13 @@ class WorkerThread(QThread):
     status = Signal(str)
     error = Signal(str)
 
+    def __init__(self):
+        super().__init__()
+        self.should_close = False
+
+    def stop(self):
+        self.should_close = True
+
     def run(self):
         try:
             self.train()
@@ -180,18 +187,24 @@ class WorkerThread(QThread):
             starting_epoch = checkpoint["epoch"] + 1
 
             self.progress.emit(starting_epoch) 
-            self.status.emit(f"Resumed from epoch {starting_epoch}...")
+            self.status.emit(f"Resumed at epoch {starting_epoch}...")
 
         except FileNotFoundError:
             starting_epoch = 0
 
         for epoch in range(starting_epoch, epochs):
+            if self.should_close:
+                break
+
             # Training loop
             # See 9.5 Training
             # ----------------
             denoiser.train()
             epoch_loss = 0
             for x, target in train_loader:
+                if self.should_close:
+                    break
+                
                 x = x.to(AI_DEVICE)
                 target = target.to(AI_DEVICE)
                 x, target = _preprocess(x, target)
@@ -204,6 +217,9 @@ class WorkerThread(QThread):
                 optim.step()
 
                 epoch_loss += loss.item() / len(train_loader)
+
+            if self.should_close:
+                break
             
             # Validation loop
             # ---------------
@@ -211,6 +227,9 @@ class WorkerThread(QThread):
             val_loss = 0
             with torch.no_grad():
                 for x, target in val_loader:
+                    if self.should_close:
+                        break
+                
                     x = x.to(AI_DEVICE)
                     target = target.to(AI_DEVICE)
                     x, target = _preprocess(x, target)
@@ -219,6 +238,9 @@ class WorkerThread(QThread):
                     prediction = denoiser(x, combined)
                     
                     val_loss += criterion(prediction, target).item() / len(val_loader)
+            
+            if self.should_close:
+                break
 
             # Update the text label
             status_text = f"Epoch: {epoch} | Epoch Loss: {epoch_loss:.6f} | Val Loss: {val_loss:.6f}"
@@ -239,35 +261,81 @@ class WorkerThread(QThread):
         self.status.emit("Training Complete!")
 
 
+class Launcher(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("AI Training")
+        self.resize(400, 400)
+
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+
+        self.main_layout = QVBoxLayout(self.central_widget)
+
+        self.start_button = QPushButton("Start")
+        self.start_button.clicked.connect(self.on_start)
+
+        self.main_layout.addWidget(self.start_button)
+
+    def on_start(self):
+        # Remove the start button
+        self.main_layout.removeWidget(self.start_button)
+        # Remove from memory
+        self.start_button.deleteLater()
+
+        status_label = QLabel("Preparing dataset...")
+        
+        progress_bar = QProgressBar()
+        progress_bar.setValue(0)
+
+        self.main_layout.addWidget(status_label)
+        self.main_layout.addWidget(progress_bar)
+
+        self.worker = WorkerThread()
+
+        self.worker.status.connect(status_label.setText)
+        self.worker.progress.connect(progress_bar.setValue)
+        self.worker.setup_progress.connect(progress_bar.setMaximum)
+
+        self.worker.start()
+
+    def closeEvent(self, event):
+        """
+        Called automatically when the user closes the window.
+        Safely terminates worker threads when terminating the program before they finish.
+        """
+        if self.worker.isRunning():
+            # Break the training loop
+            self.worker.stop()
+            # Block until the thread finishes shutting down
+            self.worker.wait()
+        # Close the window
+        event.accept()
+
+
 # Initialize globally so the dataset can access it
 denoiser = KPCN().to(AI_DEVICE)
 optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
 criterion = nn.L1Loss()
-    
-app = QApplication(sys.argv)
 
-window = QWidget()
-window.setWindowTitle("AI Training")
-window.resize(400, 400)
+def run_app():
+    app = QApplication(sys.argv)
 
-layout = QVBoxLayout()
+    launcher = Launcher()
+    launcher.show()
 
-status_label = QLabel("Preparing dataset...")
-layout.addWidget(status_label)
+    app.exec()
 
-progress_bar = QProgressBar()
-progress_bar.setValue(0)
-layout.addWidget(progress_bar)
 
-window.setLayout(layout)
+def main():
+    app = QApplication(sys.argv)
 
-worker = WorkerThread()
+    launcher = Launcher()
+    launcher.show()
 
-worker.status.connect(status_label.setText)
-worker.progress.connect(progress_bar.setValue)
-worker.setup_progress.connect(progress_bar.setMaximum)
+    app.exec()
 
-worker.start()
 
-window.show()
-app.exec()
+if __name__ == "__main__":
+    main()
