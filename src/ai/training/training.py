@@ -199,7 +199,9 @@ class WorkerThread(QThread):
         # Split the rest of the dataset to be train cases
         train_size = len(full_dataset) - val_size
 
-        train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
+        gen = torch.Generator().manual_seed(999)
+
+        train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size], generator=gen)
 
         train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False)
@@ -259,7 +261,7 @@ class WorkerThread(QThread):
                 loss.backward()
                 optim.step()
 
-                epoch_loss += loss.item() / len(train_loader)
+                epoch_loss += loss.item() * x.size(0)
 
             if self.should_close:
                 break
@@ -280,7 +282,7 @@ class WorkerThread(QThread):
 
                     prediction = denoiser(x, combined)
                     
-                    val_loss += criterion(prediction, target).item() / len(val_loader)
+                    val_loss += criterion(prediction, target).item() * x.size(0)
             
             if self.should_close:
                 break
@@ -362,6 +364,7 @@ class Launcher(QMainWindow):
         self.plot_widget.addLegend()
         self.plot_widget.setLogMode(x=False, y=True)
         self.plot_widget.setXRange(0, settings.ai_training.training.epochs)
+        self.plot_widget.getViewBox().setLimits(xMin=0, xMax=settings.ai_training.training.epochs)
 
         self.epochs_data = []
         self.train_loss_data = []
@@ -369,6 +372,14 @@ class Launcher(QMainWindow):
 
         train_pen = pg.mkPen(color="#4d89c580", width=2)
         val_pen = pg.mkPen(color="#ffffff80", width=2)
+
+        # Set anchor to be directly right of the graph line with breathing room space to the right
+        anchor = (-0.1, 0.5)
+        self.train_tip_label = pg.TextItem(color="#7ca4cc", anchor=anchor)
+        self.val_tip_label = pg.TextItem(color="#ffffff", anchor=anchor)
+
+        self.plot_widget.addItem(self.train_tip_label)
+        self.plot_widget.addItem(self.val_tip_label)
 
         self.train_line = self.plot_widget.plot(pen=train_pen, name="Train Loss")
         self.val_line = self.plot_widget.plot(pen=val_pen, name="Val Loss")
@@ -391,7 +402,13 @@ class Launcher(QMainWindow):
         self.train_loss_data.append(train_loss)
         self.val_loss_data.append(val_loss)
 
-        # Update the line data
+        self.train_tip_label.setText(f"{train_loss:.6f}")
+        self.val_tip_label.setText(f"{val_loss:.6f}")
+
+        # The plot is logarithmic, so convert y coordinates to log10
+        self.train_tip_label.setPos(epoch, np.log10(max(train_loss, 1e-8)))
+        self.val_tip_label.setPos(epoch, np.log10(max(val_loss, 1e-8)))
+
         self.train_line.setData(self.epochs_data, self.train_loss_data)
         self.val_line.setData(self.epochs_data, self.val_loss_data)
 
