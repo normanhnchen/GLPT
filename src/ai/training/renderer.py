@@ -36,7 +36,7 @@ def run_app():
     glfw_window = None
 
     try:
-        for _ in range(settings.ai_training.num_pass_throughs):
+        for _ in range(settings.ai_training.rendering.num_pass_throughs):
             remove_stale_cache()
 
             # Break if the user exited the previous window

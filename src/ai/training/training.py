@@ -48,6 +48,9 @@ QPushButton:hover {
 
 MENU_WIDTH = 300
 
+# Number of random grid patches sampled per validation image per epoch
+NUM_VAL_SAMPLES_PER_IMAGE = 4
+
 
 def load_exr(path, nan=0, posinf=0, neginf=0):
     img = cv2.imread(str(path), cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
@@ -231,8 +234,26 @@ class WorkerThread(QThread):
         train_dataset = Subset(full_dataset_train, indices[val_size:])
         val_dataset = Subset(full_dataset_val, indices[:val_size])
 
-        train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=4,
+            shuffle=True,
+            # Parallelize data loading across worker processes
+            num_workers=4,
+            # Apply fast CPU -> GPU transfer
+            pin_memory=True,
+            # Keep workers alive between epochs
+            persistent_workers=True
+        )
         val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
+
+        # Cache validation data
+        # Validation is static and repeated across epochs
+        val_x_cache = []
+        val_target_cache = []
+        for x_grid, target_grid in val_loader:
+            val_x_cache.append(x_grid.squeeze(0))
+            val_target_cache.append(target_grid.squeeze(0))
 
         # Tell the progress bar the maximum epoch value
         self.setup_progress.emit(settings.ai_training.training.epochs)
@@ -307,7 +328,7 @@ class WorkerThread(QThread):
             val_loss = 0
             total_val_patches = 0
             with torch.no_grad():
-                for x_grid, target_grid in val_loader:
+                for x_grid, target_grid in zip(val_x_cache, val_target_cache):
                     if self.should_close:
                         break
 
@@ -316,28 +337,24 @@ class WorkerThread(QThread):
                     # -> (num patches, channels, batch_size, batch_size)
                     x_grid = x_grid.squeeze(0)
                     target_grid = target_grid.squeeze(0)
-
-                    # Number of image patches the device will process at a time
-                    max_val_batch = 16
-
-                    for i in range(0, x_grid.size(0), max_val_batch):
-                        if self.should_close:
-                            break
-
-                        x = x_grid[i : i + max_val_batch].to(AI_DEVICE)
-                        target = target_grid[i : i + max_val_batch].to(AI_DEVICE)
-
-                        x = x.to(AI_DEVICE)
-                        target = target.to(AI_DEVICE)
-                        x, target = _preprocess(x, target)
-                        combined = x[:, :3].to(AI_DEVICE)
-
-                        prediction = denoiser(x, combined)
-
-                        # Multiply the validation loss by the number of batches
-                        val_loss += criterion(prediction, target).item() * x.size(0)
-
-                        total_val_patches += x.size(0)
+ 
+                    # Randomly sample a few image patches instead
+                    num_patches = x_grid.size(0)
+                    k = min(NUM_VAL_SAMPLES_PER_IMAGE, num_patches)
+                    patch_indices = torch.randperm(num_patches)[:k]
+ 
+                    x = x_grid[patch_indices].to(AI_DEVICE)
+                    target = target_grid[patch_indices].to(AI_DEVICE)
+ 
+                    x, target = _preprocess(x, target)
+                    combined = x[:, :3].to(AI_DEVICE)
+ 
+                    prediction = denoiser(x, combined)
+ 
+                    # Multiply the validation loss by the number of patches
+                    val_loss += criterion(prediction, target).item() * x.size(0)
+ 
+                    total_val_patches += x.size(0)
             
             if self.should_close:
                 break

@@ -530,7 +530,7 @@ class AI_Training:
         self.training = self.Training(self.internal_config["training"])
 
     def get_new_noisy_samples(self):
-        self.noisy_samples = random.choice(self.noisy_samples_list)
+        self.noisy_samples = random.choice(self.rendering.noisy_samples_list)
 
     def reset(self):
         self._load_internal()
