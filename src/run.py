@@ -461,15 +461,17 @@ class Launcher(QMainWindow):
         settings_button.setFixedWidth(MENU_WIDTH)
         settings_button.clicked.connect(self.open_settings)
 
-        ai_training_button = QPushButton("AI Training")
-        ai_training_button.setFixedWidth(MENU_WIDTH)
-        ai_training_button.clicked.connect(self.open_ai_training)
+        if settings.ai_training.enable_launcher_buttons:
+            ai_training_button = QPushButton("AI Training")
+            ai_training_button.setFixedWidth(MENU_WIDTH)
+            ai_training_button.clicked.connect(self.open_ai_training)
 
         box_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
         box_layout.addSpacing(50)
         box_layout.addWidget(run_button, alignment=Qt.AlignmentFlag.AlignCenter)
         box_layout.addWidget(settings_button, alignment=Qt.AlignmentFlag.AlignCenter)
-        box_layout.addWidget(ai_training_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        if settings.ai_training.enable_launcher_buttons:
+            box_layout.addWidget(ai_training_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.stacked_widget.addWidget(self.menu_widget)
 

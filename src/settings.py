@@ -503,6 +503,7 @@ class AITrainingSettings:
         self._load_internal()
 
     def _load_internal(self):
+        self.enable_launcher_buttons = self.internal_config["enable_launcher_buttons"]
         self.mode = self.internal_config["mode"]
         self.target_samples = self.internal_config["target_samples"]
         self.noisy_samples_list = self.internal_config["noisy_samples_list"]
