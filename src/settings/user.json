@@ -33,9 +33,9 @@
             "renders": "src\\assets\\renders\\ai_training",
             "scenes": "src\\assets\\models\\ai_training"
         },
-        "hdri": "src\\assets\\hdris\\ai_training\\IndoorEnvironmentHDRI012_4K_HDR.exr",
+        "hdri": "src\\assets\\hdris\\ai_training\\DayEnvironmentHDRI042_4K_HDR.exr",
         "renders": "src\\assets\\renders\\images",
-        "scene": "src\\assets\\models\\cornell_box.glb",
+        "scene": "src\\assets\\models\\scene_0 copy.glb",
         "scenes": "src\\assets\\models"
     },
     "path_tracing": {
@@ -44,7 +44,7 @@
         "geometry_mode": 0,
         "max_direct_luminance": 10.0,
         "max_indirect_luminance": 10.0,
-        "max_samples": 100,
+        "max_samples": 4096,
         "mis_mode": 0,
         "samples_per_pixel": 1,
         "specular_bounces": 4,
