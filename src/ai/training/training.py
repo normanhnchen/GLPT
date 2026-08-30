@@ -5,11 +5,11 @@ import os
 import random
 import sys
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QProgressBar, QScrollArea,
-    QHBoxLayout, QLabel, QPushButton, QSlider, QCheckBox, QStackedWidget, QSpinBox,
-    QDialog, QListWidget, QListWidgetItem, QFileDialog, QLineEdit, QToolButton, QComboBox
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QProgressBar, QLabel, QPushButton
 )
 from PySide6.QtCore import Qt, QThread, Signal
+import pyqtgraph as pg
+import numpy as np
 
 from src.settings import *
 from src.ai.denoiser.network import *
@@ -175,6 +175,7 @@ class WorkerThread(QThread):
     setup_progress = Signal(int)
     status = Signal(str)
     error = Signal(str)
+    loss_update = Signal(int, float, float)
 
     def __init__(self):
         super().__init__()
@@ -217,8 +218,22 @@ class WorkerThread(QThread):
             self.progress.emit(starting_epoch) 
             self.status.emit(f"Resumed at epoch {starting_epoch}...")
 
+            if "train_history" in checkpoint and "val_history" in checkpoint:
+                train_history = checkpoint["train_history"]
+                val_history = checkpoint["val_history"]
+                
+                # Plot the previous saved graph values
+                for e, (t_loss, v_loss) in enumerate(zip(train_history, val_history)):
+                    self.loss_update.emit(e, t_loss, v_loss)
+                
+            else:
+                train_history = []
+                val_history = []
+
         except FileNotFoundError:
             starting_epoch = 0
+            train_history = []
+            val_history = []
 
         for epoch in range(starting_epoch, settings.ai_training.training.epochs):
             if self.should_close:
@@ -271,17 +286,24 @@ class WorkerThread(QThread):
                 break
 
             # Update the text label
-            status_text = f"Epoch: {epoch} | Epoch Loss: {epoch_loss:.6f} | Val Loss: {val_loss:.6f}"
+            status_text = f"Epoch: {epoch} / {settings.ai_training.training.epochs}"
             self.status.emit(status_text)
+
+            self.loss_update.emit(epoch, epoch_loss, val_loss)
 
             # Update the progress bar (epoch + 1 to fill the progress bar completely on the last one)
             self.progress.emit(epoch + 1)
+
+            train_history.append(epoch_loss)
+            val_history.append(val_loss)
             
             curr_checkpoint = {
                 "epoch": epoch,
                 "model_state_dict": denoiser.state_dict(),
                 "optimizer_state_dict": optim.state_dict(),
-                "loss": epoch_loss
+                "loss": epoch_loss,
+                "train_history": train_history,
+                "val_history": val_history
             }
 
             save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.checkpoint)
@@ -332,16 +354,46 @@ class Launcher(QMainWindow):
         self.progress_bar.setValue(0)
         self.progress_bar.setFixedHeight(50)
 
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.setStyleSheet(APP_STYLESHEET)
+        self.plot_widget.setTitle("Loss Graph")
+        self.plot_widget.setLabel("left", "Loss")
+        self.plot_widget.setLabel("bottom", "Epoch")
+        self.plot_widget.addLegend()
+        self.plot_widget.setLogMode(x=False, y=True)
+        self.plot_widget.setXRange(0, settings.ai_training.training.epochs)
+
+        self.epochs_data = []
+        self.train_loss_data = []
+        self.val_loss_data = []
+
+        train_pen = pg.mkPen(color="#4d89c580", width=2)
+        val_pen = pg.mkPen(color="#ffffff80", width=2)
+
+        self.train_line = self.plot_widget.plot(pen=train_pen, name="Train Loss")
+        self.val_line = self.plot_widget.plot(pen=val_pen, name="Val Loss")
+
         self.main_layout.addWidget(self.status_label)
         self.main_layout.addWidget(self.progress_bar)
+        self.main_layout.addWidget(self.plot_widget)
 
         self.worker = WorkerThread()
 
         self.worker.status.connect(self.status_label.setText)
         self.worker.progress.connect(self.progress_bar.setValue)
         self.worker.setup_progress.connect(self.progress_bar.setMaximum)
+        self.worker.loss_update.connect(self.update_plot)
 
         self.worker.start()
+
+    def update_plot(self, epoch, train_loss, val_loss):
+        self.epochs_data.append(epoch)
+        self.train_loss_data.append(train_loss)
+        self.val_loss_data.append(val_loss)
+
+        # Update the line data
+        self.train_line.setData(self.epochs_data, self.train_loss_data)
+        self.val_line.setData(self.epochs_data, self.val_loss_data)
 
     def closeEvent(self, event):
         """
@@ -363,7 +415,11 @@ optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
 criterion = nn.L1Loss()
 
 def run_app():
-    app = QApplication(sys.argv)
+    app = QApplication.instance()
+
+    if app is None:
+        app = QApplication(sys.argv)
+    
     app.setStyleSheet(APP_STYLESHEET)
 
     launcher = Launcher()
