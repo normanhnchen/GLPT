@@ -5,9 +5,7 @@ from src.dtypes import *
 from src.settings import *
 
 
-# https://dl.acm.org/doi/10.1145/3072959.3073708
-
-
+# See 9.2 The U-Net
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
@@ -31,6 +29,7 @@ class ConvBlock(nn.Module):
         return self.net(x)
 
 
+# See 9.2 The U-Net
 class EncoderBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
@@ -43,6 +42,7 @@ class EncoderBlock(nn.Module):
         return self.conv(self.down(x))
 
 
+# See 9.2 The U-Net
 class DecoderBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
@@ -59,6 +59,7 @@ class DecoderBlock(nn.Module):
         return self.conv(x)
 
 
+# See 9.2 The U-Net
 class UNet(nn.Module):
     def __init__(self, in_channels=10, out_channels=3):
         super().__init__()
@@ -96,7 +97,7 @@ class UNet(nn.Module):
         return self.conv_out(x8)
 
 
-# Kernel Predicting Convolution Network
+# See 9.3 KPCN
 class KPCN(nn.Module):
     def __init__(self, in_channels=10, kernel_size=21):
         super().__init__()
@@ -234,7 +235,7 @@ class KPCN(nn.Module):
         return 1 / (depth + 1e-4)
 
     def demodulate(self, x, albedo):
-        return x / albedo.clamp(min=1e-4)
+        return x / albedo.clamp(min=1e-1)
 
     def remodulate(self, x, albedo):
-        return x * albedo.clamp(min=1e-4)
+        return x * albedo.clamp(min=1e-1)

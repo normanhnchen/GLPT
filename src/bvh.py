@@ -9,13 +9,14 @@ from src.settings import *
 # https://jacco.ompf2.com/2022/04/21/how-to-build-a-bvh-part-3-quick-builds/
 
 
+# See 4.2 Construction
 class BVH:
     def __init__(self, scene):
         self.scene_triangles = scene.triangles
         self.scene_vertices = scene.vertices
         self.scene_centroids = scene.centroids
 
-        max_nodes = 2 * scene.num_triangles
+        max_nodes = 2 * scene.num_triangles - 1
 
         # Preallocate all lists
         # ---------------------
@@ -133,6 +134,7 @@ class BVH:
         return self.tri_counts[node_idx] * area
 
 
+# See 4.2 Construction
 @njit(nogil=True, fastmath=True, parallel=True, cache=True)
 def find_best_split(centroids, vertices, bins):
     costs_per_axis = np.zeros(3, dtype=np.float32)

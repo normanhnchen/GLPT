@@ -8,9 +8,6 @@ from src.settings import *
 from src.ai.denoiser.network import *
 
 
-# https://dl.acm.org/doi/10.1145/3072959.3073708
-
-
 # Required as OpenCV disables EXR support by default
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 
@@ -37,6 +34,7 @@ def exr_to_tensor(exr_img, keep_channels=None):
     return t
 
 
+# See 9.5 Training
 def save_checkpoint(checkpoint, path):
     """
     Saves to the checkpoing temp file then replaces the actual checkpoint file.
@@ -56,6 +54,7 @@ def save_checkpoint(checkpoint, path):
         raise
 
 
+# See 9.5 Training
 class DenoiseDataset(Dataset):
     def __init__(self, renders_path, patch_size=256):
         self.combined_path = renders_path / "combined/"
@@ -109,14 +108,6 @@ class DenoiseDataset(Dataset):
         return x, target
 
     def _augment(self, x, target):
-        if random.random() < 0.5:
-            # Horizontal flip
-            x = x.flip(2)
-            target = target.flip(2)
-        if random.random() < 0.5:
-            # Vertical flip
-            x = x.flip(1)
-            target = target.flip(1)
         k = random.randint(0, 3)
         if k > 0:
             x = torch.rot90(x, k, dims=[1, 2])
@@ -125,7 +116,8 @@ class DenoiseDataset(Dataset):
         return x, target
 
 
-def _compress(x, target):
+# See 9.5 Training
+def _preprocess(x, target):
     combined = x[:, :3]
     albedo = x[:, 3:6]
     normal = x[:, 6:9]
@@ -141,6 +133,8 @@ def _compress(x, target):
     return x, target
 
 
+# See 9.5 Training
+# ----------------
 full_dataset = DenoiseDataset(settings.file_paths.ai_training.renders)
 # Split 10% of the dataset to be validation cases
 val_size = max(1, int(0.1 * len(full_dataset)))
@@ -156,30 +150,31 @@ denoiser = KPCN().to(AI_DEVICE)
 optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
 criterion = nn.L1Loss()
 
-epochs = 100
+epochs = 300
 
+# See 9.5 Training
+# ----------------
 try:
-    checkpoint = torch.load(settings.file_paths.denoiser.last_checkpoint, map_location=AI_DEVICE)
+    checkpoint = torch.load(settings.file_paths.denoiser.checkpoint, map_location=AI_DEVICE)
     denoiser.load_state_dict(checkpoint["model_state_dict"])
     optim.load_state_dict(checkpoint["optimizer_state_dict"])
     starting_epoch = checkpoint["epoch"] + 1
-    best_val_loss = checkpoint.get("best_val_loss", torch.inf)
     print(f"Resumed from epoch {starting_epoch}")
 
 except FileNotFoundError:
-    best_val_loss = torch.inf
     starting_epoch = 0
 
 
 for epoch in range(starting_epoch, epochs):
     # Training loop
-    # -------------
+    # See 9.5 Training
+    # ----------------
     denoiser.train()
     epoch_loss = 0
     for x, target in train_loader:
         x = x.to(AI_DEVICE)
         target = target.to(AI_DEVICE)
-        x, target = _compress(x, target)
+        x, target = _preprocess(x, target)
         combined = x[:, :3].to(AI_DEVICE)
 
         optim.zero_grad()
@@ -198,7 +193,7 @@ for epoch in range(starting_epoch, epochs):
         for x, target in val_loader:
             x = x.to(AI_DEVICE)
             target = target.to(AI_DEVICE)
-            x, target = _compress(x, target)
+            x, target = _preprocess(x, target)
             combined = x[:, :3].to(AI_DEVICE)
 
             prediction = denoiser(x, combined)
@@ -211,13 +206,7 @@ for epoch in range(starting_epoch, epochs):
         "epoch": epoch,
         "model_state_dict": denoiser.state_dict(),
         "optimizer_state_dict": optim.state_dict(),
-        "loss": epoch_loss,
-        "best_val_loss": best_val_loss,
+        "loss": epoch_loss
     }
 
-    if val_loss < best_val_loss:
-        best_val_loss = val_loss
-        curr_checkpoint["best_val_loss"] = best_val_loss
-        save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.checkpoint)
-
-    save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.last_checkpoint)
+    save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.checkpoint)

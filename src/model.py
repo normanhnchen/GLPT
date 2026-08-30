@@ -280,6 +280,7 @@ class Material:
         self.ior = set_f4(self._original_ior)
         self.alpha_mode = set_f4(self._original_alpha_mode)
 
+    # See 9.4 Rendering
     def scramble(self):
         """
         Randomize material properties.
@@ -324,7 +325,7 @@ class HDRI:
 
         self._build_hdri_distribution()
 
-    # https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
+    # See 7.3 HDRI Sampling
     def _build_hdri_distribution(self):
         img = self.img.astype(np.float64)
         luminance = img[:, :, 0] * 0.2126 + img[:, :, 1] * 0.7152 + img[:, :, 2] * 0.0722
@@ -398,6 +399,7 @@ class HDRI:
         self.img = self._original_img.copy()
         self.img_bytes = self.img.tobytes()
 
+    # See 9.4 Rendering
     def scramble(self):
         """
         Randomize HDRI rotation, emissive strength, and color.
@@ -714,7 +716,7 @@ class Scene:
         self.finite_light_q = q
         self.finite_light_alias = alias
     
-    # https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable
+    # See 7.4 Power Sampling
     def _build_alias_table(self, weights):
         n = len(weights)
         weights = np.asarray(weights, dtype=np.float64)
@@ -964,6 +966,7 @@ class Scene:
         for mat in self.materials:
             mat.snapshot_original()
 
+    # See 9.4 Rendering
     def scramble_materials(self):
         """
         Randomize all scene material properties and textures.

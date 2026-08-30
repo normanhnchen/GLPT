@@ -119,7 +119,8 @@ struct SurfaceInteraction {
     vec2 bary;
     vec2 uv;
     Material mat;
-    float eta;
+    float eta_i;
+    float eta_t;
     float t;
     int triId;
     bool isBackFace;
@@ -132,6 +133,7 @@ struct SurfaceInteraction {
 struct VisibilityInteraction {
     float t;
     bool isBackFace;
+    bool isOccluded;
 };
 
 struct LobeProbs {

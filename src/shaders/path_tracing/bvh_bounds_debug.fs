@@ -9,13 +9,23 @@ out vec4 fragColor;
 
 
 #include "src/shaders/common.glsl"
-#include "src/shaders/path_tracing/util_functions.glsl"
+#include "src/shaders/path_tracing/util.glsl"
 
 
 void main() {
     if (bvhColorMode == 0) {
+        /*
+         * BVH depth color
+         * See 4.4 Debug Visualization
+         */
+
         fragColor = vec4(GetBvhDepthColor(nodeDepth, bvhMaxNodeDepth), 1.0);
     } else if (bvhColorMode == 1) {
-        fragColor = vec4(GetBvhRgbColor(nodeMin, nodeMax), 1.0);
+        /*
+         * BVH angle color
+         * See 4.4 Debug Visualization
+         */
+
+        fragColor = vec4(GetBvhAngleColor(nodeMin, nodeMax), 1.0);
     }
 }

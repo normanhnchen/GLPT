@@ -3,7 +3,7 @@
         "mode": "off",
         "target_samples": 4096,
         "noisy_samples_list": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-        "num_pass_throughs": 10
+        "num_pass_throughs": 2
     },
     "bvh": {
         "max_depth": 32,
@@ -60,8 +60,7 @@
             "bvhs": "src\\assets\\cache\\bvh"
         },
         "denoiser": {
-            "checkpoint": "src\\ai\\denoiser\\checkpoint.pt",
-            "last_checkpoint": "src\\ai\\denoiser\\last_checkpoint.pt"
+            "checkpoint": "src\\ai\\denoiser\\checkpoint.pt"
         },
         "hdri": "src\\assets\\hdris\\day_sky_hdri.exr",
         "path_tracing": {
