@@ -14,6 +14,7 @@ layout(local_size_x=16, local_size_y=16) in;
 #include "src/shaders/path_tracing/volume.glsl"
 
 
+// See 8.3 The Path Integrator
 PathSample PathTrace(Ray ray, inout uvec3 rng) {
     SurfaceInteraction si;
 
@@ -28,6 +29,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
     vec3 entryPoint = vec3(0.0);
     bool isInsideMedium = false;
 
+    // Used for acumulating the ray distance when it passes through an alpha material
     float tAccum = 0.0;
 
     PathSample pathSample;
@@ -58,21 +60,33 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                 pathSample.depth = -1.0;
             }
 
+            // See 7.3 HDRI Sampling
             vec3 envColor = SampleHdri(ray.d);
+
             if (misMode == 0) {
                 if (i == 0) {
                     /* Add direct contribution */
 
                     directRadiance += throughput * envColor * hdriExposure;
                 } else {
-                    /* Multiple importance sample (MIS) */
+                    /*
+                     * Multiple importance sample (MIS)
+                     * See 7.7 Multiple Importance Sampling
+                     */
 
+                    // See 7.3 HDRI Sampling
                     float lightPdf = HdriPdf(ray.d);
                     float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, lightPdf);
 
                     if (i == 1) {
+                        /* Add direct contribution */
+
+                        // See 2.3 Firefly Clamping
                         directRadiance += ClampLuminance(throughput * envColor * hdriExposure * misWeight, maxDirectLuminance);
                     } else {
+                        /* Add indirect contribution */
+
+                        // See 2.3 Firefly Clamping
                         indirectRadiance += ClampLuminance(throughput * envColor * hdriExposure * misWeight, maxIndirectLuminance);
                     }
                 }
@@ -82,10 +96,12 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                 if (i == 0 || i == 1) {
                     /* Add direct contribution */
                     
+                    // See 2.3 Firefly Clamping
                     directRadiance += ClampLuminance(throughput * envColor * hdriExposure, maxDirectLuminance);
                 } else {
                     /* Add indirect contribution */
                     
+                    // See 2.3 Firefly Clamping
                     indirectRadiance += ClampLuminance(throughput * envColor * hdriExposure, maxIndirectLuminance);
                 }
             }
@@ -138,6 +154,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             si.eta_t = mat.ior;
         }
         
+        // See 2.4 Ray Utilities
         si.p = GetRayPoint(ray, si.t);
         si.ng = ng;
         si.ns = ns;
@@ -180,9 +197,11 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             ns = normalize(localToWorld * texNormal);
         }
         
+        // See 2.5 Ensuring Valid Reflections
         ns = EnsureValidReflection(si.ng, -ray.d, ns);
         si.ns = ns;
 
+        // See 2.7 Orthonormal Basis
         ONB(ns, dpdu, dpdv);
 
         si.localToWorld = mat3(dpdu, dpdv, ns);
@@ -195,7 +214,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                 // Advance the ray and ignore the hit
                 ray.o = si.p + ray.d * EPSILON;
                 tAccum += si.t;
-                // Decrement to negate the loop's i++
+                // Decrement to effectly ignore the hit
                 i--;
                 continue;
             }
@@ -203,11 +222,12 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         if (mat.alphaMode == 2) {
             /* BLEND */
 
+            // See 2.2 The PCG Hash
             if (Pcg3d(rng).x > mat.alpha) {
                 // Advance the ray and ignore the hit
                 ray.o = si.p + ray.d * EPSILON;
                 tAccum += si.t;
-                // Decrement to negate the loop's i++
+                // Decrement to effectly ignore the hit
                 i--;
                 continue;
             }
@@ -219,7 +239,10 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         
         if (mat.hasEmission == 1) {
             if (misMode == 0) {
-                /* Multiple importance sample (MIS) */
+                /*
+                 * Multiple importance sample (MIS)
+                 * See 7.7 Multiple Importance Sampling
+                 */
 
                 if (i == 0) {
                     /* Add direct contribution */
@@ -231,9 +254,11 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                      * Multiple importance sample (MIS)
                      */
 
+                    // See 7.6 Area Light Sampling
                     float areaLightPdf = AreaLightPdf(si, ray, prevPoint);
                     float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, areaLightPdf);
                     vec3 indirect = mat.emissive * mat.emissiveStrength * misWeight;
+                    // See 2.3 Firefly Clamping
                     indirectRadiance += ClampLuminance(throughput * indirect, maxIndirectLuminance);
                 }
             } else if (misMode == 1) {
@@ -243,26 +268,42 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                  */
                 
                 if (i == 0) {
+                    /* Add direct contribution */
+
+                    // See 2.3 Firefly Clamping
                     directRadiance += throughput * mat.emissive * mat.emissiveStrength;
                 } else {
+                    /* Add indirect contribution */
+
+                    // See 2.3 Firefly Clamping
                     indirectRadiance += ClampLuminance(throughput * mat.emissive * mat.emissiveStrength, maxIndirectLuminance);
                 }
             }
         }
         
         if (misMode == 0) {
-            /* Multiple importance sample (MIS) on */
+            /*
+             * Multiple importance sample (MIS)
+             * See 7.7 Multiple Importance Sampling
+             */
+
+            /* Add direct contribution */
 
             vec3 direct = vec3(0.0);
             for (int i = 0; i < lights.length(); i++) {
                 if (lights[i].type == 1) {
+                    // See 7.5 Punctual Lights
                     direct += SampleInfinitePunctualLight(si, ray, lights[i], rng);
                 }
             }
+            // See 7.5 Punctual Lights
             direct += SampleFinitePunctualLight(si, ray, rng);
+            // See 7.6 Area Light Sampling
             direct += SampleAreaLight(si, ray, rng);
+            // See 7.3 HDRI Sampling
             direct += SampleHdriLight(si, ray, rng);
 
+            // See 2.3 Firefly Clamping
             direct = ClampLuminance(direct, maxDirectLuminance);
 
             if (i == 0) {
@@ -276,6 +317,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             }
         }
 
+        // See 5.11 BSDF Sampling
         BsdfSample bsdfSample = SampleBsdf(rng, ray, si, bounceDepth);
 
         if (i == 0) {
@@ -305,7 +347,10 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                 pathSample.combined = vec3(pathSample.depth);
                 break;
             } else if (debugMode == 7) {
-                /* BVH depth */
+                /*
+                 * BVH depth
+                 * See 4.4 Debug Visualization
+                 */
 
                 pathSample.combined = GetBvhDepthColor(si.nodesVisited, MAX_NODES_VISITED);
                 break;
@@ -317,12 +362,19 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
         bool didRefract = dot(bsdfSample.wi, si.ng) < 0.0;
 
+        // See 6.2 Beer-Lambert
         vec3 transmittance;
         BeerLambert(isInsideMedium, entryPoint, si, transmittance, didRefract);
+
+        /*
+         * Throughput Accumulation
+         * See 8.1 Overview
+         */
 
         throughput *= transmittance;
         throughput *= bsdfSample.f;
 
+        // See 2.3 Firefly Clamping
         throughput = ClampLuminance(throughput, maxIndirectLuminance);
 
         ray.d = bsdfSample.wi;
@@ -330,14 +382,15 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         vec3 offsetDir = didRefract ? -si.ng : si.ng;
         ray.o = OffsetRayOrigin(si.p, offsetDir);
 
-        /* Russian Roulette */
-
-        // "Russian Roulette and Splitting," in Physically Based Rendering: From Theory to Implementation
-        // https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Russian_Roulette_and_Splitting
+        /*
+         * Russian Roulette
+         * See 8.2 Russian Roulette
+         */
         
         if (i > 3) {
             // Termination probability
             float q = 1.0 - max(throughput.r, max(throughput.g, throughput.b));
+            // See 2.2 The PCG Hash
             float Xi = Pcg3d(rng).x;
 
             if (Xi < q) {
@@ -382,9 +435,8 @@ void main() {
     // Only render pixels in frame
     if (pixelCoords.x >= dims.x || pixelCoords.y >= dims.y) return;
 
+    // See 2.2 The PCG Hash
     uvec3 state = InitRngState(pixelCoords);
-    
-    float maxLuminance = 100.0;
 
     vec3 sampleCombined = vec3(0.0);
     vec3 sampleBaseColor = vec3(0.0);
@@ -395,6 +447,7 @@ void main() {
     for (int i = 0; i < samplesPerPixel; i++) {
         // Get random vec3 (range [0, 1])
         // Convert to range [-0.5, 0.5]
+        // See 2.2 The PCG Hash
         vec3 noise = Pcg3d(state) - 0.5;
         // Anti-aliasing sub-pixel jitter
         vec2 jitter = noise.xy * blur;

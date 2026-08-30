@@ -5,8 +5,7 @@
 #include "src/shaders/common.glsl"
 
 
-// Beer-Lambert law: light attenuates exponentially with distance traveled through a medium
-// https://www.pbr-book.org/3ed-2018/Volume_Scattering/Volume_Scattering_Processes
+// See 6.2 Beer-Lambert
 void BeerLambert(inout bool insideMedium, inout vec3 entryPoint, SurfaceInteraction si, out vec3 transmittance, bool didRefract) {
     transmittance = vec3(1.0);
 

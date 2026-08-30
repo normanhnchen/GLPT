@@ -7,10 +7,9 @@
 #include "src/shaders/path_tracing/intersect.glsl"
 
 
-// "The Alias Method," in Physically Based Rendering: From Theory to Implementation
-// https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable::Sample
+// See 7.3 Power Based Sampling
 Triangle PowerEmissiveTriangleSample(float Xi, out float triPdf) {
-    /* Sample from the precomputed alias table*/
+    /* Sample from the precomputed alias table */
 
     int offset = min(int(Xi.x * numEmissiveTriangles), numEmissiveTriangles - 1);
     float up = min(Xi.x * numEmissiveTriangles - offset, 1.0 - EPSILON);
@@ -30,20 +29,22 @@ Triangle PowerEmissiveTriangleSample(float Xi, out float triPdf) {
     return triangles[triId];
 }
 
-// "Sampling Light Sources," in Physically Based Rendering: From Theory to Implementation
-// https://pbr-book.org/4ed/Light_Sources/Light_Sampling#PowerLightSampler
+// See 7.6 Area Light Sampling
 vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     if (numEmissiveTriangles == 0) {
         return vec3(0.0);
     }
 
+    // See 2.2 The PCG Hash
     vec3 Xi = Pcg3d(rng);
 
     float triPdf;
     Triangle tri = PowerEmissiveTriangleSample(Xi.x, triPdf);
 
+    // See 7.6 Area Light Sampling
     float b0, b1, b2;
     UniformSampleTrianglePoint(Xi.yz, b0, b1, b2);
+
     vec3 p = b0 * tri.v0.pos + b1 * tri.v1.pos + b2 * tri.v2.pos;
     vec3 lightNs = normalize(b0 * tri.v0.n + b1 * tri.v1.n + b2 * tri.v2.n);
 
@@ -64,9 +65,7 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
         return vec3(0.0);
     }
 
-    // Distance-scaled offset dynamic with how far away the light source is
-    float distOffset = max(dist * EPSILON, EPSILON);
-
+    // See 7.2 Shadow Rays
     VisibilityInteraction vi = ShadowRayTest(rng, si, dist, wi);
     if (vi.isOccluded) {
         return vec3(0.0);
@@ -77,7 +76,10 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
 
     Material lightMat = materials[tri.matId];
 
-    /* Multiple Importance Sample (MIS) */
+    /*
+     * Multiple importance sample (MIS)
+     * See 7.7 Multiple Importance Sampling
+     */
 
     float bsdfPdf;
     vec3 f = EvaluateBsdfAndPdf(wi, ray, si, bsdfPdf);
@@ -86,6 +88,7 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     return (f * lightMat.emissive * lightMat.emissiveStrength) / lightPdf * misWeight;
 }
 
+// See 7.6 Area Light Sampling
 float AreaLightPdf(SurfaceInteraction si, Ray ray, vec3 prevPoint) {
     Triangle tri = triangles[si.triId];
     vec3 wi = normalize(si.p - prevPoint);

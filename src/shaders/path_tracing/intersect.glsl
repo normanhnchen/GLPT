@@ -5,9 +5,7 @@
 #include "src/shaders/common.glsl"
 
 
-// Möller-Trumbore ray-triangle intersection algorithm
-// Adaptation from "Fast, minimum storage ray/triangle intersection,"
-// doi: 10.1145/1198555.1198746
+// See 3.3 Ray-Triangle Intersection
 bool RayTriangleIntersect(Ray ray, Triangle tri, int triId, float closestT, inout SurfaceInteraction si) {
     vec3 e1 = tri.v1.pos - tri.v0.pos;
     vec3 e2 = tri.v2.pos - tri.v0.pos;
@@ -43,9 +41,7 @@ bool RayTriangleIntersect(Ray ray, Triangle tri, int triId, float closestT, inou
     return true;
 }
 
-// Möller-Trumbore ray-triangle intersection algorithm
-// Adaptation from "Fast, minimum storage ray/triangle intersection,"
-// doi: 10.1145/1198555.1198746
+// See 3.3 Ray-Triangle Intersection
 bool ShadowRayTriangleIntersect(inout uvec3 rng, inout Ray ray, Triangle tri, int triId, float closestT, inout VisibilityInteraction vi) {
     vec3 e1 = tri.v1.pos - tri.v0.pos;
     vec3 e2 = tri.v2.pos - tri.v0.pos;
@@ -83,14 +79,20 @@ bool ShadowRayTriangleIntersect(inout uvec3 rng, inout Ray ray, Triangle tri, in
             mat.alpha = baseCol.w;
         }
 
+        // See 2.4 Ray Utilities
         vec3 p = GetRayPoint(ray, t);
 
         if (mat.alphaMode == 1) {
-            // MASK
+            /* MASK */
+
             if (mat.alpha < mat.alphaCutoff) return false;
         } else if (mat.alphaMode == 2) {
-            // BLEND
-            if (Pcg3d(rng).x > mat.alpha) return false;
+            /* BLEND */
+
+            // See 2.2 The PCG Hash
+            float Xi = Pcg3d(rng).x;
+
+            if (Xi > mat.alpha) return false;
         }
     }
 
@@ -98,8 +100,7 @@ bool ShadowRayTriangleIntersect(inout uvec3 rng, inout Ray ray, Triangle tri, in
     return true;
 }
 
-// Adaptation from "Ray–Bounds Intersections," Physically Based Rendering: From Theory to Implementation,
-// https://pbr-book.org/3ed-2018/Shapes/Basic_Shape_Interface#RayndashBoundsIntersections
+// See 3.2 AABB Testing
 AabbHit AabbTest(Ray ray, vec3 invRayD, BvhNode node, float closestT) {
     vec3 t0 = (node.aabbMin - ray.o) * invRayD;
     vec3 t1 = (node.aabbMax - ray.o) * invRayD;
@@ -117,8 +118,7 @@ AabbHit AabbTest(Ray ray, vec3 invRayD, BvhNode node, float closestT) {
     return h;
 }
 
-// Adaptation from "How to Build a BVH – Part 2: Faster Rays,"
-// https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
+// See 4.3 Traversal
 bool Intersect(Ray ray, inout SurfaceInteraction si) {
     /*
      * BVH traversal to find the closest ray-triangle intersection.
@@ -192,8 +192,7 @@ bool Intersect(Ray ray, inout SurfaceInteraction si) {
     return didIntersect;
 }
 
-// Adaptation from "How to Build a BVH – Part 2: Faster Rays,"
-// https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
+// See 4.3 Traversal
 VisibilityInteraction TestVisibility(inout uvec3 rng, Ray ray, float maxDist) {
     /*
      * BVH traversal to find if there is a ray-triangle intersection.
@@ -262,12 +261,15 @@ VisibilityInteraction TestVisibility(inout uvec3 rng, Ray ray, float maxDist) {
     return vi;
 }
 
+// See 7.2 Shadow Rays
 VisibilityInteraction ShadowRayTest(inout uvec3 rng, SurfaceInteraction si, float dist, vec3 wi) {
     Ray shadowRay;
     vec3 offsetDir = dot(si.ng, wi) < 0.0 ? -si.ng : si.ng;
+    // See 2.4 Ray Utilities
     shadowRay.o = OffsetRayOrigin(si.p, offsetDir);
     shadowRay.d = wi;
 
+    // See 4.3 Traversal
     VisibilityInteraction vi = TestVisibility(rng, shadowRay, dist);
 
     return vi;

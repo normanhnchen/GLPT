@@ -6,8 +6,7 @@
 #include "src/shaders/path_tracing/util.glsl"
 
 
-// "The Alias Method," in Physically Based Rendering: From Theory to Implementation
-// https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable::Sample
+// See 7.4 Power Sampling
 Light PowerFinitePunctualLightSample(float Xi, out float lightPdf) {
     /* Sample from the precomputed alias table */
     
@@ -29,17 +28,16 @@ Light PowerFinitePunctualLightSample(float Xi, out float lightPdf) {
     return lights[lightId];
 }
 
-// The Khronos Group, "KHR_lights_punctual," in glTF 2.0 Extensions
-// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md
-// "Light Sources," in Physically Based Rendering: From Theory to Implementation
-// https://www.pbr-book.org/4ed/Light_Sources/Point_Lights#
+// See 7.5 Punctual Lights
 vec3 SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     if (numFiniteLights == 0) {
         return vec3(0.0);
     }
 
+    // See 2.2 The PCG Hash
     vec3 Xi = Pcg3d(rng);
 
+    // See 7.4 Power Sampling
     float lightPdf;
     Light light = PowerFinitePunctualLightSample(Xi.x, lightPdf);
 
@@ -73,19 +71,18 @@ vec3 SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) 
         return vec3(0.0);
     }
 
+    // See 7.2 Shadow Rays
     VisibilityInteraction vi = ShadowRayTest(rng, si, dist, wi);
     if (vi.isOccluded) {
         return vec3(0.0);
     }
 
+    // See 5.12 BSDF Evaluation
     vec3 f = EvaluateBsdf(wi, ray, si);
     return f * Li / lightPdf;
 }
 
-// The Khronos Group, "KHR_lights_punctual," in glTF 2.0 Extensions
-// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md
-// "Light Sources," in Physically Based Rendering: From Theory to Implementation
-// https://www.pbr-book.org/4ed/Light_Sources/Point_Lights#
+// See 7.5 Punctual Lights
 vec3 SampleInfinitePunctualLight(SurfaceInteraction si, Ray ray, Light light, inout uvec3 rng) {
     vec3 wi = normalize(-light.d);
     float dist = INF;
@@ -100,11 +97,13 @@ vec3 SampleInfinitePunctualLight(SurfaceInteraction si, Ray ray, Light light, in
         return vec3(0.0);
     }
 
+    // See 7.2 Shadow Rays
     VisibilityInteraction vi = ShadowRayTest(rng, si, dist, wi);
     if (vi.isOccluded) {
         return vec3(0.0);
     }
 
+    // See 5.12 BSDF Evaluation
     vec3 f = EvaluateBsdf(wi, ray, si);
     return f * Li;
 }

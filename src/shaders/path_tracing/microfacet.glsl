@@ -5,8 +5,7 @@
 #include "src/shaders/common.glsl"
 
 
-// Adaptation from "Cosine-Weighted Hemisphere Sampling," Physically Based Rendering: From Theory to Implementation
-// https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#Cosine-WeightedHemisphereSampling
+// See 5.3 Cosine-Weighted Hemisphere Sampling
 vec3 CosineSampleHemisphere(inout uvec3 rng, SurfaceInteraction si) {
     vec2 xy = UniformSampleUnitDisk(rng);
     float x = xy.x;
@@ -21,14 +20,12 @@ vec3 CosineSampleHemisphere(inout uvec3 rng, SurfaceInteraction si) {
     return normalize(si.localToWorld * wo);
 }
 
-// Adaptation from "Cosine-Weighted Hemisphere Sampling," Physically Based Rendering: From Theory to Implementation
-// https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#Cosine-WeightedHemisphereSampling
+// See 5.3 Cosine-Weighted Hemisphere Sampling
 float CosineSampleHemispherePdf(float nDotWi) {
     return nDotWi / PI;
 }
 
-// Adaptation from "Average irregularity representation of a rough surface for ray reflection,"
-// https://doi.org/10.1364/JOSA.65.000531
+// See 5.4 Trowbridge-Reitz GGX
 float TrowbridgeReitzGgx(float nDotWh, float alpha) {
     float alpha2  = alpha * alpha;
     float nDotWh2 = nDotWh * nDotWh;
@@ -43,8 +40,7 @@ float TrowbridgeReitzGgx(float nDotWh, float alpha) {
     return numer / max(denom, EPSILON);
 }
 
-// "Real Shading in Unreal Engine 4,"
-// https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
+// See 5.5 Schlick-GGX Approximation
 float GeometrySchlickGgx(float nDotWo, float k) {
     float numer = nDotWo;
     float denom = nDotWo * (1.0 - k) + k;
@@ -52,8 +48,7 @@ float GeometrySchlickGgx(float nDotWo, float k) {
     return numer / max(denom, EPSILON);
 }
 
-// "Real Shading in Unreal Engine 4,"
-// https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
+// See 5.5 Schlick-GGX Approximation
 float GeometrySmith(float nDotWo, float nDotWi, float k) {
     float ggx1 = GeometrySchlickGgx(nDotWo, k);
     float ggx2 = GeometrySchlickGgx(nDotWi, k);
@@ -61,22 +56,14 @@ float GeometrySmith(float nDotWo, float nDotWi, float k) {
     return ggx1 * ggx2;
 }
 
-// "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs,"
-// Journal of Computer Graphics Techniques
-// https://jcgt.org/published/0003/02/03/
-// "Importance Sampling techniques for GGX with Smith Masking-Shadowing: Part 2," Joe Schutte's Blog,
-// https://schuttejoe.github.io/post/ggximportancesamplingpart2/.
+// See 5.6 Height-Correlated Smith
 float SmithGgxMasking(float nDotWo, float alpha2) {
     float denom = sqrt(alpha2 + (1.0 - alpha2) * nDotWo * nDotWo) + nDotWo;
 
     return 2.0 * nDotWo / max(denom, EPSILON);
 }
 
-// "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs,"
-// Journal of Computer Graphics Techniques
-// https://jcgt.org/published/0003/02/03/
-// "Importance Sampling techniques for GGX with Smith Masking-Shadowing: Part 2," Joe Schutte's Blog,
-// https://schuttejoe.github.io/post/ggximportancesamplingpart2/.
+// See 5.6 Height-Correlated Smith
 float SmithGgxMaskingShadowing(float nDotWi, float nDotWo, float alpha2) {
     float denomA = nDotWo * sqrt(alpha2 + (1.0 - alpha2) * nDotWi * nDotWi);
     float denomB = nDotWi * sqrt(alpha2 + (1.0 - alpha2) * nDotWo * nDotWo);
@@ -84,14 +71,12 @@ float SmithGgxMaskingShadowing(float nDotWi, float nDotWo, float alpha2) {
     return 2.0 * nDotWi * nDotWo / max(denomA + denomB, EPSILON);
 }
 
-// "Fresnel Incidence Effects," in Physically Based Rendering: From Theory to Implementation
-// https://pbr-book.org/3ed-2018/Reflection_Models/Fresnel_Incidence_Effects
+// See 5.7 Fresnel-Schlick Approximation
 vec3 FresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(1.0 - clamp(cosTheta, 0.0, 1.0), 5.0);
 }
 
-// "Sampling the GGX Distribution of Visible Normals," Journal of Computer Graphics Techniques (JCGT)
-// http://jcgt.org/published/0007/04/01/
+// See 5.8 GGX VNDF Importance Sampling
 vec3 ImportanceSampleGgxVndf(SurfaceInteraction si, vec2 Xi, vec3 wo, float roughness) {
     // Convert wo to tangent space for GGX VNDF importance sampling
     vec3 woTangent = si.worldToLocal * wo;
@@ -132,6 +117,7 @@ vec3 ImportanceSampleGgxVndf(SurfaceInteraction si, vec2 Xi, vec3 wo, float roug
     return normalize(si.localToWorld * wm);
 }
 
+// See 5.8 GGX VNDF Importance Sampling
 float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
     float nDotWo = dot(n, wo);
     vec3 wh = normalize(wo + wi);
@@ -139,15 +125,22 @@ float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
 
     float nDotWh = dot(n, wh);
 
+    // See 5.4 Trowbridge-Reitz GGX
     float D = TrowbridgeReitzGgx(nDotWh, alpha);
 
     float G1;
     if (geometryMode == 0) {
-        /* Height-correlated Smith method */
+        /*
+         * Height-correlated Smith method
+         * See 5.6 Height-Correlated Smith
+         */
 
         G1 = SmithGgxMasking(abs(nDotWo), alpha2);
     } else {
-        /* Schlick-GGX approximation method */
+        /*
+         * Schlick-GGX approximation method
+         * See 5.5 Schlick-GGX Approximation
+         */
         
         float roughness = sqrt(alpha);
         float k = (roughness + 1.0) * (roughness + 1.0) / 8.0;
@@ -157,8 +150,11 @@ float GgxVndfPdf(vec3 n, vec3 wo, vec3 wi, float alpha) {
     return (D * G1) / max((4.0 * abs(nDotWo)), EPSILON);
 }
 
+// See 5.10 Lobe Selection
 LobeProbs ComputeLobeProbs(Material mat, float nsDotWo, vec3 F0) {
+    // See 5.7 Fresnel-Schlick Approximation
     vec3 F = FresnelSchlick(nsDotWo, F0);
+    // See 2.3 Firefly Clamping
     float weight = GetLuminance(F);
 
     float pSpec = clamp(weight, 0.05, 0.95);

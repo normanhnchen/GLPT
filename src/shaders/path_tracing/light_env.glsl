@@ -8,8 +8,7 @@
 #include "src/shaders/path_tracing/intersect.glsl"
 
 
-// "Sampling light sources," in Physically Based Rendering: From Theory to Implementation
-// https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
+// See 7.3 HDRI Sampling
 int SampleRowCdf(float Xi, int height, out float rowHigh, out float rowLow, out float rowPmf) {
     /* Binary search to find the correct row */
 
@@ -31,8 +30,7 @@ int SampleRowCdf(float Xi, int height, out float rowHigh, out float rowLow, out 
     return lo;
 }
 
-// "Sampling light sources," in Physically Based Rendering: From Theory to Implementation
-// https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
+// See 7.3 HDRI Sampling
 int SampleColCdf(float Xi, int row, int width, out float colHigh, out float colLow, out float colPmf) {
     /* Binary search to find the correct column */
 
@@ -54,6 +52,7 @@ int SampleColCdf(float Xi, int row, int width, out float colHigh, out float colL
     return lo;
 }
 
+// See 7.3 HDRI Sampling
 vec3 SampleHdri(vec3 d) {
     // Convert to spherical coordinates
     float phi = atan(d.z, d.x);
@@ -63,12 +62,12 @@ vec3 SampleHdri(vec3 d) {
     return texture(hdri, uv).rgb;
 }
 
-// "Sampling light sources," in Physically Based Rendering: From Theory to Implementation
-// https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
+// See 7.3 HDRI Sampling
 vec3 DirectSampleHdri(inout uvec3 rng, out vec3 d, out float hdriPdf) {
     ivec2 size = textureSize(hdri, 0);
     int width = size.x, height = size.y;
 
+    // See 2.2 The PCG Hash
     vec3 Xi = Pcg3d(rng);
 
     float rowHigh, rowLow, rowPmf;
@@ -100,6 +99,7 @@ vec3 DirectSampleHdri(inout uvec3 rng, out vec3 d, out float hdriPdf) {
     return texture(hdri, vec2(u, v)).rgb;
 }
 
+// See 7.3 HDRI Sampling
 vec3 SampleHdriLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     vec3 wi;
     float lightPdf;
@@ -116,12 +116,16 @@ vec3 SampleHdriLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
         return vec3(0.0);
     }
 
+    // See 7.2 Shadow Rays
     VisibilityInteraction vi = ShadowRayTest(rng, si, dist, wi);
     if (vi.isOccluded) {
         return vec3(0.0);
     }
 
-    /* Multiple Importance Sample (MIS) */
+    /*
+     * Multiple importance sample (MIS)
+     * See 7.7 Multiple Importance Sampling
+     */
 
     float bsdfPdf;
     vec3 f = EvaluateBsdfAndPdf(wi, ray, si, bsdfPdf);
@@ -130,8 +134,7 @@ vec3 SampleHdriLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     return (f * Li * hdriExposure) / lightPdf * misWeight;
 }
 
-// "Sampling light sources," in Physically Based Rendering: From Theory to Implementation
-// https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights
+// See 7.3 HDRI Sampling
 float HdriPdf(vec3 d) {
     ivec2 size = textureSize(hdri, 0);
     int width = size.x, height = size.y;

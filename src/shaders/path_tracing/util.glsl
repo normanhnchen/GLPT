@@ -5,8 +5,7 @@
 #include "src/shaders/common.glsl"
 
 
-// Jarzynski & Olano, "Hash Functions for GPU Rendering," JCGT, vol. 9, no. 3, 2020.
-// http://jcgt.org/published/0009/03/02/
+// See 2.2 The PCG Hash
 vec3 Pcg3d(inout uvec3 rng) {
     rng = rng * 1664525u + 1013904223u;
     rng.x += rng.y*rng.z; rng.y += rng.z*rng.x; rng.z += rng.x*rng.y;
@@ -16,6 +15,7 @@ vec3 Pcg3d(inout uvec3 rng) {
     return vec3(rng) / float(UINT32_MAX);
 }
 
+// See 2.2 The PCG Hash
 uvec3 InitRngState(ivec2 pixelCoords) {
     uvec3 state = uvec3(
         (pixelCoords.x) * 1512558u,
@@ -26,12 +26,12 @@ uvec3 InitRngState(ivec2 pixelCoords) {
     return state;
 }
 
+// See 2.4 Ray Utilities
 vec3 GetRayPoint(Ray ray, float t) {
     return ray.o + t * ray.d;
 }
 
-// Adapted from Ray Tracing Gems, Chapter 6:
-// "A Fast and Robust Method for Avoiding Self-Intersection" (Wächter and Binder)
+// See 2.4 Ray Utilities
 vec3 OffsetRayOrigin(vec3 p, vec3 n) {
     const float intScale = 256.0;
     const float floatScale = 1.0 / 65536.0;
@@ -52,10 +52,12 @@ vec3 OffsetRayOrigin(vec3 p, vec3 n) {
     );
 }
 
+// See 2.3 Firefly Clamping
 float GetLuminance(vec3 col) {
     return dot(col, vec3(0.2126, 0.7152, 0.0722));
 }
 
+// See 2.3 Firefly Clamping
 vec3 ClampLuminance(vec3 col, float maxLum) {
     float lum = GetLuminance(col);
     if (lum > maxLum) {
@@ -64,6 +66,7 @@ vec3 ClampLuminance(vec3 col, float maxLum) {
     return col;
 }
 
+// See 2.5 Ensuring Valid Reflections
 vec3 EnsureValidReflection(vec3 ng, vec3 wo, vec3 ns) {
     vec3 R = reflect(-wo, ns);
 
@@ -83,7 +86,9 @@ vec3 EnsureValidReflection(vec3 ng, vec3 wo, vec3 ns) {
     }
 }
 
+// See 2.6 Uniform Disk Sampling
 vec2 UniformSampleUnitDisk(inout uvec3 rng) {
+    // See 2.2 The PCG Hash
     vec3 Xi = Pcg3d(rng);
     float Xi1 = Xi.x;
     float Xi2 = Xi.y;
@@ -93,8 +98,7 @@ vec2 UniformSampleUnitDisk(inout uvec3 rng) {
     return vec2(r * cos(theta), r * sin(theta));
 }
 
-// "Triangle Meshes," in Physically Based Rendering: From Theory to Implementation
-// https://pbr-book.org/4ed/Shapes/Triangle_Meshes#Sampling
+// See 7.6 Area Light Sampling
 void UniformSampleTrianglePoint(vec2 Xi, out float b0, out float b1, out float b2) {
     float Xi1 = Xi.x;
     float Xi2 = Xi.y;
@@ -109,8 +113,7 @@ void UniformSampleTrianglePoint(vec2 Xi, out float b0, out float b1, out float b
     }
 }
 
-// "Building an Orthonormal Basis, Revisited," Journal of Computer Graphics Techniques (JCGT)
-// http://jcgt.org/published/0006/01/01/
+// See 2.7 Orthonormal Basis
 void ONB(vec3 n, out vec3 dpdu, out vec3 dpdv) {
     float s = sign(n.z) == 0.0 ? 1.0 : sign(n.z);
     float a = -1.0 / (s + n.z);
@@ -119,14 +122,14 @@ void ONB(vec3 n, out vec3 dpdu, out vec3 dpdv) {
     dpdv = vec3(b, s + n.y * n.y * a, -n.y);
 }
 
-// "Importance Sampling," in Physically Based Rendering: From Theory to Implementation
-// https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Importance_Sampling#MultipleImportanceSampling
+// See 7.7 Multiple Importance Sampling
 float PowerHeuristic(int nf, float fPdf, int ng, float gPdf) {
     float f = float(nf) * fPdf;
     float g = float(ng) * gPdf;
     return (f * f) / (f * f + g * g);
 }
 
+// See 4.4 Debug Visualization
 vec3 GetBvhDepthColor(int currDepth, int maxDepth) {
     float t = clamp(float(currDepth) / float(maxDepth), 0.0, 1.0);
 
@@ -138,14 +141,14 @@ vec3 GetBvhDepthColor(int currDepth, int maxDepth) {
     return col;
 }
 
-// Adapted from Iñigo Quilez's HSB to RGB function
-// https://www.shadertoy.com/view/MsS3Wc
+// See 4.4 Debug Visualization
 vec3 HsbToRgb(in vec3 hsb){
     vec3 rgb = clamp(abs(mod(hsb.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
     rgb = rgb * rgb * (3.0 - 2.0 * rgb);
     return hsb.z * mix(vec3(1.0), rgb, hsb.y);
 }
 
+// See 4.4 Debug Visualization
 vec3 GetBvhAngleColor(vec3 aabbMin, vec3 aabbMax) {
     vec3 center = (aabbMin + aabbMax) * 0.5;
     
@@ -155,6 +158,7 @@ vec3 GetBvhAngleColor(vec3 aabbMin, vec3 aabbMax) {
     float c = theta / (2.0 * PI) + 0.5;
     
     vec3 hsb = vec3(c, 1.0, 1.0);
+    // See 4.4 Debug Visualization
     return HsbToRgb(hsb);
 }
 
