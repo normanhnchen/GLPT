@@ -16,7 +16,7 @@ class PathTracingPipeline:
 
     def render(self):
         # BVH Bounds
-        if self.pt_state.debug.mode == 7:
+        if self.pt_state.debug.mode == 8:
             # Don't render path tracing since this mode runs through a separate shader
             self.bvh_bounds_debug_pass.render()
             self.ctx.screen.use()
