@@ -231,7 +231,7 @@ def load_bvh(scene):
         bvh = load_bvh_data(cache_path)
     
     except:
-        bvh = BVH()
+        bvh = BVH(scene)
 
         save_bvh_data(bvh, cache_path)
 

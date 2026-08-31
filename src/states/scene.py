@@ -131,7 +131,7 @@ class CameraCaptureState:
             with open(settings.file_paths.ai_training.camera_capture_states) as f:
                 loaded = json.load(f)
         except:
-            pass
+            loaded = {}
 
         # Rebuild to add new scenes and remove stale keys
         self.states = {
