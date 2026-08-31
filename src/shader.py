@@ -3,29 +3,37 @@ from src.dtypes import *
 
 
 def _load_shader_source(path, is_root=True):
-        try:
-            version = ""
-            shader_source = ""
-            with open(path, "r") as f:
-                for line in f:
-                    stripped = line.strip()
-                    if stripped.startswith("#include"):
-                        include_path = stripped.split('"')[1]
-                        file_path = settings.root_dir / include_path
-                        shader_source += _load_shader_source(file_path, is_root=False)
-                        shader_source += "\n"
+    """
+    GLSL has no native #include support, so we hand parse them for file organization
+    and clarity. Included files must be wrapped with a #ifndef #define #endif to prevent "defined already"
+    errors when including a file multiple times. #version is stripped from every included file since it
+    MUST be the FIRST LINE of the final concatenated source. Tradeoff: compile errors report
+    line numbers from the concatenated output not the original file.
+    """
 
-                    elif stripped.startswith("#version"):
-                        if is_root and not version:
-                            version = line
+    try:
+        version = ""
+        shader_source = ""
+        with open(path, "r") as f:
+            for line in f:
+                stripped = line.strip()
+                if stripped.startswith("#include"):
+                    include_path = stripped.split('"')[1]
+                    file_path = settings.root_dir / include_path
+                    shader_source += _load_shader_source(file_path, is_root=False)
+                    shader_source += "\n"
 
-                    else:
-                        shader_source += line
+                elif stripped.startswith("#version"):
+                    if is_root and not version:
+                        version = line
 
-            return version + shader_source
+                else:
+                    shader_source += line
 
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Could not find shader file at: {path}")
+        return version + shader_source
+
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Could not find shader file at: {path}")
 
         
 class Shader:
@@ -43,6 +51,13 @@ class Shader:
             raise
     
     def _reset_tonemaps(self):
+        """
+        This function exists because tonemaps are a one bool uniform each rather
+        than a single cycling number. Without resetting, a previously-set bool
+        could override the tonemap during the if/elif/else chain.
+        Possible future implementation: collapse to a single int uniform.
+        """
+
         self.prog["None"].value = set_i4(0)
         self.prog["ACESFilm"].value = set_i4(0)
         self.prog["AgX"].value = set_i4(0)
@@ -58,6 +73,11 @@ class Shader:
         self.prog["Unreal"].value = set_i4(0)
 
     def set_tonemap(self, name):
+        """
+        Possible future implementation: collapse the if/elif/else chain
+        to a single cycling int uniform.
+        """
+        
         self._reset_tonemaps()
 
         if name == "None":
@@ -94,6 +114,7 @@ class ComputeShader:
             src = _load_shader_source(comp_path)
 
             self.prog = ctx.compute_shader(src)
+        
         except Exception as e:
             print(f"Compute shader file was not succesfully read: {e}")
             raise

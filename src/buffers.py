@@ -3,6 +3,13 @@ import numpy as np
 from src.dtypes import *
 
 
+"""
+std430 SSBOs pad to 16 bytes (float/int/uint are 4 bytes)
+Important note: a vec3 cannot pad a float and a vec2 can't pad
+bytes 5-8 of a 16 byte block.
+"""
+
+
 camera_dtype = np.dtype([
     ("pos", *vec3),
     ("aperture", f4),

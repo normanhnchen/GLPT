@@ -13,7 +13,10 @@ def _compute_uniforms():
 def _set_uniforms(prog, uniform_dict):
     for uniform, value in uniform_dict.items():
         if isinstance(value, bytes):
+            # Matrices can't be assigned via .value = ... like scalar/vector
+            # uniforms; matrices need .write(bytes)
             prog[uniform].write(value)
+        
         else:
             prog[uniform].value = value
 
@@ -40,5 +43,7 @@ class FinalPass:
 
         self.quad.draw()
 
+        # The pass is always rendered into the output FBO and never directly to the screen
+        # so blit it directly to the screen
         self.ctx.copy_framebuffer(self.ctx.screen, self.final_output_state.output_fbo)
         self.ctx.screen.use()

@@ -4,6 +4,11 @@ from src.scene.caching import load_bvh
 
 
 class BVHBackgroundBuilder:
+    """
+    Builds the BVH on a background CPU daemon thread.
+    A daemon thread is used so quitting mid-BVH build terminates itself immediately.
+    """
+
     def __init__(self, scene):
         self.scene = scene
         self.is_done = False

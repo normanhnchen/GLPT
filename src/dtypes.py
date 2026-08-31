@@ -1,6 +1,13 @@
 import numpy as np
 
 
+"""
+f4/i4/u4 = np.float32/int32/uint32 shorthand.
+vec2/vec3/vec4 (and ivec2, uvec2, etc. variants) are (dtype, size) shorthands, so
+we unpack them with * when used in a dtype definition
+"""
+
+
 f4 = "f4"
 i4 = "i4"
 u4 = "u4"

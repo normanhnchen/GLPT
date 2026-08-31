@@ -34,7 +34,8 @@ class EncoderBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
 
-        # kernel_size=2 and stride=2 to downsample by 2 times
+        # Use MaxPool2d (not average pooling) to preserve sharper features
+        # kernel_size=2 and stride=2 to downsample by a factor of 2
         self.down = nn.MaxPool2d(kernel_size=2, stride=2)
         self.conv = ConvBlock(in_channels, out_channels)
     
@@ -47,14 +48,15 @@ class DecoderBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
 
-        # kernel_size=2 and stride=2 to upsample by 2 times
+        # kernel_size=2 and stride=2 to upsample by a factor of 2
         self.up = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2, device=settings.pytorch_device)
         self.conv = ConvBlock(in_channels, out_channels)
     
     def forward(self, x, skip_connection):
         x = self.up(x)
         
-        # Concatenate UNet skip connection
+        # Concatenate UNet skip connection to recover lost spatial detail while encoding
+        # which is important for thin geometry and fine texture detail
         x = torch.cat([x, skip_connection], dim=1)
         return self.conv(x)
 
@@ -100,6 +102,12 @@ class UNet(nn.Module):
 # See 9.3 KPCN
 class KPCN(nn.Module):
     def __init__(self, in_channels=10, kernel_size=21):
+        """
+        The default in_channels is 10: combined(3) + albedo(3) + normal(3) + depth(1).
+        kernel_size=21 per Bako et al. U-Net output is kernel_size**2 channels: one predicted
+        set of weights based on the neighborhood per pixel.
+        """
+
         super().__init__()
 
         self.kernel_size = kernel_size
@@ -108,7 +116,8 @@ class KPCN(nn.Module):
     def _pad_to_multiple(self, x, multiple=16):
         """
         Pads tensors on the right and bottom sides to a multiple to prevent
-        size mismatches when concatenating skip connections.
+        size mismatches when concatenating skip connections. 4 convolution blocks of 2x downsampling need dimensions
+        divisible by 2**4=16.
         """
 
         _, _, h, w = x.shape
@@ -118,7 +127,8 @@ class KPCN(nn.Module):
 
         if pad_h == 0 and pad_w == 0:
             return x
-    
+
+        # Use ReflectionPad2d instead zero-padding to preserve more real data at edges
         pad = nn.ReflectionPad2d([
             0, # Left
             pad_w, # Right

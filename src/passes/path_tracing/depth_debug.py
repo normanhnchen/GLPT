@@ -10,7 +10,10 @@ class DepthDebugPass:
     def render(self):
         depth_arr = self.pt_state.framebuffers.get_ndarray_depth()
 
+        # depth_array[..., 0] is already averaged over hit samples only in the path tracer
         depth = depth_arr[..., 0]
+        # Sub-pixel jitter in the path tracer means some samples in a pixel hit geometry
+        # and others miss, so hit_fraction is the fraction of samplers hit
         hit_fraction = depth_arr[..., 1]
         # Misses are set to 0.0 in the path trace shader
         hit_mask = hit_fraction > 0.0
@@ -29,6 +32,7 @@ class DepthDebugPass:
             else:
                 normalized[hit_mask] = 1
 
+        # Fade partially-coverged pixels toward black
         normalized = normalized * hit_fraction
 
         output = depth_arr.copy()
