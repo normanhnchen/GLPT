@@ -962,11 +962,13 @@ class DebugUI:
             "Albedo", # 1
             "Normal", # 2
             "Depth", # 3
-            "Direct", # 4
-            "Indirect", # 5
-            "Demodulated", # 6
-            "BVH Depth", # 7
-            "BVH Bounds", # 8
+            "Metallic", # 4
+            "Roughness", # 5
+            "Direct", # 6
+            "Indirect", # 7
+            "Demodulated", # 8
+            "BVH Depth", # 9
+            "BVH Bounds", # 10
         ]
 
         def on_change(new_val):

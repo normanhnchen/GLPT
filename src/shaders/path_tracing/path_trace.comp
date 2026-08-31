@@ -329,6 +329,8 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             pathSample.baseCol = mat.baseCol;
             pathSample.normal = si.ns;
             pathSample.depth = tAccum + si.t;
+            pathSample.metallic = mat.metallic;
+            pathSample.roughness = mat.roughness;
 
             if (debugMode == 1) {
                 /* Albedo */
@@ -346,7 +348,17 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
                 pathSample.combined = vec3(pathSample.depth);
                 break;
-            } else if (debugMode == 7) {
+            } else if (debugMode == 4) {
+                /* Metallic */
+
+                pathSample.combined = vec3(pathSample.metallic);
+                break;
+            } else if (debugMode == 5) {
+                /* Roughness */
+
+                pathSample.combined = vec3(pathSample.roughness);
+                break;
+            } else if (debugMode == 9) {
                 /*
                  * BVH depth
                  * See 4.4 Debug Visualization
@@ -406,15 +418,15 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         /* Off */
 
         pathSample.combined = directRadiance + indirectRadiance;
-    } else if (debugMode == 4) {
+    } else if (debugMode == 6) {
         /* Direct */
 
         pathSample.combined = directRadiance;
-    } else if (debugMode == 5) {
+    } else if (debugMode == 7) {
         /* Indirect */
 
         pathSample.combined = indirectRadiance;
-    } else if (debugMode == 6) {
+    } else if (debugMode == 8) {
         /* Demodulated */
 
         if (pathSample.depth < 0.0) {

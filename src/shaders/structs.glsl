@@ -159,6 +159,8 @@ struct PathSample {
     vec3 baseCol;
     vec3 normal;
     float depth;
+    float metallic;
+    float roughness;
 };
 
 struct AabbHit {
