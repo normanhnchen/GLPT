@@ -19,7 +19,7 @@ class Texture:
 
 
 class Material:
-    def __init__(self, trimesh_material, extensions):
+    def __init__(self, trimesh_material, extensions, pbr_factors=None):
         alpha_mode = getattr(trimesh_material, "alphaMode", "OPAQUE")
         if alpha_mode == "MASK":
             self.alpha_mode = 1
@@ -133,6 +133,12 @@ class Material:
             self.ior = KHR_materials_ior["ior"]
         else:
             self.ior = set_f4(1.5)
+
+        # Replace roughness and metallic with extracted factors from glTF extensions
+        # NOTE: Trimesh has an issue where it converts roughness = 1 and metallic = 1 to None
+        pbr_factors = pbr_factors or {}
+        self.roughness = set_f4(pbr_factors.get("roughnessFactor", 1))
+        self.metallic = set_f4(pbr_factors.get("metallicFactor", 0))
 
     def _to_float_rgb(self, color):
         color = np.asarray(color, dtype=f4)

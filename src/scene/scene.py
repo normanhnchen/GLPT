@@ -18,7 +18,7 @@ class Scene:
     def build(self):
         scene = trimesh.load(self.scene_path)
 
-        all_extensions, all_lights = self._get_extensions()
+        all_extensions, all_pbr, all_lights = self._get_extensions()
 
         all_vertices = []
         all_triangles = []
@@ -58,7 +58,8 @@ class Scene:
             mat_key = mat_name if mat_name is not None else id(trimesh_material)
         
             if mat_key not in material_dict:
-                material = Material(trimesh_material, mat_extensions)
+                mat_pbr = all_pbr.get(mat_name, {"metallicFactor": 1.0, "roughnessFactor": 1.0})
+                material = Material(trimesh_material, mat_extensions, pbr_factors=mat_pbr)
 
                 material.base_color_tex_id = self._get_texture_id(material.base_color_tex, self.base_color_textures)
                 material.emissive_tex_id = self._get_texture_id(material.emissive_tex, self.emissive_textures)
@@ -251,17 +252,25 @@ class Scene:
         gltf = pygltflib.GLTF2().load(self.scene_path)
 
         material_extensions = {}
+        material_pbr = {}
         for mat in gltf.materials:
             name = mat.name
             exts = mat.extensions
             if name and exts:
                 material_extensions[name] = exts
+
+            if name:
+                pbr = mat.pbrMetallicRoughness
+                material_pbr[name] = {
+                    "metallicFactor": pbr.metallicFactor if pbr and pbr.metallicFactor is not None else 1,
+                    "roughnessFactor": pbr.roughnessFactor if pbr and pbr.roughnessFactor is not None else 1,
+                }
         
         lights = self._build_lights(gltf)
         
         lights = np.array(lights, dtype=light_dtype)
         
-        return material_extensions, lights
+        return material_extensions, material_pbr, lights
 
     def _build_lights(self, gltf):
         extensions = gltf.extensions or {}
