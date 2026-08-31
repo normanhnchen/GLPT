@@ -11,6 +11,7 @@ class GlfwWindow:
     def __init__(self):
         self.window = None
         self.need_resize = False
+        self.is_minimized = False
 
     def create(self, title):
         if not glfwInit():
@@ -40,8 +41,16 @@ class GlfwWindow:
         glfwSetWindowTitle(self.window, title)
 
     def resize(self, width, height):
-        width = max(1, int(width))
-        height = max(1, int(height))
+        width = int(width)
+        height = int(height)
+
+        if width <= 0 or height <= 0:
+            # Window minimized
+            return
+
+        if width == settings.screen.width and height == settings.screen.height:
+            # Same size as before (e.g. un-minimizing)
+            return
 
         settings.screen.width = width
         settings.screen.height = height
@@ -188,6 +197,10 @@ class GlfwCallbackState:
         glfwSetKeyCallback(window, self._key_callback)
         glfwSetFramebufferSizeCallback(window, self._framebuffer_size_callback)
         glfwSetWindowSizeLimits(window, settings.screen.min_width, settings.screen.min_height, GLFW_DONT_CARE, GLFW_DONT_CARE)
+        glfwSetWindowIconifyCallback(window, self._iconify_callback)
+
+    def _iconify_callback(self, window, iconified):
+        self.glfw_window.is_minimized = bool(iconified)
 
     def _framebuffer_size_callback(self, window, width, height):
         self.glfw_window.resize(width, height)

@@ -134,10 +134,18 @@ def run_app(scene, ai_denoiser, camera, buffers):
     while not glfw_window.should_close():
         frame_stats.track()
 
-        if settings.screen.width <= 0 or settings.screen.height <= 0:
+        if glfw_window.is_minimized:
             glfwPollEvents()
-            continue
 
+            if settings.rendering.mode == "path_tracing":
+                pt_pipeline.render_offscreen()
+
+            frame_stats.increment_frame_count()
+
+            frame_stats.cap_fps(60)
+
+            continue
+        
         bvh_state.update(4, 5, 8)
         
         if glfw_window.need_resize:

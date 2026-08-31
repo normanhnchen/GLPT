@@ -154,8 +154,13 @@ def run_app():
                 while not glfw_window.should_close():
                     frame_stats.track()
 
-                    if settings.screen.width <= 0 or settings.screen.height <= 0:
+                    if glfw_window.is_minimized:
                         glfwPollEvents()
+
+                        if settings.rendering.mode == "path_tracing":
+                            pt_pipeline.render_offscreen()
+
+                        frame_stats.increment_frame_count()
                         continue
 
                     bvh_state.update(4, 5, 8)
