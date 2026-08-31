@@ -276,10 +276,11 @@ class Checkbox:
 
 
 class RenderingUI:
-    def __init__(self, pt_state, bvh_state, camera_buffer):
+    def __init__(self, pt_state, bvh_state, camera_buffer, ai_denoiser=None):
         self.pt_state = pt_state
         self.bvh_state = bvh_state
         self.camera_buffer = camera_buffer
+        self.ai_denoiser = ai_denoiser
 
         self.stop_button = Button("Stop")
         self.continue_button = Button("Continue")
@@ -350,7 +351,13 @@ class RenderingUI:
         def on_change():
             self.pt_state.denoising.should_denoise = True
 
-        self.denoise_button.button(on_change)
+        if self.ai_denoiser:
+            enabled = True
+        
+        else:
+            enabled = False
+
+        self.denoise_button.button(on_change, enabled=enabled, reason="No AI denoiser checkpoint was found")
     
     def draw_view_saved_button(self):
         def on_change():
@@ -1174,7 +1181,8 @@ class SettingsUI:
             export_state,
             bvh_state,
             camera_buffer,
-            camera
+            camera,
+            ai_denoiser=None
         ):
 
         self.pt_state = pt_state
@@ -1185,7 +1193,7 @@ class SettingsUI:
         self.camera_buffer = camera_buffer
         self.camera = camera
 
-        self.rendering_ui = RenderingUI(pt_state, bvh_state, camera_buffer)
+        self.rendering_ui = RenderingUI(pt_state, bvh_state, camera_buffer, ai_denoiser=ai_denoiser)
         self.path_tracing_ui = PathTracingUI(pt_state)
         self.camera_ui = CameraUI(pt_state, camera, camera_buffer)
         self.post_processing_ui = PostProcessingUI(pt_state)

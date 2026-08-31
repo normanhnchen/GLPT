@@ -41,8 +41,11 @@ def preload_scene_data(progress_callback=None):
 
     report(70, "Loading AI Denoiser")
     ai_denoiser = KPCN()
-    # Load saved weights and biases
-    ai_denoiser.load_state_dict(torch.load(settings.file_paths.denoiser.checkpoint)["model_state_dict"])
+    try:
+        # Load saved weights and biases
+        ai_denoiser.load_state_dict(torch.load(settings.file_paths.denoiser.checkpoint)["model_state_dict"])
+    except FileNotFoundError:
+        ai_denoiser = None
 
     camera = Camera()
     
@@ -118,7 +121,8 @@ def run_app(scene, ai_denoiser, camera, buffers):
         export_state,
         bvh_state,
         buffers["camera"],
-        camera
+        camera,
+        ai_denoiser=ai_denoiser
     )
 
     pt_pipeline = PathTracingPipeline(ctx, scene, camera, pt_state, final_output_state, pt_shaders, ai_denoiser)
