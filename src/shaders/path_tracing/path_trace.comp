@@ -234,7 +234,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         }
 
         // Prevent 0 roughness which can result in NaN
-        mat.roughness = max(mat.roughness, 1e-2);
+        mat.roughness = max(mat.roughness, 1e-3);
         si.mat = mat;
         
         if (mat.hasEmission == 1) {
@@ -385,9 +385,6 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
         throughput *= transmittance;
         throughput *= bsdfSample.f;
-
-        // See 2.3 Firefly Clamping
-        throughput = ClampLuminance(throughput, maxIndirectLuminance);
 
         ray.d = bsdfSample.wi;
 
