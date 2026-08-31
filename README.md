@@ -4,14 +4,33 @@ GLPT is a GPU path tracer built with a ModernGL and GLFW backend.
 
 ## Path Tracer Features
 
-- **Primitive Intersection:** Möller-Trumbore ray-triangle intersection.
-- **Bounding Volume Hierarchy (BVH):** Background CPU construction with SAH binning.
-- **BSDF & Microfacet Models:** Microfacet transmission, height-correlated Smith, and Fresnel-Schlick approximation.
-- **Advanced Sampling:** GGX VNDF importance sampling and cosine-weighted hemisphere sampling.
-- **Next Event Estimation (NEE):** Direct sampling for punctual lights, area lights, and HDRI.
-- **Multiple Importance Sampling (MIS):** Power heuristic for combining BSDF and NEE contributions.
-- **Volumetrics:** Beer-Lambert law integration for homogenous mediums.
-- **AI Denoising:** Kernel-Predicting Convolutional Network (KPCN) with a U-Net architecture.
+- **Primitive Intersection:** Möller-Trumbore ray-triangle intersection
+- **Bounding Volume Hierarchy (BVH):** Background CPU construction with SAH binning
+- **BSDF & Microfacet Models:** Microfacet transmission, height-correlated Smith, and Fresnel-Schlick approximation
+- **Advanced Sampling:** GGX VNDF importance sampling and cosine-weighted hemisphere sampling
+- **Next Event Estimation (NEE):** Direct sampling for punctual lights, area lights, and HDRI
+- **Multiple Importance Sampling (MIS):** Power heuristic for combining BSDF and NEE contributions
+- **Volumetrics:** Beer-Lambert law integration for homogenous mediums
+- **AI Denoising:** Kernel-Predicting Convolutional Network (KPCN) with a U-Net architecture
+
+## Requirements
+
+### Hardware & OS
+- A GPU with **OpenGL 4.6** support (compute shaders, SSBOs) is required, effectively meaning a Windows or Linux OS (**macOS is not supported**)
+- A dedicated GPU is strongly recommended because path-tracing is significantly demanding on the GPU side
+- A capable CPU speeds up BVH construction especially for more complex scenes
+
+### Scene Format
+Scenes must be `glTF` or `.glb`. GLPT reads the following extra lighting and material data through glTF extensions:
+
+- `KHR_materials_emissive_strength`
+- `KHR_materials_transmission`
+- `KHR_materials_ior`
+- `KHR_lights_punctual`
+
+## Gallery
+
+## Benchmarks
 
 ## Developer Installation
 
