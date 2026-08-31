@@ -13,6 +13,25 @@ GLPT is a GPU path tracer built with a ModernGL and GLFW backend.
 - **Volumetrics:** Beer-Lambert law integration for homogenous mediums.
 - **AI Denoising:** Kernel-Predicting Convolutional Network (KPCN) with a U-Net architecture.
 
+## Developer Installation
+
+Requires **Python 3.10+**.
+
+```bash
+git clone https://github.com/normanhnchen/GLPT
+cd glpt
+pip install -r requirements.txt
+```
+
+If you have an NVIDIA GPU, install a CUDA-accelerated `torch` build from
+[pytorch.org](https://pytorch.org/get-started/locally/) instead for faster AI denoising / training.
+
+Run the main launcher with:
+
+```bash
+python -m src.run
+```
+
 ## Documentation
 
 GLPT includes comprehensive documentation covering the underlying mathematics, derivations, and concepts used in the engine. 
@@ -84,6 +103,12 @@ The following resources were consulted during the implementation of this project
 - **Uniform Disk Sampling:** M. Pharr, W. Jakob, and G. Humphreys, *Physically Based Rendering*, 4th ed., 2023. [Read here](https://www.pbr-book.org/4ed/Sampling_Algorithms/Sampling_Multidimensional_Functions#SamplingaUnitDisk).
 - **Orthonormal Basis:** T. Duff et al., "Building an Orthonormal Basis, Revisited," *JCGT*, 2017. [Read here](http://jcgt.org/published/0006/01/01/).
 
+### Primitive Intersection
+- **AABB Testing (Slab Method):** M. Pharr, W. Jakob, and G. Humphreys, "Ray–Bounds Intersections," in *Physically Based Rendering: From Theory to Implementation*, 3rd ed. [Read here](https://pbr-book.org/3ed-2018/Shapes/Basic_Shape_Interface#RayndashBoundsIntersections).
+- **Ray-Triangle Intersection (Möller-Trumbore):** T. Möller and B. Trumbore, "Fast, minimum storage ray/triangle intersection," in *ACM SIGGRAPH 2005 Courses*, Los Angeles, CA, USA: Association for Computing Machinery, 2005, Art. no. 7. doi: 10.1145/1198555.1198746.
+  - Wikipedia contributors, "Cramer's rule," *Wikipedia, The Free Encyclopedia*. [Read here](https://en.wikipedia.org/wiki/Cramer%27s_rule).
+  - Wikipedia contributors, "Triple product," *Wikipedia, The Free Encyclopedia*. [Read here](https://en.wikipedia.org/wiki/Triple_product).
+
 ### Bounding Volume Hierarchy (BVH)
 - **Construction & Traversal:** J. Bikker, "How to Build a BVH" tutorial series (Basics, Faster Rays, Quick Builds), *jacco.ompf2.com*, 2022. [Part 1](https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/) | [Part 2](https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/) | [Part 3](https://jacco.ompf2.com/2022/04/21/how-to-build-a-bvh-part-3-quick-builds/).
 - **Debug Visualization:** I. Quilez, "Smooth HSV," *Shadertoy*. [Read here](https://www.shadertoy.com/view/MsS3Wc).
@@ -102,14 +127,14 @@ The following resources were consulted during the implementation of this project
   - *Physically Based Rendering*, 3rd ed. [Read here](https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Reflection_Functions#MicrofacetBxDFs).
 - **Microfacet Transmission:** B. Walter et al., "Microfacet models for refraction through rough surfaces," *EGSR'07*, 2007. [Read here](https://dl.acm.org/doi/10.5555/2383847.2383874).
 
+### Volumetrics
+- **Beer-Lambert Law:** M. Pharr, W. Jakob, and G. Humphreys, "Volume Scattering Processes," *Physically Based Rendering: From Theory to Implementation*, 3rd ed. [Read here](https://www.pbr-book.org/3ed-2018/Volume_Scattering/Volume_Scattering_Processes).
+
 ### Light Sampling
 - **HDRI & Area Light Sampling:** *Physically Based Rendering*, 3rd & 4th eds. [HDRI Sampling](https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights) | [Area Lights](https://pbr-book.org/4ed/Light_Sources/Light_Sampling#PowerLightSampler) | [Triangle Meshes](https://pbr-book.org/4ed/Shapes/Triangle_Meshes#Sampling).
 - **Power Sampling & The Alias Method:** *Physically Based Rendering*, 4th ed. [Read here](https://pbr-book.org/4ed/Sampling_Algorithms/The_Alias_Method#AliasTable::Sample).
 - **Punctual Lights:** *Physically Based Rendering*, 4th ed. [Read here](https://www.pbr-book.org/4ed/Light_Sources/Point_Lights#) and The Khronos Group, "KHR_lights_punctual," 2017. [Read here](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md).
 - **Multiple Importance Sampling (MIS):** *Physically Based Rendering*, 3rd ed. [Read here](https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/Importance_Sampling#MultipleImportanceSampling).
-
-### Volumetrics
-- **Beer-Lambert Law:** M. Pharr, W. Jakob, and G. Humphreys, "Volume Scattering Processes," *Physically Based Rendering*, 3rd ed. [Read here](https://www.pbr-book.org/3ed-2018/Volume_Scattering/Volume_Scattering_Processes).
 
 ### AI Denoiser
 - **The U-Net:** GeeksforGeeks, "U-Net Architecture Explained." [Read here](https://www.geeksforgeeks.org/machine-learning/u-net-architecture-explained/).

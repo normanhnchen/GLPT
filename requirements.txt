@@ -1,0 +1,29 @@
+# GLPT requirements (Python 3.13)
+
+# Core / math
+numpy==2.4.6
+numba==0.65.1
+
+# Rendering backend
+moderngl==5.12.0
+glfw==2.10.0
+PyGLM==2.8.3
+
+# Scene / asset loading
+trimesh==4.12.2
+pygltflib==1.16.5
+Pillow==12.2.0
+
+# EXR read / write
+opencv-python==5.0.0
+
+# AI denoiser & training
+# Installs the CPU build by default, so for CUDA acceleration install the accelerated build
+torch==2.12.1
+
+# Launcher UI & AI training loss plot
+PySide6==6.11.1
+pyqtgraph
+
+# Real-time settings
+imgui-bundle
