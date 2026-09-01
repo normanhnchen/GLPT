@@ -1,0 +1,2708 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://github.com/normanhnchen/GLPT/9_AI_Denoiser/9.3_KPCN/">
+      
+      
+        <link rel="prev" href="../9.2_The_U-Net/">
+      
+      
+        <link rel="next" href="../9.4_Rendering/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>9.3 KPCN - GLPT</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#93-kpcn" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="GLPT" class="md-header__button md-logo" aria-label="GLPT" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            GLPT
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              9.3 KPCN
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="GLPT" class="md-nav__button md-logo" aria-label="GLPT" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    GLPT
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1 Introduction
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    1 Introduction
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../1_Introduction/1.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../1_Introduction/1.2_Naming_Conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.2 Naming Conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../1_Introduction/1.3_The_Rendering_Equation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.3 The Rendering Equation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2 Basic Utilities
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    2 Basic Utilities
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.2_The_PCG_Hash/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.2 PCG Hash
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.3_Firefly_Clamping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.3 Firefly Clamping
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.4_Ray_Utilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.4 Ray Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.5_Ensuring_Valid_Reflections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.5 Ensuring Valid Reflections
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.6_Uniform_Disk_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.6 Uniform Disk Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.7_Orthonormal_Basis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.7 Orthonormal Basis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3 Primitive Intersection
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    3 Primitive Intersection
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../3_Primitive_Intersection/3.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../3_Primitive_Intersection/3.2_AABB_Testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3.2 AABB Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../3_Primitive_Intersection/3.3_Ray-Triangle_Intersection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3.3 Ray-Triangle Intersection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4 BVH
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    4 BVH
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../4_BVH/4.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../4_BVH/4.2_Construction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4.2 Construction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../4_BVH/4.3_Traversal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4.3 Traversal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../4_BVH/4.4_Debug_Visualization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4.4 Debug Visualization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5 BSDF
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    5 BSDF
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.2_Lambert%27s_Cosine_Law/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.2 Lambert's Cosine Law
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.3_Cosine-Weighted_Hemisphere_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.3 Cosine-Weighted Hemisphere Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.4_Trowbridge-Reitz_GGX/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.4 Trowbridge-Reitz GGX
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.5_Schlick-GGX_Approximation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.5 Schlick-GGX Approximation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.6_Height-Correlated_Smith/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.6 Height-Correlated Smith
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.7_Fresnel-Schlick_Approximation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.7 Fresnel-Schlick Approximation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.8_GGX_VNDF_Importance_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.8 GGX VNDF Importance Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.9_Microfacet_Transmission/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.9 Microfacet Transmission
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.10_Lobe_Selection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.10 Lobe Selection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.11_BSDF_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.11 BSDF Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.12_BSDF_Evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.12 BSDF Evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6 Volumetrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    6 Volumetrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../6_Volumetrics/6.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../6_Volumetrics/6.2_Beer-Lambert_Law/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6.2 Beer-Lambert Law
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7 Light Sampling
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    7 Light Sampling
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../7_Light_Sampling/7.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../7_Light_Sampling/7.2_Shadow_Rays/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.2 Shadow Rays
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../7_Light_Sampling/7.3_HDRI_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.3 HDRI Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../7_Light_Sampling/7.4_Power_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.4 Power Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../7_Light_Sampling/7.5_Punctual_Lights/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.5 Punctual Lights
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../7_Light_Sampling/7.6_Area_Light_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.6 Area Light Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../7_Light_Sampling/7.7_Multiple_Importance_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.7 Multiple Importance Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8 Path Tracing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    8 Path Tracing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../8_Path_Tracing/8.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../8_Path_Tracing/8.2_Russian_Roulette/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8.2 Russian Roulette
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../8_Path_Tracing/8.3_The_Path_Integrator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8.3 The Path Integrator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9 AI Denoiser
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    9 AI Denoiser
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../9.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../9.2_The_U-Net/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9.2 The U-Net
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9.3 KPCN
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9.3 KPCN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Processing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Processing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#demodulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Demodulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logarithmic-compression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logarithmic Compression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depth-normalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Depth Normalization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#forward-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Forward Pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Forward Pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#padding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Padding
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#u-net" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        U-Net
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#softmax" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Softmax
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#applying-predicted-kernels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Applying Predicted Kernels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-implemention" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Implemention
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../9.4_Rendering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9.4 Rendering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../9.5_Training/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9.5 Training
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Processing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Processing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#demodulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Demodulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logarithmic-compression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logarithmic Compression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depth-normalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Depth Normalization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#forward-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Forward Pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Forward Pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#padding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Padding
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#u-net" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        U-Net
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#softmax" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Softmax
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#applying-predicted-kernels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Applying Predicted Kernels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-implemention" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Implemention
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="93-kpcn">9.3 KPCN</h1>
+<p>The neural network model used for the AI denoiser is a Kernel-Predicting Convolutional Network (KPCN) with a U-Net architecture. Instead of directly denoising the image, the network predicts for every pixel, a set of weights describing how to blend its noisy neighborhood into a converged estimate. The implementation is a custom adaptation of the paper from Bako et al. Mainly, it doesn't include the diffuse/specular split but rather inputs the full combined pass. </p>
+<h2 id="input">Input</h2>
+<p>The network inputs the following buffers: combined, albedo, normal, depth. Respectively, they include the number of channels: 3, 3, 3, 1. Thus, together, there are <span class="arithmatex">\(3+3+3+1 = 10\)</span> input channels.</p>
+<h2 id="output">Output</h2>
+<p>After passing the input buffers through the network, the denoiser outputs the final denoised render.</p>
+<h2 id="processing">Processing</h2>
+<h3 id="demodulation">Demodulation</h3>
+<p>Demodulation is the process of stripping out the albedo from the combined pass so that the network learns how to solely denoise the lighting rather than fine textures or detail. We demodulate before passing the buffers through the network, then remodulate after for the final denoised render.</p>
+<p>Note that in the functions below, <code>x</code> should represent any arbitrary combined pass.</p>
+<pre><code class="language-python">def demodulate(self, x, albedo):
+    return x / albedo.clamp(min=1e-1)
+</code></pre>
+<pre><code class="language-python">def remodulate(self, x, albedo):
+    return x * albedo.clamp(min=1e-1)
+</code></pre>
+<h3 id="logarithmic-compression">Logarithmic Compression</h3>
+<p>Compression of the combined pass is essential due to the nature of linear HDR images. Because HDR radiance is unbounded, extreme fireflies can dominate the loss, permanently ruining the network's weights. Therefore, we can logarithmically compress the render before passing it through the network to control the large variance of HDR values.</p>
+<p>Note that in the functions below, <code>x</code> should represent any arbitrary combined pass.</p>
+<pre><code class="language-python">def compress(self, x):
+    return torch.log1p(x.clamp(min=0))
+</code></pre>
+<pre><code class="language-python">def decompress(self, x):
+    return torch.expm1(x).clamp(min=0)
+</code></pre>
+<h3 id="depth-normalization">Depth Normalization</h3>
+<p>The raw depth pass outputed by GLPT's path tracer is unnormalized, meaning it represents the raw ray distances to the scene geometry (in arbitrary scene units). Also, the path tracer outputs a -1 depth value for rays missing the scene.</p>
+<p>Because large unbounded values can dominate gradients and destabilize training, we want to normalize the depth buffer; specifically, we want to use the inverse depth convention <span class="arithmatex">\(\frac{1}{d}\)</span>, where <span class="arithmatex">\(d\)</span> represents the depth value. With inverse depth, nearby geometry are mapped to larger values and further away objects are mapped to smaller values.</p>
+<p>Note that in the implementation we add an offset to the denominator to prevent infinities from propagating through the network.</p>
+<pre><code class="language-python">def normalize_depth(self, depth):
+    # Ray misses are set to -1.0 in the path tracer
+    misses = depth == -1.0
+
+    # Inverse depth
+    inv = 1 / (depth.clamp(min=1e-4) + 1e-4)
+    inv[misses] = -1.0
+
+    return inv
+</code></pre>
+<h2 id="forward-pass">Forward Pass</h2>
+<h3 id="padding">Padding</h3>
+<p>Padding the tensors are not optional; padding is required to prevent mismatch errors when concatenating skip connections. We use a default multiple value of 16 because the U-Net downsamples by a factor of <span class="arithmatex">\(2\)</span> four times, and so <span class="arithmatex">\(2^4 = 16\)</span>. We use reflection padding, which fills padded regions with mirrored real content rather than zeros.</p>
+<pre><code class="language-python">def _pad_to_multiple(self, x, multiple=16):
+    _, _, h, w = x.shape
+
+    pad_h = (multiple - (h % multiple)) % multiple
+    pad_w = (multiple - (w % multiple)) % multiple
+
+    if pad_h == 0 and pad_w == 0:
+        return x
+
+    pad = nn.ReflectionPad2d([
+        0, # Left
+        pad_w, # Right
+        0, # Top
+        pad_h, # Bottom
+    ])
+
+    return pad(x)
+</code></pre>
+<h3 id="u-net">U-Net</h3>
+<p>The U-Net architecture is briefly defined in the <a href="../9.2_The_U-Net/">previous section</a>.</p>
+<p>Because we are doing kernel prediction with kernel size of <span class="arithmatex">\(k\)</span>, we want the U-Net to output <span class="arithmatex">\(k^2\)</span> channels. Similarly to Bako et al., we will use a kernel size of <span class="arithmatex">\(k=21\)</span> which is good enough for our use case.</p>
+<h3 id="softmax">Softmax</h3>
+<p>At the end of the forward pass, we apply <code>torch.softmax</code>. This normalizes the <span class="arithmatex">\(k^2\)</span> weights at each pixel to sum to 1 which implicitly enforces energy conservation.</p>
+<pre><code class="language-python">weights = torch.softmax(weights, dim=1)
+</code></pre>
+<h3 id="applying-predicted-kernels">Applying Predicted Kernels</h3>
+<p>After predicting the kernels to denoise the image, we have to actually apply the kernels.</p>
+<p>In the implementation below, we use a nested for loop rather than using <code>torch.nn.unfold</code> to prevent possible memory errors when applying kernels on a large image, especially on the CPU device. Also, padding before applying the kernels is required to allow applying the kernels to edge pixels where there isn't a complete <span class="arithmatex">\(k^2\)</span> neigborhood around them.</p>
+<pre><code class="language-python">def _apply_kernel(self, weights, combined):
+    B, _, H, W = weights.shape
+    K = self.kernel_size
+    pad_size = K // 2
+
+    # Pad for the kernel neighborhood around the edge pixels
+    pad = nn.ReflectionPad2d([pad_size, pad_size, pad_size, pad_size])
+    # (B, 3, H, W) -&gt; # (B, 3, H+2*pad, W+2*pad)
+    padded = pad(combined)
+
+    output = torch.zeros([B, 3, K * K, H, W], device=AI_DEVICE, dtype=torch.float32)
+    # (B, 3, H+2*pad, W+2*pad) -&gt; (B, 3, K*K, H, W)
+    idx = 0
+    for i in range(K):
+        for j in range(K):
+            output[:, :, idx, :, :] = padded[:, :, i:i + H, j:j + W]
+            idx += 1
+
+    # Add batch dimension at index 1
+    # (B, K*K, H, W) -&gt; (B, 1, K*K, H, W)
+    w = weights.unsqueeze(1)
+
+    # Apply weights to the combined image RGB channels
+    return (output * w).sum(dim=2) # (B, 3, H, W)
+</code></pre>
+<h2 id="full-implemention">Full Implemention</h2>
+<p>Below is the full PyTorch implementation of the KPCN class:</p>
+<pre><code class="language-python">class KPCN(nn.Module):
+    def __init__(self, in_channels=10, kernel_size=21):
+        &quot;&quot;&quot;
+        The default in_channels is 10: combined(3) + albedo(3) + normal(3) + depth(1).
+        kernel_size=21 per Bako et al. U-Net output is kernel_size**2 channels: one predicted
+        set of weights based on the neighborhood per pixel.
+        &quot;&quot;&quot;
+
+        super().__init__()
+
+        self.kernel_size = kernel_size
+        self.unet = UNet(in_channels=in_channels, out_channels=kernel_size**2)
+
+    def _pad_to_multiple(self, x, multiple=16):
+        &quot;&quot;&quot;
+        Pads tensors on the right and bottom sides to a multiple to prevent
+        size mismatches when concatenating skip connections. 4 convolution blocks of 2x downsampling need dimensions
+        divisible by 2**4=16.
+        &quot;&quot;&quot;
+
+        _, _, h, w = x.shape
+
+        pad_h = (multiple - (h % multiple)) % multiple
+        pad_w = (multiple - (w % multiple)) % multiple
+
+        if pad_h == 0 and pad_w == 0:
+            return x
+
+        # Use ReflectionPad2d instead zero-padding to preserve more real data at edges
+        pad = nn.ReflectionPad2d([
+            0, # Left
+            pad_w, # Right
+            0, # Top
+            pad_h, # Bottom
+        ])
+
+        return pad(x)
+
+    def forward(self, x, combined):
+        # Original spatial dimensions
+        _, _, h, w = x.shape
+
+        x = self._pad_to_multiple(x)
+        combined = self._pad_to_multiple(combined)
+
+        # (B, K*K, H, W)
+        weights = self.unet(x)
+        # Normalize
+        weights = torch.softmax(weights, dim=1)
+        combined = self._apply_kernel(weights, combined)
+
+        return combined[:, :, :h, :w]
+
+    def _apply_kernel(self, weights, combined):
+        B, _, H, W = weights.shape
+        K = self.kernel_size
+        pad_size = K // 2
+
+        # Pad for the kernel neighborhood around the edge pixels
+        pad = nn.ReflectionPad2d([pad_size, pad_size, pad_size, pad_size])
+        # (B, 3, H, W) -&gt; # (B, 3, H+2*pad, W+2*pad)
+        padded = pad(combined)
+
+        output = torch.zeros([B, 3, K * K, H, W], device=settings.pytorch_device, dtype=torch.float32)
+        # (B, 3, H+2*pad, W+2*pad) -&gt; (B, 3, K*K, H, W)
+        idx = 0
+        for i in range(K):
+            for j in range(K):
+                output[:, :, idx, :, :] = padded[:, :, i:i + H, j:j + W]
+                idx += 1
+
+        # Add batch dimension at index 1
+        # (B, K*K, H, W) -&gt; (B, 1, K*K, H, W)
+        w = weights.unsqueeze(1)
+
+        # Apply weights to the combined image RGB channels
+        return (output * w).sum(dim=2) # (B, 3, H, W)
+
+    def denoise(self, combined, albedo, normal, depth, denoised, direct_emissive):
+        with torch.no_grad():
+            self.eval()
+            # Convert from OpenGL textures to torch tensors
+            combined = self._tex_to_tensor(combined, keep_channels=3) # RGBA -&gt; RGB
+            albedo = self._tex_to_tensor(albedo, keep_channels=3) # RGBA -&gt; RGB
+            normal = self._tex_to_tensor(normal, keep_channels=3) # RGBA -&gt; RGB
+            depth = self._tex_to_tensor(depth, keep_channels=1) # RGBA -&gt; R
+            direct_emissive = self._tex_to_tensor(direct_emissive, keep_channels=3) # RGBA -&gt; RGB
+
+            # Normalize depth via the inverse depth method
+            depth = self.normalize_depth(depth)
+
+            combined = combined - direct_emissive
+            combined = self.demodulate(combined, albedo)
+            combined = self.compress(combined)
+
+            # 10 channels
+            x = torch.cat([combined, albedo, normal, depth], dim=1)
+
+            output = self(x, combined)
+            output = self.decompress(output)
+            output = self.remodulate(output, albedo)
+            output = output + direct_emissive
+            self._tensor_to_tex(output, denoised)
+
+    def _tex_to_tensor(self, tex, keep_channels=None):
+        # bytearray() to copy the original as it is not writable (PyTorch requirement)
+        data = bytearray(tex.read())
+        width, height = tex.size
+        channels = tex.components
+
+        # Create 1d array from the texture data
+        t = torch.frombuffer(data, dtype=torch.float32)
+        # Reshape to OpenGL convention (H, W, C)
+        t = t.reshape(height, width, channels)
+        # Reshape to 3d tensor PyTorch convention (C, H, W)
+        t = t.permute(2, 0, 1).contiguous()
+
+        if keep_channels is not None:
+            t = t[:keep_channels]
+
+        # Add batch dimension at index 0 (C, H, W) -&gt; (1, C, H, W)
+        t = t.unsqueeze(0)
+
+        return t.to(settings.pytorch_device)
+
+    def _tensor_to_tex(self, tensor, denoised_tex):
+        # Reshape to OpenGL texture data (H, W, C)
+        t = tensor.squeeze(0) # Remove batch dimension
+
+        t = t.permute(1, 2, 0).contiguous()
+
+        data = t.cpu().numpy().tobytes()
+        denoised_tex.write(data)
+
+    def compress(self, x):
+        return torch.log1p(x.clamp(min=0))
+
+    def decompress(self, x):
+        return torch.expm1(x).clamp(min=0)
+
+    def normalize_depth(self, depth):
+        # Ray misses are set to -1.0 in the path tracer
+        misses = depth == -1.0
+
+        # Inverse depth
+        inv = 1 / (depth.clamp(min=1e-4) + 1e-4)
+        inv[misses] = -1.0
+
+        return inv
+
+    def demodulate(self, x, albedo):
+        return x / albedo.clamp(min=1e-1)
+
+    def remodulate(self, x, albedo):
+        return x * albedo.clamp(min=1e-1)
+</code></pre>
+<h2 id="sources">Sources</h2>
+<p>S. Bako, T. Vogels, B. McWilliams, M. Meyer, J. Novák, A. Harvill, P. Sen, T. DeRose, and F. Rousselle, "Kernel-predicting convolutional networks for denoising Monte Carlo renderings," ACM Transactions on Graphics, vol. 36, no. 4, Article 97, pp. 1-14, Jul. 2017. https://doi.org/10.1145/3072959.3073708</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../9.2_The_U-Net/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 9.2 The U-Net">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                9.2 The U-Net
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../9.4_Rendering/" class="md-footer__link md-footer__link--next" aria-label="Next: 9.4 Rendering">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                9.4 Rendering
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  Copyright &copy; 2026 GLPT
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": {"navigation.footer": true}, "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
