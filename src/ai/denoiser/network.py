@@ -178,7 +178,7 @@ class KPCN(nn.Module):
         # Apply weights to the combined image RGB channels
         return (output * w).sum(dim=2) # (B, 3, H, W)
 
-    def denoise(self, combined, albedo, normal, depth, denoised):
+    def denoise(self, combined, albedo, normal, depth, denoised, direct_emissive):
         with torch.no_grad():
             self.eval()
             # Convert from OpenGL textures to torch tensors
@@ -186,19 +186,22 @@ class KPCN(nn.Module):
             albedo = self._tex_to_tensor(albedo, keep_channels=3) # RGBA -> RGB
             normal = self._tex_to_tensor(normal, keep_channels=3) # RGBA -> RGB
             depth = self._tex_to_tensor(depth, keep_channels=1) # RGBA -> R
+            direct_emissive = self._tex_to_tensor(direct_emissive, keep_channels=3) # RGBA -> RGB
 
             # Normalize depth via the inverse depth method
             depth = self.normalize_depth(depth)
 
-            combined = self.demodulate(combined, albedo)
-            combined = self.compress(combined)
+            to_denoise = combined - direct_emissive  # NEW
+            to_denoise = self.demodulate(to_denoise, albedo)
+            to_denoise = self.compress(to_denoise)
 
             # 10 channels
-            x = torch.cat([combined, albedo, normal, depth], dim=1)
+            x = torch.cat([to_denoise, albedo, normal, depth], dim=1)
 
             output = self(x, combined)
             output = self.decompress(output)
             output = self.remodulate(output, albedo)
+            output = output + direct_emissive
             self._tensor_to_tex(output, denoised)
     
     def _tex_to_tensor(self, tex, keep_channels=None):
@@ -239,10 +242,13 @@ class KPCN(nn.Module):
 
     def normalize_depth(self, depth):
         # Ray misses are set to -1.0 in the path tracer
-        depth[depth == -1.0] = torch.inf
+        misses = [depth == -1.0]
 
         # Inverse depth
-        return 1 / (depth + 1e-4)
+        inv = 1 / (depth.clamp(min=1e-4) + 1e-4)
+        inv[misses] = -1.0
+
+        return inv
 
     def demodulate(self, x, albedo):
         return x / albedo.clamp(min=1e-1)

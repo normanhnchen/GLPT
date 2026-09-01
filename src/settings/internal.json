@@ -1,9 +1,9 @@
 {
     "ai_training": {
-        "mode": "training",
+        "mode": "off",
         "enable_launcher_buttons": true,
         "training": {
-            "epochs": 300
+            "epochs": 200
         },
         "rendering": {
             "mode": "off",

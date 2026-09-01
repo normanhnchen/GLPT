@@ -21,12 +21,14 @@ class FramebufferState:
         self.albedo = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.normal = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.depth = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
+        self.direct_emissive = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
     
     def _create_saved_buffers(self):
         self.saved_combined = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.saved_albedo = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.saved_normal = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.saved_depth = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
+        self.saved_direct_emissive = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
 
     def _clear_active_buffers(self):
         zeros = np.zeros((*settings.screen.resolution, 4), dtype=f4)
@@ -34,6 +36,7 @@ class FramebufferState:
         self.albedo.write(zeros)
         self.normal.write(zeros)
         self.depth.write(zeros)
+        self.direct_emissive.write(zeros)
 
     def _release_saved_buffers(self):
         if self.saved_combined is not None:
@@ -44,6 +47,8 @@ class FramebufferState:
             self.saved_normal.release()
         if self.saved_depth is not None:
             self.saved_depth.release()
+        if self.saved_direct_emissive is not None:
+            self.saved_direct_emissive.release()
 
     def _release_active_buffers(self):
         if self.combined is not None:
@@ -68,12 +73,14 @@ class FramebufferState:
         self.saved_albedo.write(self.albedo.read())
         self.saved_normal.write(self.normal.read())
         self.saved_depth.write(self.depth.read())
+        self.saved_direct_emissive.write(self.direct_emissive.read())
 
-    def bind_to_images(self, combined_loc=0, albedo_loc=1, normal_loc=2, depth_loc=3):
+    def bind_to_images(self, combined_loc=0, albedo_loc=1, normal_loc=2, depth_loc=3, direct_emissive_loc=4):
         self.combined.bind_to_image(combined_loc, read=True, write=True)
         self.albedo.bind_to_image(albedo_loc, read=True, write=True)
         self.normal.bind_to_image(normal_loc, read=True, write=True)
         self.depth.bind_to_image(depth_loc, read=True, write=True)
+        self.direct_emissive.bind_to_image(direct_emissive_loc, read=True, write=True)
 
     def _get_ndarray(self, buffer):
         data = buffer.read()
@@ -98,6 +105,9 @@ class FramebufferState:
 
     def get_ndarray_depth(self):
         return self._get_ndarray(self.depth)
+
+    def get_ndarray_direct_emissive(self):
+        return self._get_ndarray(self.direct_emissive)
 
 
 class TileState:
@@ -252,6 +262,7 @@ class PTState:
             self.framebuffers.saved_albedo,
             self.framebuffers.saved_normal,
             self.framebuffers.saved_depth,
+            self.framebuffers.saved_direct_emissive
         )
 
 

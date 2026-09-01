@@ -37,6 +37,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
     pathSample.normal = vec3(0.0);
     pathSample.depth = 0.0;
     pathSample.combined = vec3(0.0);
+    pathSample.directEmissive = vec3(0.0);
 
     float prevBsdfPdf = 0.0;
     vec3 prevPoint = vec3(0.0);
@@ -58,6 +59,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
             if (i == 0) {
                 pathSample.depth = -1.0;
+                pathSample.baseCol = vec3(1.0);
             }
 
             // See 7.3 HDRI Sampling
@@ -248,6 +250,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                     /* Add direct contribution */
 
                     directRadiance += throughput * mat.emissive * mat.emissiveStrength;
+                    pathSample.directEmissive += throughput * mat.emissive * mat.emissiveStrength;
                 } else {
                     /*
                      * Add indirect contribution
@@ -452,6 +455,7 @@ void main() {
     vec3 sampleNormal = vec3(0.0);
     float sampleDepth = 0.0;
     float sampleHitCount = 0.0;
+    float sampleDirectEmissive = vec3(0.0);
 
     for (int i = 0; i < samplesPerPixel; i++) {
         // Get random vec3 (range [0, 1])
@@ -496,6 +500,7 @@ void main() {
         sampleCombined += pathSample.combined;
         sampleBaseColor += pathSample.baseCol;
         sampleNormal += pathSample.normal;
+        sampleDirectEmissive += pathSample.directEmissive;
         
         if (pathSample.depth >= 0.0) {
             sampleDepth += pathSample.depth;
@@ -506,6 +511,7 @@ void main() {
     sampleCombined /= float(samplesPerPixel);
     sampleBaseColor /= float(samplesPerPixel);
     sampleNormal /= float(samplesPerPixel);
+    sampleDirectEmissive /= float(samplesPerPixel);
     float sampleHitFraction = sampleHitCount / float(samplesPerPixel);
     // Set the depth to be -1.0 if there were no hits so that the
     // CPU side can correctly normalize the image by ignoring depth < 0.0
@@ -515,6 +521,7 @@ void main() {
     vec3 oldBaseColor = imageLoad(baseColorPass, pixelCoords).rgb;
     vec3 oldNormal = imageLoad(normalPass, pixelCoords).rgb;
     vec2 oldDepth = imageLoad(depthPass, pixelCoords).rg;
+    vec3 oldDirectEmissive = imageLoad(directEmissivePass, pixelCoords).rgb;
 
     float weight = float(samplesPerPixel) / (float(totalSamples + samplesPerPixel));
     
@@ -523,6 +530,7 @@ void main() {
     vec3 finalNormal;
     float finalDepth;
     float finalHitFraction;
+    vec3 finalDirectEmissive;
 
     if (totalSamples == 0) {
         /* Ignore old color */
@@ -532,6 +540,7 @@ void main() {
         finalNormal = sampleNormal;
         finalDepth = sampleDepth;
         finalHitFraction = sampleHitFraction;
+        finalDirectEmissive = sampleDirectEmissive;
     } else {
         /* Progressive accumulation */
 
@@ -539,6 +548,7 @@ void main() {
         finalBaseCol = mix(oldBaseColor.rgb, sampleBaseColor, weight);
         finalNormal = mix(oldNormal.rgb, sampleNormal, weight);
         finalHitFraction = mix(oldDepth.g, sampleHitFraction, weight);
+        finalDirectEmissive = mix(oldDirectEmissive.rgb, sampleDirectEmissive, weight);
 
         float oldHits = oldDepth.g * float(totalSamples);
         float newHits = oldHits + sampleHitCount;

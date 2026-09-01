@@ -351,6 +351,7 @@ class FilePathSettings:
             self.normal_renders = _resolve_folder(self.renders / "normal")
             self.depth_renders = _resolve_folder(self.renders / "depth")
             self.target_renders = _resolve_folder(self.renders / "target")
+            self.direct_emissive_renders = _resolve_folder(self.renders / "direct_emissive")
 
         def _load_user(self):
             self.scenes = _resolve_folder(self.user_config["scenes"])
@@ -361,6 +362,7 @@ class FilePathSettings:
             self.normal_renders = _resolve_folder(self.renders / "normal")
             self.depth_renders = _resolve_folder(self.renders / "depth")
             self.target_renders = _resolve_folder(self.renders / "target")
+            self.direct_emissive_renders = _resolve_folder(self.renders / "direct_emissive")
 
     class Denoiser:
         def __init__(self, internal_config):

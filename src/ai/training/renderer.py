@@ -189,13 +189,6 @@ def run_app():
                     imgui_state.begin_frame()
                     ui_state.settings_window = settings_ui.draw(ui_state.settings_window)
 
-                    # NOTE: Disable blur and DOF since the AI denoiser will process the buffers
-                    # as if the blur and DOF create "new" geometry, causing incorrect results.
-                    camera.blur = 0
-                    camera.dof_enabled = False
-                    camera.aperture = 0
-                    camera_buffer.update_data()
-
                     if settings.ai_training.mode != "camera_setup":
                         if is_first_render and bvh_state.ready:
                             pt_state.start_render()
@@ -213,12 +206,6 @@ def run_app():
 
                             if pt_state.rendering.render_complete:
                                 camera_capture_state.load_next_state()
-
-                                # NOTE: Disable blur and DOF since the AI denoiser will process the buffers
-                                # as if the blur and DOF create "new" geometry, causing incorrect results.
-                                camera.blur = 0
-                                camera.dof_enabled = False
-                                camera.aperture = 0
 
                                 scene.scramble_materials()
                                 scene.hdri.scramble()
