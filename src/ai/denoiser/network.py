@@ -178,7 +178,7 @@ class KPCN(nn.Module):
         # Apply weights to the combined image RGB channels
         return (output * w).sum(dim=2) # (B, 3, H, W)
 
-    def denoise(self, combined, albedo, normal, depth, denoised):
+    def denoise(self, combined, albedo, normal, depth, denoised, direct_emissive):
         with torch.no_grad():
             self.eval()
             # Convert from OpenGL textures to torch tensors
@@ -186,10 +186,12 @@ class KPCN(nn.Module):
             albedo = self._tex_to_tensor(albedo, keep_channels=3) # RGBA -> RGB
             normal = self._tex_to_tensor(normal, keep_channels=3) # RGBA -> RGB
             depth = self._tex_to_tensor(depth, keep_channels=1) # RGBA -> R
+            direct_emissive = self._tex_to_tensor(direct_emissive, keep_channels=3) # RGBA -> RGB
 
             # Normalize depth via the inverse depth method
             depth = self.normalize_depth(depth)
 
+            combined = combined - direct_emissive
             combined = self.demodulate(combined, albedo)
             combined = self.compress(combined)
 
@@ -199,6 +201,7 @@ class KPCN(nn.Module):
             output = self(x, combined)
             output = self.decompress(output)
             output = self.remodulate(output, albedo)
+            output = output + direct_emissive
             self._tensor_to_tex(output, denoised)
     
     def _tex_to_tensor(self, tex, keep_channels=None):
