@@ -191,12 +191,12 @@ class KPCN(nn.Module):
             # Normalize depth via the inverse depth method
             depth = self.normalize_depth(depth)
 
-            to_denoise = combined - direct_emissive  # NEW
-            to_denoise = self.demodulate(to_denoise, albedo)
-            to_denoise = self.compress(to_denoise)
+            combined = combined - direct_emissive
+            combined = self.demodulate(combined, albedo)
+            combined = self.compress(combined)
 
             # 10 channels
-            x = torch.cat([to_denoise, albedo, normal, depth], dim=1)
+            x = torch.cat([combined, albedo, normal, depth], dim=1)
 
             output = self(x, combined)
             output = self.decompress(output)
@@ -242,7 +242,7 @@ class KPCN(nn.Module):
 
     def normalize_depth(self, depth):
         # Ray misses are set to -1.0 in the path tracer
-        misses = [depth == -1.0]
+        misses = depth == -1.0
 
         # Inverse depth
         inv = 1 / (depth.clamp(min=1e-4) + 1e-4)

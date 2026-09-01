@@ -59,6 +59,8 @@ class FramebufferState:
             self.normal.release()
         if self.depth is not None:
             self.depth.release()
+        if self.direct_emissive is not None:
+            self.direct_emissive.release()
     
     def reset(self):
         self._release_active_buffers()
@@ -197,10 +199,10 @@ class DenoiseState:
         if self.saved_denoised is not None:
             self.saved_denoised.release()
 
-    def denoise(self, ai_denoiser, combined, albedo, normal, depth):
+    def denoise(self, ai_denoiser, combined, albedo, normal, depth, direct_emissive):
         if self.saved_denoised is None:
             self.saved_denoised = self.ctx.texture(settings.screen.resolution, 3, dtype=f4)
-            ai_denoiser.denoise(combined, albedo, normal, depth, self.saved_denoised)
+            ai_denoiser.denoise(combined, albedo, normal, depth, self.saved_denoised, direct_emissive)
 
     def reset(self):
         self._release_buffer()

@@ -275,6 +275,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
                     // See 2.3 Firefly Clamping
                     directRadiance += throughput * mat.emissive * mat.emissiveStrength;
+                    pathSample.directEmissive += throughput * mat.emissive * mat.emissiveStrength;
                 } else {
                     /* Add indirect contribution */
 
@@ -455,7 +456,7 @@ void main() {
     vec3 sampleNormal = vec3(0.0);
     float sampleDepth = 0.0;
     float sampleHitCount = 0.0;
-    float sampleDirectEmissive = vec3(0.0);
+    vec3 sampleDirectEmissive = vec3(0.0);
 
     for (int i = 0; i < samplesPerPixel; i++) {
         // Get random vec3 (range [0, 1])
@@ -565,4 +566,5 @@ void main() {
     imageStore(baseColorPass, pixelCoords, vec4(finalBaseCol, 1.0));
     imageStore(normalPass, pixelCoords, vec4(finalNormal, 1.0));
     imageStore(depthPass, pixelCoords, vec4(finalDepth, finalHitFraction, 0.0, 1.0));
+    imageStore(directEmissivePass, pixelCoords, vec4(finalDirectEmissive, 1.0));
 }
