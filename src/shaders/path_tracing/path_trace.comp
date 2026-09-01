@@ -58,6 +58,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
             if (i == 0) {
                 pathSample.depth = -1.0;
+                pathSample.baseCol = vec3(1.0);
             }
 
             // See 7.3 HDRI Sampling

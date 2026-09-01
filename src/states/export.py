@@ -26,7 +26,7 @@ class ExportState:
                 "combined": self.pt_state.framebuffers.get_ndarray_combined(),
                 "albedo": self.pt_state.framebuffers.get_ndarray_albedo(),
                 "normal": self.pt_state.framebuffers.get_ndarray_normal(),
-                "depth": self.pt_state.framebuffers.get_ndarray_depth(),
+                "depth": self.pt_state.framebuffers.get_ndarray_depth()
             }
         
         if self.noisy is not None and total_samples >= settings.path_tracing.max_samples:

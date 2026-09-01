@@ -35,7 +35,7 @@
         },
         "hdri": false,
         "renders": "src\\assets\\renders\\images",
-        "scene": "src\\assets\\models\\glass_test.glb",
+        "scene": "src\\assets\\models\\dragon.glb",
         "scenes": "src\\assets\\models"
     },
     "path_tracing": {

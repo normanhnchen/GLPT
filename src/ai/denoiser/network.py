@@ -239,10 +239,13 @@ class KPCN(nn.Module):
 
     def normalize_depth(self, depth):
         # Ray misses are set to -1.0 in the path tracer
-        depth[depth == -1.0] = torch.inf
+        misses = depth == -1.0
 
         # Inverse depth
-        return 1 / (depth + 1e-4)
+        inv = 1 / (depth.clamp(min=1e-4) + 1e-4)
+        inv[misses] = -1.0
+
+        return inv
 
     def demodulate(self, x, albedo):
         return x / albedo.clamp(min=1e-1)

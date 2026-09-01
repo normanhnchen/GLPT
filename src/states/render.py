@@ -34,6 +34,7 @@ class FramebufferState:
         self.albedo.write(zeros)
         self.normal.write(zeros)
         self.depth.write(zeros)
+        self.direct_emissive.write(zeros)
 
     def _release_saved_buffers(self):
         if self.saved_combined is not None:
@@ -251,7 +252,7 @@ class PTState:
             self.framebuffers.saved_combined,
             self.framebuffers.saved_albedo,
             self.framebuffers.saved_normal,
-            self.framebuffers.saved_depth,
+            self.framebuffers.saved_depth
         )
 
 
