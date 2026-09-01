@@ -15,6 +15,7 @@ class FramebufferState:
         self.saved_albedo = None
         self.saved_normal = None
         self.saved_depth = None
+        self.saved_direct_emissive = None
 
     def _create_active_buffers(self):
         self.combined = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
