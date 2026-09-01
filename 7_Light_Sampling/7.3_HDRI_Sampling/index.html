@@ -1,0 +1,2491 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://github.com/normanhnchen/GLPT/7_Light_Sampling/7.3_HDRI_Sampling/">
+      
+      
+        <link rel="prev" href="../7.2_Shadow_Rays/">
+      
+      
+        <link rel="next" href="../7.4_Power_Sampling/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>7.3 HDRI Sampling - GLPT</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#73-hdri-sampling" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="GLPT" class="md-header__button md-logo" aria-label="GLPT" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            GLPT
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              7.3 HDRI Sampling
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="GLPT" class="md-nav__button md-logo" aria-label="GLPT" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    GLPT
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1 Introduction
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    1 Introduction
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../1_Introduction/1.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../1_Introduction/1.2_Naming_Conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.2 Naming Conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../1_Introduction/1.3_The_Rendering_Equation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.3 The Rendering Equation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2 Basic Utilities
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    2 Basic Utilities
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.2_The_PCG_Hash/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.2 PCG Hash
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.3_Firefly_Clamping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.3 Firefly Clamping
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.4_Ray_Utilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.4 Ray Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.5_Ensuring_Valid_Reflections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.5 Ensuring Valid Reflections
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.6_Uniform_Disk_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.6 Uniform Disk Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2_Basic_Utilities/2.7_Orthonormal_Basis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.7 Orthonormal Basis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3 Primitive Intersection
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    3 Primitive Intersection
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../3_Primitive_Intersection/3.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../3_Primitive_Intersection/3.2_AABB_Testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3.2 AABB Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../3_Primitive_Intersection/3.3_Ray-Triangle_Intersection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3.3 Ray-Triangle Intersection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4 BVH
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    4 BVH
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../4_BVH/4.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../4_BVH/4.2_Construction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4.2 Construction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../4_BVH/4.3_Traversal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4.3 Traversal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../4_BVH/4.4_Debug_Visualization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4.4 Debug Visualization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5 BSDF
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    5 BSDF
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.2_Lambert%27s_Cosine_Law/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.2 Lambert's Cosine Law
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.3_Cosine-Weighted_Hemisphere_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.3 Cosine-Weighted Hemisphere Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.4_Trowbridge-Reitz_GGX/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.4 Trowbridge-Reitz GGX
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.5_Schlick-GGX_Approximation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.5 Schlick-GGX Approximation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.6_Height-Correlated_Smith/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.6 Height-Correlated Smith
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.7_Fresnel-Schlick_Approximation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.7 Fresnel-Schlick Approximation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.8_GGX_VNDF_Importance_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.8 GGX VNDF Importance Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.9_Microfacet_Transmission/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.9 Microfacet Transmission
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.10_Lobe_Selection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.10 Lobe Selection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.11_BSDF_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.11 BSDF Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5_BSDF/5.12_BSDF_Evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.12 BSDF Evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6 Volumetrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    6 Volumetrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../6_Volumetrics/6.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../6_Volumetrics/6.2_Beer-Lambert_Law/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6.2 Beer-Lambert Law
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7 Light Sampling
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    7 Light Sampling
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../7.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../7.2_Shadow_Rays/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.2 Shadow Rays
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.3 HDRI Sampling
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.3 HDRI Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#direct-evaluation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct Evaluation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sampling-the-cdf-distributions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sampling the CDF Distributions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directly-sampling-the-hdri" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Directly Sampling the HDRI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Directly Sampling the HDRI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hdri-pdf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HDRI PDF
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Implementation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../7.4_Power_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.4 Power Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../7.5_Punctual_Lights/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.5 Punctual Lights
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../7.6_Area_Light_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.6 Area Light Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../7.7_Multiple_Importance_Sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7.7 Multiple Importance Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8 Path Tracing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    8 Path Tracing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../8_Path_Tracing/8.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../8_Path_Tracing/8.2_Russian_Roulette/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8.2 Russian Roulette
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../8_Path_Tracing/8.3_The_Path_Integrator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8.3 The Path Integrator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9 AI Denoiser
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    9 AI Denoiser
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../9_AI_Denoiser/9.1_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9.1 Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../9_AI_Denoiser/9.2_The_U-Net/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9.2 The U-Net
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../9_AI_Denoiser/9.3_KPCN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9.3 KPCN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../9_AI_Denoiser/9.4_Rendering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9.4 Rendering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../9_AI_Denoiser/9.5_Training/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9.5 Training
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#direct-evaluation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct Evaluation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sampling-the-cdf-distributions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sampling the CDF Distributions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directly-sampling-the-hdri" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Directly Sampling the HDRI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Directly Sampling the HDRI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hdri-pdf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HDRI PDF
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Implementation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="73-hdri-sampling">7.3 HDRI Sampling</h1>
+<h2 id="direct-evaluation">Direct Evaluation</h2>
+<p>The method below directly samples the HDRI from a given direction by converting from cartesian <span class="arithmatex">\(\rightarrow\)</span> spherical <span class="arithmatex">\(\rightarrow\)</span> <span class="arithmatex">\((u, v)\)</span>.</p>
+<pre><code class="language-glsl">vec3 SampleHdri(vec3 d) {
+    // Convert to spherical coordinates
+    float phi = atan(d.z, d.x);
+    float theta = acos(d.y);
+    // Convert to uv coordinates
+    vec2 uv = vec2(phi / (2.0 * PI) + 0.5, theta / PI);
+    return texture(hdri, uv).rgb;
+}
+</code></pre>
+<h2 id="sampling-the-cdf-distributions">Sampling the CDF Distributions</h2>
+<p>On the CPU side, we build the CDF distribution to importance sample from the HDRI equirectangular map when using NEE, which is then passed to the GPU side with a buffer:</p>
+<pre><code class="language-python">def _build_hdri_distribution(self):
+    img = self.img.astype(np.float64)
+    luminance = img[:, :, 0] * 0.2126 + img[:, :, 1] * 0.7152 + img[:, :, 2] * 0.0722
+
+    # Adjust for equirectangular map spherical distortion
+    theta = (np.arange(self.height) + 0.5) / self.height * np.pi
+    sin_theta = np.sin(theta)[:, None]
+    weighted = luminance * sin_theta
+
+    # Build the CDFs
+    # --------------
+    # Marginal distribution over rows
+    row_sums = weighted.sum(axis=1)
+    row_cdf = np.cumsum(row_sums)
+    row_cdf /= row_cdf[-1]
+
+    # Conditional distribution over column given a row
+    col_cdf = np.cumsum(weighted, axis=1)
+    col_cdf /= col_cdf[:, -1:]
+
+    self.row_cdf = row_cdf.astype(f4)
+    self.col_cdf = col_cdf.astype(f4)
+</code></pre>
+<p>To sample from the the row and column CDFs in the shader,
+we do binary searches to find the row and column cells from a uniform random number.
+We also extract the high and lower bounds of the cell range and the PMF of choosing that cell.</p>
+<p>Since the CDF distribution is defined with a linear slope between each cell, the PMF is the range of the CDF cell.</p>
+<pre><code class="language-glsl">int SampleRowCdf(float Xi, int height, out float rowHigh, out float rowLow, out float rowPmf) {
+    // Binary search to find the correct row
+    int lo = 0, hi = height - 1;
+    while (lo &lt; hi) {
+        int mid = (hi + lo) / 2;
+        float val = texelFetch(hdriRowCdf, ivec2(0, mid), 0).r;
+        if (val &lt; Xi) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    // Use lo as the chosen row index
+    rowHigh = texelFetch(hdriRowCdf, ivec2(0, lo), 0).r;
+    rowLow = lo &gt; 0 ? texelFetch(hdriRowCdf, ivec2(0, lo - 1), 0).r : 0.0;
+    rowPmf = max(rowHigh - rowLow, 1e-8);
+    return lo;
+}
+</code></pre>
+<pre><code class="language-glsl">int SampleColCdf(float Xi, int row, int width, out float colHigh, out float colLow, out float colPmf) {
+    // Binary search to find the correct column
+    int lo = 0, hi = width - 1;
+    while (lo &lt; hi) {
+        int mid = (hi + lo) / 2;
+        float val = texelFetch(hdriColCdf, ivec2(mid, row), 0).r;
+        if (val &lt; Xi) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    colHigh = texelFetch(hdriColCdf, ivec2(lo, row), 0).r;
+    colLow = lo &gt; 0 ? texelFetch(hdriColCdf, ivec2(lo - 1, row), 0).r : 0.0;
+    colPmf = max(colHigh - colLow, 1e-8);
+    return lo;
+}
+</code></pre>
+<h2 id="directly-sampling-the-hdri">Directly Sampling the HDRI</h2>
+<p>Since sampling the CDF distributions only give us an integer position of the column and row,
+it throws away the data of where inside that cell the uniformly generated value sits.
+Thus, we calculate the required offset to map the chosen column and row back to a continuous position, then calculated the uv coordinates to sample the HDRI with:</p>
+<pre><code class="language-glsl">float dv = (Xi.x - rowLow) / rowPmf;
+float du = (Xi.y - colLow) / colPmf;
+
+float u = (float(col) + du) / float(width);
+float v = (float(row) + dv) / float(height);
+</code></pre>
+<h3 id="hdri-pdf">HDRI PDF</h3>
+<p>To find the solid angle HDRI PDF <span class="arithmatex">\(\text{PDF}_{\Omega}(\omega)\)</span>, we must first find the PDF of choosing the sampled continuous <span class="arithmatex">\((u, v)\)</span> coordinates. We can find this PDF, which we call <span class="arithmatex">\(\text{PDF}_{U,V}(u, v)\)</span>, with the following calculations:</p>
+<div class="arithmatex">\[
+\begin{align*}
+\text{PDF}_{U,V}(u, v) &amp;= \dfrac{\text{PMF}(\text{row})\cdot\text{PMF}(\text{col | row})}{\Delta{u}\cdot\Delta{v}} \\
+&amp;= \text{PMF}(\text{row})\cdot\text{PMF}(\text{col | row})\cdot{W}\cdot{H}
+\end{align*}
+\]</div>
+<p>where <span class="arithmatex">\(W\)</span> and <span class="arithmatex">\(H\)</span> represent the respective width and height of the HDRI texture.</p>
+<p>To solve for <span class="arithmatex">\(\text{PDF}_{\Omega}(\omega)\)</span>, we need to note that we need a PDF with respect to solid angle.
+As such, we need to map <span class="arithmatex">\((u, v) \rightarrow (\theta, \phi) \rightarrow \omega\)</span>.
+So,</p>
+<div class="arithmatex">\[
+\text{PDF}_{\Omega}(\omega) =
+\text{PDF}_{\Theta, \Phi}(\theta, \phi) \cdot |J_{\Omega}| =
+\text{PDF}_{U, V}(u, v) \cdot |J_{\Theta, \Phi}| \cdot |J_{\Omega}|
+\]</div>
+<p>Since we define
+<span class="arithmatex">\(\theta = v\pi, \phi = (u-0.5)\cdot{2}\cdot\pi \implies v = \frac{\theta}{\pi}, u = \frac{\phi}{2\pi}+0.5\)</span>,</p>
+<div class="arithmatex">\[
+J_{\Theta, \Phi} =
+\begin{vmatrix}
+\frac{\partial{u}}{\partial{\phi}} &amp; \frac{\partial{u}}{\partial{\theta}} \\
+\frac{\partial{v}}{\partial{\phi}} &amp; \frac{\partial{v}}{\partial{\theta}}
+\end{vmatrix} =
+\begin{vmatrix}
+\frac{1}{2\pi} &amp; 0 \\
+0 &amp; \frac{1}{\pi}
+\end{vmatrix} =
+\dfrac{1}{2\pi} \cdot \dfrac{1}{\pi} - 0\cdot0 =
+\dfrac{1}{2\pi^2}
+\]</div>
+<p>Also, the relationship between solid angle and spherical angles is
+<span class="arithmatex">\(d\omega = \sin{\theta}d\theta d\phi\)</span>. Because probabilistic mass is conserved,</p>
+<div class="arithmatex">\[
+\text{PDF}_{\Theta, \Phi}(\theta, \phi)d\theta d\phi =
+\text{PDF}_{\Omega}(\omega)d\omega =
+\text{PDF}_{\Omega}(\omega)\sin{\theta}d\theta d\phi
+\]</div>
+<p>and so</p>
+<div class="arithmatex">\[
+\text{PDF}_{\Omega}(\omega) = \dfrac{\text{PDF}_{\Theta, \Phi}(\theta, \phi)}{\sin{\theta}} \implies
+J_{\Omega} = \dfrac{1}{\sin{\theta}}
+\]</div>
+<p>Finally, we get</p>
+<div class="arithmatex">\[
+\text{PDF}_{\Omega}(\omega) = \text{PDF}_{U,V}(u,v) \cdot |J_{\Theta, \Phi}| \cdot |J_{\Omega}|
+\]</div>
+<p>For completeness,</p>
+<div class="arithmatex">\[
+\text{PDF}_{\Omega}(\omega) = \text{PMF}(\text{row})\cdot\text{PMF}(\text{col | row})\cdot{W}\cdot{H} \cdot \left| \dfrac{1}{2\pi^2} \right| \cdot \left|\dfrac{1}{\sin{\theta}}\right|
+\]</div>
+<h2 id="full-implementation">Full Implementation</h2>
+<pre><code class="language-glsl">vec3 DirectSampleHdri(inout uvec3 rng, out vec3 d, out float hdriPdf) {
+    ivec2 size = textureSize(hdri, 0);
+    int width = size.x, height = size.y;
+
+    vec3 Xi = Pcg3d(rng);
+
+    float rowHigh, rowLow, rowPmf;
+    int row = SampleRowCdf(Xi.x, height, rowHigh, rowLow, rowPmf);
+    float colHigh, colLow, colPmf;
+    int col = SampleColCdf(Xi.y, row, width, colHigh, colLow, colPmf);
+
+    // Offsets to the row and column column to map it back to a continuous point
+    float dv = (Xi.x - rowLow) / rowPmf;
+    float du = (Xi.y - colLow) / colPmf;
+
+    // Sampled continuous point in ranges [0, 1)
+    float u = (float(col) + du) / float(width);
+    float v = (float(row) + dv) / float(height);
+
+    float theta = v * PI;
+    float phi = (u - 0.5) * 2.0 * PI;
+
+    d = normalize(vec3(
+        sin(theta) * cos(phi),
+        cos(theta),
+        sin(theta) * sin(phi)
+    ));
+
+    float mapPdf = rowPmf * colPmf * float(width) * float(height);
+    float sinTheta = sin(theta);
+    hdriPdf = sinTheta &gt; 0.0 ? mapPdf / (2.0 * PI * PI * sinTheta) : 0.0;
+
+    return texture(hdri, vec2(u, v)).rgb;
+}
+</code></pre>
+<pre><code class="language-glsl">float HdriPdf(vec3 d) {
+    ivec2 size = textureSize(hdri, 0);
+    int width = size.x, height = size.y;
+
+    // Convert to spherical coordinates
+    float phi = atan(d.z, d.x);
+    float theta = acos(d.y);
+    // Convert to uv coordinates
+    vec2 uv = vec2(phi / (2.0 * PI) + 0.5, theta / PI);
+
+    int col = min(int(uv.x * float(width)), width - 1);
+    int row = min(int(uv.y * float(height)), height - 1);
+
+    float rowHigh = texelFetch(hdriRowCdf, ivec2(0, row), 0).r;
+    float rowLow = row &gt; 0 ? texelFetch(hdriRowCdf, ivec2(0, row - 1), 0).r : 0.0;
+    float rowPmf = max(rowHigh - rowLow, 1e-8);
+
+    float colHigh = texelFetch(hdriColCdf, ivec2(col, row), 0).r;
+    float colLow = col &gt; 0 ? texelFetch(hdriColCdf, ivec2(col - 1, row), 0).r : 0.0;
+    float colPmf = max(colHigh - colLow, 1e-8);
+
+    float mapPdf = rowPmf * colPmf * float(width) * float(height);
+    float sinTheta = sin(theta);
+    return sinTheta &gt; 0.0 ? mapPdf / (2.0 * PI * PI * sinTheta) : 0.0;
+}
+</code></pre>
+<h2 id="sources">Sources</h2>
+<p>M. Pharr, W. Jakob, and G. Humphreys, "Sampling light sources," in Physically Based Rendering: From Theory to Implementation, 3rd ed. San Francisco, CA, USA: Morgan Kaufmann, 2016, sec. 14.2. [Online]. Available: https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources#InfiniteAreaLights</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../7.2_Shadow_Rays/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 7.2 Shadow Rays">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                7.2 Shadow Rays
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../7.4_Power_Sampling/" class="md-footer__link md-footer__link--next" aria-label="Next: 7.4 Power Sampling">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                7.4 Power Sampling
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  Copyright &copy; 2026 GLPT
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": {"navigation.footer": true}, "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
