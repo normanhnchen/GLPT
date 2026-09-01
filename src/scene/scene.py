@@ -214,7 +214,7 @@ class Scene:
         q = np.zeros(n, dtype=np.float64)
         alias = np.full(n, -1, dtype=np.int32)
 
-        p[:] = weights / total
+        p[:] = weights / (total + 1e-4)
 
         under = []
         over = []
