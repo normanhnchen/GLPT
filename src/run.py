@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QThread, Signal
 
 from src.settings import settings
-from src.scene.caching import import_model
+from src.scene.caching import import_model, remove_stale_cache
 import src.renderer as renderer
 import src.ai.training.renderer as ai_training_renderer
 import src.ai.training.training as ai_training
@@ -174,7 +174,11 @@ class SceneSelector(QWidget):
 
         self.import_button = QPushButton("Import")
         self.import_button.clicked.connect(self.browse)
-        self.import_button.setFixedWidth(SCENE_SETTINGS_WIDTH)
+        self.import_button.setFixedWidth(SCENE_SETTINGS_WIDTH // 2)
+
+        self.delete_button = QPushButton("Delete")
+        self.delete_button.clicked.connect(self.delete_selected)
+        self.delete_button.setFixedWidth(SCENE_SETTINGS_WIDTH // 2)
 
         self.existing_combo = QComboBox()
         self.existing_combo.setFixedWidth(SCENE_SETTINGS_WIDTH)
@@ -182,6 +186,7 @@ class SceneSelector(QWidget):
 
         self.box_layout.addWidget(self.existing_combo)
         self.box_layout.addWidget(self.import_button)
+        self.box_layout.addWidget(self.delete_button)
 
         self.main_layout.addWidget(self.label)
         self.main_layout.addLayout(self.box_layout)
@@ -220,6 +225,17 @@ class SceneSelector(QWidget):
             self.refresh_existing()
             self.select_path(dst_path)
 
+    def delete_selected(self):
+        idx = self.existing_combo.currentIndex()
+        path = self.existing_combo.itemData(idx)
+        
+        if path is not None and path.exists():
+            path.unlink() # Delete the file
+            self.selected_path = None
+            self.refresh_existing()
+            remove_stale_cache()
+            
+
 
 class HDRISelector(QWidget):
     def __init__(self, label):
@@ -237,7 +253,11 @@ class HDRISelector(QWidget):
 
         self.import_button = QPushButton("Import")
         self.import_button.clicked.connect(self.browse)
-        self.import_button.setFixedWidth(SCENE_SETTINGS_WIDTH)
+        self.import_button.setFixedWidth(SCENE_SETTINGS_WIDTH // 2)
+
+        self.delete_button = QPushButton("Delete")
+        self.delete_button.clicked.connect(self.delete_selected)
+        self.delete_button.setFixedWidth(SCENE_SETTINGS_WIDTH // 2)
 
         self.existing_combo = QComboBox()
         self.existing_combo.setFixedWidth(SCENE_SETTINGS_WIDTH)
@@ -245,6 +265,7 @@ class HDRISelector(QWidget):
 
         self.box_layout.addWidget(self.existing_combo)
         self.box_layout.addWidget(self.import_button)
+        self.box_layout.addWidget(self.delete_button)
 
         self.main_layout.addWidget(self.label)
         self.main_layout.addLayout(self.box_layout)
@@ -286,6 +307,15 @@ class HDRISelector(QWidget):
             self.selected_path = dst_path
             self.refresh_existing()
             self.select_path(dst_path)
+
+    def delete_selected(self):
+        idx = self.existing_combo.currentIndex()
+        path = self.existing_combo.itemData(idx)
+        
+        if path is not None and path != NO_HDRI and path.exists():
+            path.unlink() # Delete the file
+            self.selected_path = None
+            self.refresh_existing()
 
 
 class SettingsDialog(QDialog):
