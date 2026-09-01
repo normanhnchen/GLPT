@@ -104,7 +104,6 @@ class DenoiseDataset(Dataset):
         self.normal_path = renders_path / "normal/"
         self.depth_path = renders_path / "depth/"
         self.target_path = renders_path / "target/"
-        self.direct_emissive_path = renders_path / "direct_emissive/"
 
         self.num_samples = sum(1 for item in self.combined_path.iterdir() if item.is_file())
         self.patch_size = patch_size
@@ -122,7 +121,6 @@ class DenoiseDataset(Dataset):
         normal = load_exr(self.normal_path / f"normal_{idx}.exr")
         depth = load_exr(self.depth_path / f"depth_{idx}.exr")
         target = load_exr(self.target_path / f"target_{idx}.exr")
-        direct_emissive = load_exr(self.direct_emissive_path / f"direct_emissive_{idx}.exr")
 
         # Convert EXR images to PyTorch tensors
         # -------------------------------------
@@ -131,12 +129,11 @@ class DenoiseDataset(Dataset):
         normal = exr_to_tensor(normal, keep_channels=3)
         depth = exr_to_tensor(depth, keep_channels=1)
         target = exr_to_tensor(target, keep_channels=3)
-        direct_emissive = exr_to_tensor(direct_emissive, keep_channels=3)
 
         # Normalize depth via the inverse depth method
         depth = denoiser.normalize_depth(depth)
 
-        x = torch.cat([combined, albedo, normal, depth, direct_emissive])
+        x = torch.cat([combined, albedo, normal, depth])
 
         if self.is_validation:
             x_patches = []
@@ -193,10 +190,6 @@ def _preprocess(x, target):
     albedo = x[:, 3:6]
     normal = x[:, 6:9]
     depth = x[:, 9:10]
-    direct_emissive = x[:, 10:13]
-
-    combined = combined - direct_emissive
-    target = target - direct_emissive
 
     combined = denoiser.demodulate(combined, albedo)
     target = denoiser.demodulate(target, albedo)

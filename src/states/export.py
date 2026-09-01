@@ -74,7 +74,6 @@ class ExportState:
         albedo_array = noisy["albedo"]
         normal_array = noisy["normal"]
         depth_array = noisy["depth"]
-        direct_emissive_array = noisy["direct_emissive"]
         
         # Flip image vertically
         # OpenGL is bottom-up, EXR is top-down
@@ -82,26 +81,22 @@ class ExportState:
         albedo_array = np.flipud(albedo_array)
         normal_array = np.flipud(normal_array)
         depth_array = np.flipud(depth_array)
-        direct_emissive_array = np.flipud(direct_emissive_array)
         
         combined_dir = Path(settings.file_paths.ai_training.combined_renders)
         albedo_dir = Path(settings.file_paths.ai_training.albedo_renders)
         normal_dir = Path(settings.file_paths.ai_training.normal_renders)
         depth_dir = Path(settings.file_paths.ai_training.depth_renders)
-        direct_emissive_dir = Path(settings.file_paths.ai_training.direct_emissive_renders)
 
         combined_path = self._get_next_exr_path(combined_dir, "combined")
         albedo_path = self._get_next_exr_path(albedo_dir, "albedo")
         normal_path = self._get_next_exr_path(normal_dir, "normal")
         depth_path = self._get_next_exr_path(depth_dir, "depth")
-        direct_emissive_path = self._get_next_exr_path(direct_emissive_dir, "direct_emissive")
 
         # Save to .exr files
         self._export_exr(combined_path, combined_array)
         self._export_exr(albedo_path, albedo_array)
         self._export_exr(normal_path, normal_array)
         self._export_exr(depth_path, depth_array)
-        self._export_exr(direct_emissive_path, direct_emissive_array)
     
     def _export_training_target(self, target):
         target_array = target

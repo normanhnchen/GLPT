@@ -161,7 +161,6 @@ struct PathSample {
     float depth;
     float metallic;
     float roughness;
-    vec3 directEmissive;
 };
 
 struct AabbHit {

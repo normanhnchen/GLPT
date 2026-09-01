@@ -15,21 +15,18 @@ class FramebufferState:
         self.saved_albedo = None
         self.saved_normal = None
         self.saved_depth = None
-        self.saved_direct_emissive = None
 
     def _create_active_buffers(self):
         self.combined = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.albedo = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.normal = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.depth = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
-        self.direct_emissive = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
     
     def _create_saved_buffers(self):
         self.saved_combined = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.saved_albedo = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.saved_normal = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.saved_depth = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
-        self.saved_direct_emissive = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
 
     def _clear_active_buffers(self):
         zeros = np.zeros((*settings.screen.resolution, 4), dtype=f4)
@@ -47,8 +44,6 @@ class FramebufferState:
             self.saved_normal.release()
         if self.saved_depth is not None:
             self.saved_depth.release()
-        if self.saved_direct_emissive is not None:
-            self.saved_direct_emissive.release()
 
     def _release_active_buffers(self):
         if self.combined is not None:
@@ -59,8 +54,6 @@ class FramebufferState:
             self.normal.release()
         if self.depth is not None:
             self.depth.release()
-        if self.direct_emissive is not None:
-            self.direct_emissive.release()
     
     def reset(self):
         self._release_active_buffers()
@@ -75,14 +68,12 @@ class FramebufferState:
         self.saved_albedo.write(self.albedo.read())
         self.saved_normal.write(self.normal.read())
         self.saved_depth.write(self.depth.read())
-        self.saved_direct_emissive.write(self.direct_emissive.read())
 
-    def bind_to_images(self, combined_loc=0, albedo_loc=1, normal_loc=2, depth_loc=3, direct_emissive_loc=4):
+    def bind_to_images(self, combined_loc=0, albedo_loc=1, normal_loc=2, depth_loc=3):
         self.combined.bind_to_image(combined_loc, read=True, write=True)
         self.albedo.bind_to_image(albedo_loc, read=True, write=True)
         self.normal.bind_to_image(normal_loc, read=True, write=True)
         self.depth.bind_to_image(depth_loc, read=True, write=True)
-        self.direct_emissive.bind_to_image(direct_emissive_loc, read=True, write=True)
 
     def _get_ndarray(self, buffer):
         data = buffer.read()
@@ -107,9 +98,6 @@ class FramebufferState:
 
     def get_ndarray_depth(self):
         return self._get_ndarray(self.depth)
-
-    def get_ndarray_direct_emissive(self):
-        return self._get_ndarray(self.direct_emissive)
 
 
 class TileState:
@@ -199,10 +187,10 @@ class DenoiseState:
         if self.saved_denoised is not None:
             self.saved_denoised.release()
 
-    def denoise(self, ai_denoiser, combined, albedo, normal, depth, direct_emissive):
+    def denoise(self, ai_denoiser, combined, albedo, normal, depth):
         if self.saved_denoised is None:
             self.saved_denoised = self.ctx.texture(settings.screen.resolution, 3, dtype=f4)
-            ai_denoiser.denoise(combined, albedo, normal, depth, self.saved_denoised, direct_emissive)
+            ai_denoiser.denoise(combined, albedo, normal, depth, self.saved_denoised)
 
     def reset(self):
         self._release_buffer()

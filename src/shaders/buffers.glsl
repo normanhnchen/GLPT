@@ -9,7 +9,6 @@ layout(rgba32f, binding = 0) uniform image2D combinedPass;
 layout(rgba32f, binding = 1) uniform image2D baseColorPass;
 layout(rgba32f, binding = 2) uniform image2D normalPass;
 layout(rgba32f, binding = 3) uniform image2D depthPass;
-layout(rgba32f, binding = 4) uniform image2D directEmissivePass;
 
 layout(std430, binding = 0) buffer CameraBuffer {
     vec3 pos;
