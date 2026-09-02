@@ -13,15 +13,25 @@ class PathTracingPipeline:
         self.depth_debug_pass = DepthDebugPass(pt_state)
         self.bvh_bounds_debug_pass = BVHBoundsDebugPass(ctx, scene, camera, pt_shaders.bvh_bounds_debug)
         self.final_pass = FinalPass(ctx, pt_shaders.final, pt_state, final_output_state)
+        self.combined_fbo = ctx.framebuffer(color_attachments=[pt_state.framebuffers.combined])
 
     def render(self):
         # BVH Bounds
         if self.pt_state.debug.mode == 10:
-            # Don't render path tracing since this mode runs through a separate shader
+            # Don't render path tracing (self.pt_pass) since this mode runs through a separate shader
+
+            # Create FBO to render to the combined texture
+            combined_fbo = self.ctx.framebuffer(
+                color_attachments=[self.pt_state.framebuffers.combined]
+            )
+            combined_fbo.use()
+            combined_fbo.clear(0.0, 0.0, 0.0, 1.0)
             self.bvh_bounds_debug_pass.render()
-            self.ctx.screen.use()
+            combined_fbo.release()
+
+            self.final_pass.render()
             return
-        
+                
         is_denoising = (
             self.pt_state.denoising.should_denoise and
             self.ai_denoiser is not None and

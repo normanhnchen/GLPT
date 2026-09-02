@@ -192,7 +192,7 @@ def main():
 
 def update_stats(glfw_window, pt_state, bvh_state, fps, samples, render_complete):
     # BVH Bounds
-    if pt_state.debug.mode == 7:
+    if pt_state.debug.mode == 10:
         # This mode runs through a rasterizer so don't display samples
         glfw_window.set_title(f"FPS: {fps:.2f}")
 
