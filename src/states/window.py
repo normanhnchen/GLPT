@@ -133,7 +133,7 @@ class InputState:
 
 class UIState:
     def __init__(self):
-        self.settings_window = False
+        self.settings_window = True
 
     def toggle_settings(self):
         self.settings_window = not self.settings_window

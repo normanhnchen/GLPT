@@ -1174,6 +1174,26 @@ class ExportUI:
         self.export_button.button(on_change)
 
 
+class ControlsUI:
+    BINDINGS = [
+        ("W", "Move forward"),
+        ("S", "Move backward"),
+        ("A", "Move left"),
+        ("D", "Move right"),
+        ("Space", "Move up"),
+        ("Shift", "Move down"),
+        ("Middle Mouse (drag)", "Look around"),
+        ("Scroll Wheel", "Zoom"),
+        ("Esc", "Toggle Settings panel"),
+    ]
+
+    def draw(self):
+        for key, description in self.BINDINGS:
+            imgui.text_colored((0.49, 0.64, 0.80, 1.0), key)
+            imgui.same_line(180)
+            imgui.text(description)
+
+
 class SettingsUI:
     def __init__(self,
             scene,
@@ -1204,6 +1224,7 @@ class SettingsUI:
         self.scene_ui = SceneUI(scene_state)
         self.camera_capturing_ui = CameraCapturingUI(pt_state, scene_state, camera_capture_state)
         self.export_ui = ExportUI(export_state)
+        self.controls_ui = ControlsUI()
 
         self.reset_all_button = Button("Reset All Settings")
         self.save_settings_button = Button("Save Current Settings")
@@ -1334,6 +1355,9 @@ class SettingsUI:
     def draw_export_ui(self):
         self.export_ui.draw_export_button()
 
+    def draw_controls_ui(self):
+        self.controls_ui.draw()
+
     def draw_ai_training_ui(self):
         self.draw_scene_ui()
         self.draw_camera_capturing_ui()
@@ -1379,6 +1403,12 @@ class SettingsUI:
 
         imgui.set_next_window_size((600, 600))
         is_expand, settings_window = imgui.begin("Settings", settings_window)
+
+        if is_expand:
+            if imgui.tree_node("Controls"):
+                self.draw_controls_ui()
+                
+                imgui.tree_pop()
 
         if settings.ai_training.mode == "off":
             if is_expand:
