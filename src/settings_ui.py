@@ -1207,6 +1207,9 @@ class SettingsUI:
 
         self.reset_all_button = Button("Reset All Settings")
         self.save_settings_button = Button("Save Current Settings")
+        self.return_to_launcher_button = Button("Return to Launcher")
+
+        self.should_return_to_launcher = False
 
     def draw_rendering_ui(self,
             allow_start=True,
@@ -1364,6 +1367,12 @@ class SettingsUI:
 
         self.save_settings_button.button(on_change, enabled=is_settings_changed)
 
+    def draw_return_to_launcher_button(self):
+        def on_change():
+            self.should_return_to_launcher = True
+
+        self.return_to_launcher_button.button(on_change)
+
     def draw(self, settings_window):
         if not settings_window:
             return settings_window
@@ -1485,6 +1494,7 @@ class SettingsUI:
 
         self.draw_reset_all_button()
         self.draw_save_settings_button()
+        self.draw_return_to_launcher_button()
         
         imgui.end()
 

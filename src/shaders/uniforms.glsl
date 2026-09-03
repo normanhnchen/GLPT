@@ -41,6 +41,7 @@ uniform int backfaceCulling;
 
 uniform float maxDirectLuminance;
 uniform float maxIndirectLuminance;
+uniform float maxBsdfLuminance;
 
 
 /* final.fs */

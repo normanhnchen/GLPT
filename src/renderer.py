@@ -132,6 +132,9 @@ def run_app(scene, ai_denoiser, camera, buffers):
 
     # Render loop
     while not glfw_window.should_close():
+        if settings_ui.should_return_to_launcher:
+            break
+
         frame_stats.track()
 
         if glfw_window.is_minimized:
@@ -183,6 +186,8 @@ def run_app(scene, ai_denoiser, camera, buffers):
     
     imgui_state.shutdown()
     glfw_window.shutdown()
+
+    return settings_ui.should_return_to_launcher
 
 
 def main():

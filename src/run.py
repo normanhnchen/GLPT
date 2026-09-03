@@ -597,20 +597,30 @@ def main():
     app = QApplication(sys.argv)
     app.setStyleSheet(APP_STYLESHEET)
 
-    launcher = Launcher()
-    launcher.show()
+    while True:
+        launcher = Launcher()
+        launcher.show()
 
-    app.exec()
+        app.exec()
+        
+        if launcher.pending_run_data is not None:
+            scene, ai_denoiser, camera, buffers = launcher.pending_run_data
+            return_to_launcher = renderer.run_app(scene, ai_denoiser, camera, buffers)
 
-    if launcher.pending_run_data is not None:
-        scene, ai_denoiser, camera, buffers = launcher.pending_run_data
-        renderer.run_app(scene, ai_denoiser, camera, buffers)
+            if return_to_launcher:
+                continue
+            break
 
-    elif settings.ai_training.mode == "training":
-        ai_training.run_app()
-    
-    elif settings.ai_training.mode == "camera_setup" or settings.ai_training.mode == "render":
-        ai_training_renderer.run_app()
+        elif settings.ai_training.mode == "training":
+            ai_training.run_app()
+            break
+        
+        elif settings.ai_training.mode == "camera_setup" or settings.ai_training.mode == "render":
+            ai_training_renderer.run_app()
+            break
+
+        else:
+            break
 
 
 if __name__ == "__main__":

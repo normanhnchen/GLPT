@@ -9,7 +9,7 @@
             "mode": "off",
             "target_samples": 4096,
             "noisy_samples_list": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-            "num_pass_throughs": 1
+            "num_pass_throughs": 2
         }
     },
     "bvh": {
@@ -109,6 +109,7 @@
         "geometry_mode": 0,
         "max_direct_luminance": 10.0,
         "max_indirect_luminance": 10.0,
+        "max_bsdf_luminance": 10.0,
         "max_samples": 4096,
         "mis_mode": 0,
         "samples_per_pixel": 1,
