@@ -39,7 +39,8 @@ def _compute_uniforms(scene, camera, pt_state):
         "backfaceCulling": set_i4(1) if settings.path_tracing.backface_culling else set_i4(0),
 
         "maxDirectLuminance": set_f4(settings.path_tracing.max_direct_luminance),
-        "maxIndirectLuminance": set_f4(settings.path_tracing.max_indirect_luminance)
+        "maxIndirectLuminance": set_f4(settings.path_tracing.max_indirect_luminance),
+        "maxBsdfLuminance": set_f4(settings.path_tracing.max_bsdf_luminance)
     }
 
 

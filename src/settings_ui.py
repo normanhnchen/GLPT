@@ -943,6 +943,7 @@ class DebugUI:
 
         self.max_direct_luminance_slider = FloatSlider(0, 1000, "Max Direct Luminance", slider_speed=0.1, increment=0.1)
         self.max_indirect_luminance_slider = FloatSlider(0, 1000, "Max Indirect Luminance", slider_speed=0.1, increment=0.1)
+        self.max_bsdf_luminance_slider = FloatSlider(0, 1000, "Max BSDF Luminance", slider_speed=0.1, increment=0.1)
 
     def _get_max_idx(self):
         """
@@ -1072,6 +1073,18 @@ class DebugUI:
         self.max_indirect_luminance_slider.minus_button(on_change)
         self.max_indirect_luminance_slider.plus_button(on_change)
         self.max_indirect_luminance_slider.draw_label()
+
+    def draw_max_bsdf_luminance_slider(self):
+        def on_change(new_val):
+            settings.path_tracing.max_bsdf_luminance = new_val
+            self.pt_state.restart_render()
+            settings_changed()
+
+        self.max_bsdf_luminance_slider.slider(settings.path_tracing.max_bsdf_luminance)
+        self.max_bsdf_luminance_slider.dragging_logic(on_change)
+        self.max_bsdf_luminance_slider.minus_button(on_change)
+        self.max_bsdf_luminance_slider.plus_button(on_change)
+        self.max_bsdf_luminance_slider.draw_label()
 
     def draw_reset_debug_button(self):
         def on_change():
@@ -1339,6 +1352,7 @@ class SettingsUI:
 
         self.debug_ui.draw_max_direct_luminance_slider()
         self.debug_ui.draw_max_indirect_luminance_slider()
+        self.debug_ui.draw_max_bsdf_luminance_slider()
 
         self.debug_ui.draw_reset_debug_button()
     

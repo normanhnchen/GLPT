@@ -128,6 +128,7 @@ class PathTracingSettings:
 
         self.max_direct_luminance = self.internal_config["max_direct_luminance"]
         self.max_indirect_luminance = self.internal_config["max_indirect_luminance"]
+        self.max_bsdf_luminance = self.internal_config["max_bsdf_luminance"]
 
         self.default_hdri_color = self.internal_config["default_hdri_color"]
 
@@ -149,6 +150,7 @@ class PathTracingSettings:
 
         self.max_direct_luminance = self.user_config["max_direct_luminance"]
         self.max_indirect_luminance = self.user_config["max_indirect_luminance"]
+        self.max_bsdf_luminance = self.user_config["max_bsdf_luminance"]
 
     def reset(self):
         self._load_internal()
