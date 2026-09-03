@@ -980,7 +980,7 @@ class DebugUI:
     def draw_bvh_color_mode_cycle_button(self):
         options = [
             "Depth-Based",
-            "Node-Based"
+            "Angle-Based"
         ]
 
         def on_change(new_val):
@@ -1305,7 +1305,7 @@ class SettingsUI:
         self.debug_ui.draw_debug_mode_dropdown()
 
         # BVH Bounds
-        if self.pt_state.debug.mode == 7:
+        if self.pt_state.debug.mode == 10:
             if self.debug_ui.scene.bvh is None:
                 imgui.text_disabled("BVH is still building...")
             else:
