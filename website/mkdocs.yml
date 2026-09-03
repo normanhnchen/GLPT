@@ -11,61 +11,64 @@ docs_dir: ../docs
 
 nav:
   - Home: index.md
-  - 1 Introduction:
-    - 1.1 Overview: 1_Introduction/1.1_Overview.md
-    - 1.2 Naming Conventions: 1_Introduction/1.2_Naming_Conventions.md
-    - 1.3 The Rendering Equation: 1_Introduction/1.3_The_Rendering_Equation.md
-  - 2 Basic Utilities:
-    - 2.1 Overview: 2_Basic_Utilities/2.1_Overview.md
-    - 2.2 PCG Hash: 2_Basic_Utilities/2.2_The_PCG_Hash.md
-    - 2.3 Firefly Clamping: 2_Basic_Utilities/2.3_Firefly_Clamping.md
-    - 2.4 Ray Utilities: 2_Basic_Utilities/2.4_Ray_Utilities.md
-    - 2.5 Ensuring Valid Reflections: 2_Basic_Utilities/2.5_Ensuring_Valid_Reflections.md
-    - 2.6 Uniform Disk Sampling: 2_Basic_Utilities/2.6_Uniform_Disk_Sampling.md
-    - 2.7 Orthonormal Basis: 2_Basic_Utilities/2.7_Orthonormal_Basis.md
-  - 3 Primitive Intersection:
-    - 3.1 Overview: 3_Primitive_Intersection/3.1_Overview.md
-    - 3.2 AABB Testing: 3_Primitive_Intersection/3.2_AABB_Testing.md
-    - 3.3 Ray-Triangle Intersection: 3_Primitive_Intersection/3.3_Ray-Triangle_Intersection.md
-  - 4 BVH:
-    - 4.1 Overview: 4_BVH/4.1_Overview.md
-    - 4.2 Construction: 4_BVH/4.2_Construction.md
-    - 4.3 Traversal: 4_BVH/4.3_Traversal.md
-    - 4.4 Debug Visualization: 4_BVH/4.4_Debug_Visualization.md
-  - 5 BSDF:
-    - 5.1 Overview: 5_BSDF/5.1_Overview.md
-    - 5.2 Lambert's Cosine Law: 5_BSDF/5.2_Lambert's_Cosine_Law.md
-    - 5.3 Cosine-Weighted Hemisphere Sampling: 5_BSDF/5.3_Cosine-Weighted_Hemisphere_Sampling.md
-    - 5.4 Trowbridge-Reitz GGX: 5_BSDF/5.4_Trowbridge-Reitz_GGX.md
-    - 5.5 Schlick-GGX Approximation: 5_BSDF/5.5_Schlick-GGX_Approximation.md
-    - 5.6 Height-Correlated Smith: 5_BSDF/5.6_Height-Correlated_Smith.md
-    - 5.7 Fresnel-Schlick Approximation: 5_BSDF/5.7_Fresnel-Schlick_Approximation.md
-    - 5.8 GGX VNDF Importance Sampling: 5_BSDF/5.8_GGX_VNDF_Importance_Sampling.md
-    - 5.9 Microfacet Transmission: 5_BSDF/5.9_Microfacet_Transmission.md
-    - 5.10 Lobe Selection: 5_BSDF/5.10_Lobe_Selection.md
-    - 5.11 BSDF Sampling: 5_BSDF/5.11_BSDF_Sampling.md
-    - 5.12 BSDF Evaluation: 5_BSDF/5.12_BSDF_Evaluation.md
-  - 6 Volumetrics:
-    - 6.1 Overview: 6_Volumetrics/6.1_Overview.md
-    - 6.2 Beer-Lambert Law: 6_Volumetrics/6.2_Beer-Lambert_Law.md
-  - 7 Light Sampling:
-    - 7.1 Overview: 7_Light_Sampling/7.1_Overview.md
-    - 7.2 Shadow Rays: 7_Light_Sampling/7.2_Shadow_Rays.md
-    - 7.3 HDRI Sampling: 7_Light_Sampling/7.3_HDRI_Sampling.md
-    - 7.4 Power Sampling: 7_Light_Sampling/7.4_Power_Sampling.md
-    - 7.5 Punctual Lights: 7_Light_Sampling/7.5_Punctual_Lights.md
-    - 7.6 Area Light Sampling: 7_Light_Sampling/7.6_Area_Light_Sampling.md
-    - 7.7 Multiple Importance Sampling: 7_Light_Sampling/7.7_Multiple_Importance_Sampling.md
-  - 8 Path Tracing:
-    - 8.1 Overview: 8_Path_Tracing/8.1_Overview.md
-    - 8.2 Russian Roulette: 8_Path_Tracing/8.2_Russian_Roulette.md
-    - 8.3 The Path Integrator: 8_Path_Tracing/8.3_The_Path_Integrator.md
-  - 9 AI Denoiser:
-    - 9.1 Overview: 9_AI_Denoiser/9.1_Overview.md
-    - 9.2 The U-Net: 9_AI_Denoiser/9.2_The_U-Net.md
-    - 9.3 KPCN: 9_AI_Denoiser/9.3_KPCN.md
-    - 9.4 Rendering: 9_AI_Denoiser/9.4_Rendering.md
-    - 9.5 Training: 9_AI_Denoiser/9.5_Training.md
+  - Gallery: gallery.md
+  - Documentation:
+    - Getting Started: getting_started.md
+    - 1 Introduction:
+      - 1.1 Overview: 1_Introduction/1.1_Overview.md
+      - 1.2 Naming Conventions: 1_Introduction/1.2_Naming_Conventions.md
+      - 1.3 The Rendering Equation: 1_Introduction/1.3_The_Rendering_Equation.md
+    - 2 Basic Utilities:
+      - 2.1 Overview: 2_Basic_Utilities/2.1_Overview.md
+      - 2.2 PCG Hash: 2_Basic_Utilities/2.2_The_PCG_Hash.md
+      - 2.3 Firefly Clamping: 2_Basic_Utilities/2.3_Firefly_Clamping.md
+      - 2.4 Ray Utilities: 2_Basic_Utilities/2.4_Ray_Utilities.md
+      - 2.5 Ensuring Valid Reflections: 2_Basic_Utilities/2.5_Ensuring_Valid_Reflections.md
+      - 2.6 Uniform Disk Sampling: 2_Basic_Utilities/2.6_Uniform_Disk_Sampling.md
+      - 2.7 Orthonormal Basis: 2_Basic_Utilities/2.7_Orthonormal_Basis.md
+    - 3 Primitive Intersection:
+      - 3.1 Overview: 3_Primitive_Intersection/3.1_Overview.md
+      - 3.2 AABB Testing: 3_Primitive_Intersection/3.2_AABB_Testing.md
+      - 3.3 Ray-Triangle Intersection: 3_Primitive_Intersection/3.3_Ray-Triangle_Intersection.md
+    - 4 BVH:
+      - 4.1 Overview: 4_BVH/4.1_Overview.md
+      - 4.2 Construction: 4_BVH/4.2_Construction.md
+      - 4.3 Traversal: 4_BVH/4.3_Traversal.md
+      - 4.4 Debug Visualization: 4_BVH/4.4_Debug_Visualization.md
+    - 5 BSDF:
+      - 5.1 Overview: 5_BSDF/5.1_Overview.md
+      - 5.2 Lambert's Cosine Law: 5_BSDF/5.2_Lambert's_Cosine_Law.md
+      - 5.3 Cosine-Weighted Hemisphere Sampling: 5_BSDF/5.3_Cosine-Weighted_Hemisphere_Sampling.md
+      - 5.4 Trowbridge-Reitz GGX: 5_BSDF/5.4_Trowbridge-Reitz_GGX.md
+      - 5.5 Schlick-GGX Approximation: 5_BSDF/5.5_Schlick-GGX_Approximation.md
+      - 5.6 Height-Correlated Smith: 5_BSDF/5.6_Height-Correlated_Smith.md
+      - 5.7 Fresnel-Schlick Approximation: 5_BSDF/5.7_Fresnel-Schlick_Approximation.md
+      - 5.8 GGX VNDF Importance Sampling: 5_BSDF/5.8_GGX_VNDF_Importance_Sampling.md
+      - 5.9 Microfacet Transmission: 5_BSDF/5.9_Microfacet_Transmission.md
+      - 5.10 Lobe Selection: 5_BSDF/5.10_Lobe_Selection.md
+      - 5.11 BSDF Sampling: 5_BSDF/5.11_BSDF_Sampling.md
+      - 5.12 BSDF Evaluation: 5_BSDF/5.12_BSDF_Evaluation.md
+    - 6 Volumetrics:
+      - 6.1 Overview: 6_Volumetrics/6.1_Overview.md
+      - 6.2 Beer-Lambert Law: 6_Volumetrics/6.2_Beer-Lambert_Law.md
+    - 7 Light Sampling:
+      - 7.1 Overview: 7_Light_Sampling/7.1_Overview.md
+      - 7.2 Shadow Rays: 7_Light_Sampling/7.2_Shadow_Rays.md
+      - 7.3 HDRI Sampling: 7_Light_Sampling/7.3_HDRI_Sampling.md
+      - 7.4 Power Sampling: 7_Light_Sampling/7.4_Power_Sampling.md
+      - 7.5 Punctual Lights: 7_Light_Sampling/7.5_Punctual_Lights.md
+      - 7.6 Area Light Sampling: 7_Light_Sampling/7.6_Area_Light_Sampling.md
+      - 7.7 Multiple Importance Sampling: 7_Light_Sampling/7.7_Multiple_Importance_Sampling.md
+    - 8 Path Tracing:
+      - 8.1 Overview: 8_Path_Tracing/8.1_Overview.md
+      - 8.2 Russian Roulette: 8_Path_Tracing/8.2_Russian_Roulette.md
+      - 8.3 The Path Integrator: 8_Path_Tracing/8.3_The_Path_Integrator.md
+    - 9 AI Denoiser:
+      - 9.1 Overview: 9_AI_Denoiser/9.1_Overview.md
+      - 9.2 The U-Net: 9_AI_Denoiser/9.2_The_U-Net.md
+      - 9.3 KPCN: 9_AI_Denoiser/9.3_KPCN.md
+      - 9.4 Rendering: 9_AI_Denoiser/9.4_Rendering.md
+      - 9.5 Training: 9_AI_Denoiser/9.5_Training.md
 
 markdown_extensions:
   - pymdownx.arithmatex:
