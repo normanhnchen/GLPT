@@ -4,8 +4,8 @@
 
 The image below will be used as the reference image for the BVH debug images.
 
-<div id="bvhBoundsLayerViewer">
-    <img id="bvhBoundsLayerImage" src="../assets/gallery/BVH_Debug/combined_16384.png">
+<div id="bvhDebugCombinedViewer">
+    <img id="bvhDebugCombinedImage" src="../assets/gallery/BVH_Debug/combined_16384.png">
 </div>
 
 ### BVH Bounds
@@ -21,12 +21,12 @@ The image below will be used as the reference image for the BVH debug images.
 <input type="range" id="bvhBoundsLayerSlider" min="-1" max="28" step="1" value="-1">
 
 <script>
-    const bvhBoundsLayerlider = document.getElementById("bvhBoundsLayerSlider");
+    const bvhBoundsLayerSlider = document.getElementById("bvhBoundsLayerSlider");
     const bvhBoundsLayerImage = document.getElementById("bvhBoundsLayerImage");
     const bvhBoundsLayerLabel = document.getElementById("bvhBoundsLayerLabel");
 
-    bvhBoundsLayerlider.addEventListener("input", function() {
-        const layer = bvhBoundsLayerlider.value;
+    bvhBoundsLayerSlider.addEventListener("input", function() {
+        const layer = bvhBoundsLayerSlider.value;
 
         if (layer == -1) {
             bvhBoundsLayerImage.src = "../assets/gallery/BVH_Debug/Bounds/Layer/layer_all.png";
