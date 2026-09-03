@@ -143,7 +143,7 @@ class CameraCaptureState:
         return self.states[self._get_key()]
 
     def _load_state(self, state):
-        self.camera.load_state(state)
+        self.camera.load_state(state, randomize=True)
         self.camera_buffer.update_data()
 
     def _write(self):

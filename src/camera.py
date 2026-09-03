@@ -1,4 +1,6 @@
 import glm
+import random
+import math
 
 from src.settings import settings
 
@@ -137,15 +139,38 @@ class Camera:
             "blur": self.blur,
         }
 
-    def load_state(self, state):
+    def load_state(self, state, randomize=False):
         self.pos = glm.vec3(state["pos"])
         self.yaw = state["yaw"]
         self.pitch = state["pitch"]
         self.fov = state["fov"]
-        self.dof_enabled = state["dof_enabled"]
-        self.aperture = state["aperture"]
-        self.focus_dist = state["focus_dist"]
-        self.blur = state["blur"]
+
+        if randomize:
+            # Randomize all camera DOF and blur properties
+            # Only used for AI training
+
+            self.blur = 1
+            self.dof_enabled = False
+            self.aperture = 0
+            self.focus_dist = state["focus_dist"]
+
+            if random.random() < 0.5:
+                if random.random() < 0.9:
+                    self.blur = random.uniform(0, 2)
+                
+                else:
+                    self.blur = math.exp(random.uniform(math.log(2), math.log(10)))
+
+            if random.random() < 0.1:
+                self.dof_enabled = True
+                self.aperture = math.exp(random.uniform(math.log(0.01), math.log(0.99)))
+                self.focus_dist = random.uniform(1, 50)
+        
+        else:
+            self.dof_enabled = state["dof_enabled"]
+            self.aperture = state["aperture"]
+            self.focus_dist = state["focus_dist"]
+            self.blur = state["blur"]
 
         self._update_camera_vectors()
     
