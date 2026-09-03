@@ -2,11 +2,12 @@ from src.settings import settings
 from src.fullscreen_quad import FullScreenQuad
 
 
-def _compute_uniforms():
+def _compute_uniforms(pt_state):
     return {
         # Fragment Shader Uniforms
         # ------------------------
-        "exposure": settings.post_processing.exposure
+        "exposure": settings.post_processing.exposure,
+        "debugMode": pt_state.debug.mode
     }
 
 
@@ -36,7 +37,7 @@ class FinalPass:
         texture = override_texture if override_texture is not None else self.pt_state.framebuffers.combined
         texture.use(location=0)
 
-        uniform_dict = _compute_uniforms()
+        uniform_dict = _compute_uniforms(self.pt_state)
         _set_uniforms(self.shader.prog, uniform_dict)
 
         self.shader.set_tonemap(settings.post_processing.tonemap)

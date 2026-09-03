@@ -12,6 +12,25 @@ out vec4 fragColor;
 void main() {
     vec3 hdrColor = texture(tex, texCoords).rgb;
 
+    if (debugMode == 2 || // Normal
+        debugMode == 3 || // Depth
+        debugMode == 4 || // Metallic
+        debugMode == 5 || // Roughness
+        debugMode == 9 || // BVH depth; see 4.4 Debug Visualization
+        debugMode == 10) { // BVH bounds; see 4.4 Debug Visualization
+        fragColor = vec4(hdrColor, 1.0);
+        return;
+    }
+
+    if (debugMode == 1) {
+        /* Albedo*/
+        
+        // Gamma correction
+        vec3 finalColor = pow(hdrColor, vec3(1.0 / 2.2));
+        fragColor = vec4(finalColor, 1.0);
+        return;
+    }
+
     hdrColor *= exposure;
 
     // Tone mapping
@@ -90,7 +109,7 @@ void main() {
         // Gamma correction is baked into the tonemapper
         color = pow(color, vec3(2.2));
     }
-
+    
     // Gamma correction
     vec3 finalColor = pow(color, vec3(1.0 / 2.2));
     fragColor = vec4(finalColor, 1.0);

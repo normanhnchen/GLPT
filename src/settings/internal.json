@@ -3,7 +3,7 @@
         "mode": "off",
         "enable_launcher_buttons": true,
         "training": {
-            "epochs": 200
+            "epochs": 100
         },
         "rendering": {
             "mode": "off",

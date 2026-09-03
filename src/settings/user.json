@@ -35,7 +35,7 @@
         },
         "hdri": false,
         "renders": "src\\assets\\renders\\images",
-        "scene": "src\\assets\\models\\dragon.glb",
+        "scene": "src\\assets\\models\\dragon_scene.glb",
         "scenes": "src\\assets\\models"
     },
     "path_tracing": {
@@ -44,7 +44,7 @@
         "geometry_mode": 0,
         "max_direct_luminance": 10.0,
         "max_indirect_luminance": 10.0,
-        "max_samples": 4096,
+        "max_samples": 10,
         "mis_mode": 0,
         "samples_per_pixel": 1,
         "specular_bounces": 4,
@@ -55,11 +55,11 @@
     },
     "post_processing": {
         "exposure": 3.0,
-        "hdri_exposure": 1.0,
+        "hdri_exposure": 0.10000000149011612,
         "tonemap": "AgX"
     },
     "rendering": {
-        "mode": "rasterization",
+        "mode": "path_tracing",
         "texture_size": [
             1024,
             1024
