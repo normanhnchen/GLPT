@@ -177,15 +177,25 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
             mat.emissive = texture(emissiveTextures, vec3(si.uv, mat.emissiveTexId)).rgb;
         }
-        if (mat.hasRoughTex == 1) {
-            /* Sample roughness texture */
-
-            mat.roughness = texture(roughnessTextures, vec3(si.uv, mat.roughTexId)).r;
-        }
         if (mat.hasMetalTex == 1) {
-            /* Sample metallic texture */
+            /*
+             * Sample metallic texture
+             * Combine with the metallic factor because the final metallic
+             * is factor * texture sample, not just the texture sample.
+             * Using = instead of *= silently ignores the metallic factor
+             * whenever a texture is present.
+             */
 
-            mat.metallic = texture(metallicTextures, vec3(si.uv, mat.metalTexId)).r;
+            mat.metallic *= texture(metallicTextures, vec3(si.uv, mat.metalTexId)).r;
+        }
+        if (mat.hasRoughTex == 1) {
+            /*
+             * Sample roughness texture
+             * The same rule as the metallic texture
+             * applies to roughness: factor * texture sample.
+             */
+
+            mat.roughness *= texture(roughnessTextures, vec3(si.uv, mat.roughTexId)).r;
         }
         // https://learnopengl.com/Advanced-Lighting/Normal-Mapping
         if (mat.hasNormalTex == 1) {
