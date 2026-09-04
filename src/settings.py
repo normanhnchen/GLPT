@@ -170,7 +170,8 @@ class PathTracingSettings:
                 "transmission_mode": self.transmission_mode,
                 "backface_culling": self.backface_culling,
                 "max_direct_luminance": self.max_direct_luminance,
-                "max_indirect_luminance": self.max_indirect_luminance
+                "max_indirect_luminance": self.max_indirect_luminance,
+                "max_bsdf_luminance": self.max_bsdf_luminance
             }
         }
 
