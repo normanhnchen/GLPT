@@ -80,7 +80,7 @@ Now, what happens when the path tracer breaks out the BVH traversal after a cert
     <img id="bvhDisintegrationImage" src="../assets/gallery/BVH_Debug/Disintegration/depth_32.png">
 </div>
 
-<p id="bvhDisintegrationLabel" style="font-weight:600; margin-top: 4px;">Depth: Max</p>
+<p id="bvhDisintegrationLabel" style="font-weight:600; margin-top: 4px;">Max Depth: 32</p>
 
 <input type="range" id="bvhDisintegrationSlider" min="0" max="5" step="1" value="0">
 <span id="sliderValue">32</span>
@@ -98,6 +98,7 @@ Now, what happens when the path tracer breaks out the BVH traversal after a cert
         const depth = depthSteps[index];
 
         bvhDisintegrationImage.src = "../assets/gallery/BVH_Debug/Disintegration/depth_" + depth + ".png";
+        bvhDisintegrationLabel.textContent = "Max Depth: " + depth;
         sliderValueDisplay.textContent = depth;
     });
 </script>
