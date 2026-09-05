@@ -4,21 +4,54 @@
 
 The image below will be used as the reference image for the BVH debug images.
 
-<div id="bvhDebugCombinedViewer">
-    <img id="bvhDebugCombinedImage" src="../assets/gallery/BVH_Debug/combined_16384.png">
+<style>
+    .gallery-card {
+        border: 2px solid var(--md-default-fg-color--lightest);
+        border-radius: 8px;
+        padding: 16px;
+        margin: 24px 0;
+    }
+
+    .gallery-viewer {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .gallery-viewer img {
+        width: 100%;
+        border-radius: 6px;
+    }
+
+    .gallery-label {
+        text-align: center;
+        font-weight: 600;
+        margin: 8px 0;
+    }
+
+    input[type="range"] {
+        width: 100%;
+        margin: 0 auto;
+        accent-color: var(--md-primary-fg-color);
+    }
+</style>
+
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="bvhDebugCombinedImage" src="../assets/gallery/BVH_Debug/combined_16384.png">
+    </div>
 </div>
 
 ### BVH Bounds
 
 #### Layer
 
-<div id="bvhBoundsLayerViewer">
-    <img id="bvhBoundsLayerImage" src="../assets/gallery/BVH_Debug/Bounds/Layer/layer_all.png">
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="bvhBoundsLayerImage" src="../assets/gallery/BVH_Debug/Bounds/Layer/layer_all.png">
+    </div>
+    <p class="gallery-label" id="bvhBoundsLayerLabel">Layer: All</p>
+    <input type="range" id="bvhBoundsLayerSlider" min="-1" max="28" step="1" value="-1">
 </div>
-
-<p id="bvhBoundsLayerLabel" style="font-weight:600; margin-top: 4px;">Layer: All</p>
-
-<input type="range" id="bvhBoundsLayerSlider" min="-1" max="28" step="1" value="-1">
 
 <script>
     const bvhBoundsLayerSlider = document.getElementById("bvhBoundsLayerSlider");
@@ -40,13 +73,13 @@ The image below will be used as the reference image for the BVH debug images.
 
 #### Depth
 
-<div id="bvhBoundsDepthViewer">
-    <img id="bvhBoundsDepthImage" src="../assets/gallery/BVH_Debug/Bounds/Depth/depth_max.png">
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="bvhBoundsDepthImage" src="../assets/gallery/BVH_Debug/Bounds/Depth/depth_max.png">
+    </div>
+    <p class="gallery-label" id="bvhBoundsDepthLabel">Depth: Max</p>
+    <input type="range" id="bvhBoundsDepthSlider" min="-1" max="28" step="1" value="-1">
 </div>
-
-<p id="bvhBoundsDepthLabel" style="font-weight:600; margin-top: 4px;">Depth: Max</p>
-
-<input type="range" id="bvhBoundsDepthSlider" min="-1" max="28" step="1" value="-1">
 
 <script>
     const bvhBoundsDepthSlider = document.getElementById("bvhBoundsDepthSlider");
@@ -68,28 +101,32 @@ The image below will be used as the reference image for the BVH debug images.
 
 ### BVH Depth
 
-<div id="bvhDepthViewer">
-    <img id="bvhDepthImage" src="../assets/gallery/BVH_Debug/Depth/depth.png">
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="bvhDepthImage" src="../assets/gallery/BVH_Debug/Depth/depth.png">
+    </div>
 </div>
 
 ### Disintegration
 
 Now, what happens when the path tracer breaks out the BVH traversal after a certain maximum depth? Use the slider below to find out.
 
-<div id="bvhDisintegrationViewer">
-    <img id="bvhDisintegrationImage" src="../assets/gallery/BVH_Debug/Disintegration/depth_32.png">
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="bvhDisintegrationImage" src="../assets/gallery/BVH_Debug/Disintegration/depth_32.png">
+    </div>
+    <p class="gallery-label" id="bvhDisintegrationLabel">Max Depth: 32</p>
+    <div class="gallery-slider-row">
+        <input type="range" id="bvhDisintegrationSlider" min="0" max="5" step="1" value="0">
+        <span id="bvhDisintegrationSliderValue">32</span>
+    </div>
 </div>
-
-<p id="bvhDisintegrationLabel" style="font-weight:600; margin-top: 4px;">Max Depth: 32</p>
-
-<input type="range" id="bvhDisintegrationSlider" min="0" max="5" step="1" value="0">
-<span id="sliderValue">32</span>
 
 <script>
     const bvhDisintegrationSlider = document.getElementById("bvhDisintegrationSlider");
     const bvhDisintegrationImage = document.getElementById("bvhDisintegrationImage");
     const bvhDisintegrationLabel = document.getElementById("bvhDisintegrationLabel");
-    const sliderValueDisplay = document.getElementById("sliderValue");
+    const sliderValueDisplay = document.getElementById("bvhDisintegrationSliderValue");
 
     const depthSteps = [32, 16, 8, 4, 2, 1];
 
