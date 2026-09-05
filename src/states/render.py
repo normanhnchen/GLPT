@@ -12,18 +12,24 @@ class FramebufferState:
         self._clear_active_buffers()
 
         self.saved_combined = None
+        self.saved_diffuse = None
+        self.saved_specular = None
         self.saved_albedo = None
         self.saved_normal = None
         self.saved_depth = None
 
     def _create_active_buffers(self):
         self.combined = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
+        self.diffuse = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
+        self.specular = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.albedo = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.normal = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.depth = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
     
     def _create_saved_buffers(self):
         self.saved_combined = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
+        self.saved_diffuse = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
+        self.saved_specular = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.saved_albedo = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.saved_normal = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.saved_depth = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
@@ -31,6 +37,8 @@ class FramebufferState:
     def _clear_active_buffers(self):
         zeros = np.zeros((*settings.screen.resolution, 4), dtype=f4)
         self.combined.write(zeros)
+        self.diffuse.write(zeros)
+        self.specular.write(zeros)
         self.albedo.write(zeros)
         self.normal.write(zeros)
         self.depth.write(zeros)
@@ -38,6 +46,10 @@ class FramebufferState:
     def _release_saved_buffers(self):
         if self.saved_combined is not None:
             self.saved_combined.release()
+        if self.saved_diffuse is not None:
+            self.saved_diffuse.release()
+        if self.saved_specular is not None:
+            self.saved_specular.release()
         if self.saved_albedo is not None:
             self.saved_albedo.release()
         if self.saved_normal is not None:
@@ -48,6 +60,10 @@ class FramebufferState:
     def _release_active_buffers(self):
         if self.combined is not None:
             self.combined.release()
+        if self.diffuse is not None:
+            self.diffuse.release()
+        if self.specular is not None:
+            self.specular.release()
         if self.albedo is not None:
             self.albedo.release()
         if self.normal is not None:
@@ -65,12 +81,24 @@ class FramebufferState:
         self._create_saved_buffers()
 
         self.saved_combined.write(self.combined.read())
+        self.saved_diffuse.write(self.diffuse.read())
+        self.saved_specular.write(self.specular.read())
         self.saved_albedo.write(self.albedo.read())
         self.saved_normal.write(self.normal.read())
         self.saved_depth.write(self.depth.read())
 
-    def bind_to_images(self, combined_loc=0, albedo_loc=1, normal_loc=2, depth_loc=3):
+    def bind_to_images(
+            self,
+            combined_loc=0,
+            diffuse_loc=1,
+            specular_loc=2,
+            albedo_loc=3,
+            normal_loc=4,
+            depth_loc=5
+        ):
         self.combined.bind_to_image(combined_loc, read=True, write=True)
+        self.diffuse.bind_to_image(diffuse_loc, read=True, write=True)
+        self.specular.bind_to_image(specular_loc, read=True, write=True)
         self.albedo.bind_to_image(albedo_loc, read=True, write=True)
         self.normal.bind_to_image(normal_loc, read=True, write=True)
         self.depth.bind_to_image(depth_loc, read=True, write=True)
@@ -89,6 +117,12 @@ class FramebufferState:
 
     def get_ndarray_combined(self):
         return self._get_ndarray(self.combined)
+
+    def get_ndarray_diffuse(self):
+        return self._get_ndarray(self.diffuse)
+
+    def get_ndarray_specular(self):
+        return self._get_ndarray(self.specular)
 
     def get_ndarray_albedo(self):
         return self._get_ndarray(self.albedo)

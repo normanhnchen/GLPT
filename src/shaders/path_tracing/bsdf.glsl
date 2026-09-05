@@ -65,6 +65,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             bsdfSample.f = vec3(0.0);
             bsdfSample.wi = wi;
             bsdfSample.pdf = 0.0;
+            bsdfSample.lobeType = 1; // Specular
 
             return bsdfSample;
         }
@@ -138,6 +139,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
         bsdfSample.pdf = bsdfPdf;
         bsdfSample.wi = wi;
         bsdfSample.f = specular / lobeProbs.specular;
+        bsdfSample.lobeType = 1; // Specular
 
         return bsdfSample;
     } else {
@@ -233,6 +235,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 bsdfSample.pdf = bsdfPdf;
                 bsdfSample.f = specular / lobeProbs.transmission;
                 bsdfSample.wi = wi;
+                bsdfSample.lobeType = 2; // Transmission
 
                 return bsdfSample;
             }
@@ -288,6 +291,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             bsdfSample.pdf = bsdfPdf;
             bsdfSample.f = transmission / lobeProbs.transmission;
             bsdfSample.wi = wi;
+            bsdfSample.lobeType = 2; // Transmission
 
             return bsdfSample;
         } else {
@@ -305,6 +309,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
                 bsdfSample.f = vec3(0.0);
                 bsdfSample.wi = wi;
                 bsdfSample.pdf = 0.0;
+                bsdfSample.lobeType = 0; // Diffuse
 
                 return bsdfSample;
             }
@@ -350,6 +355,7 @@ BsdfSample SampleBsdf(inout uvec3 rng, Ray ray, SurfaceInteraction si, inout Bou
             bsdfSample.pdf = bsdfPdf;
             bsdfSample.f = diffuse / lobeProbs.diffuse;
             bsdfSample.wi = wi;
+            bsdfSample.lobeType = 0; // Diffuse
 
             return bsdfSample;
         }
@@ -394,6 +400,49 @@ vec3 EvaluateBsdfAndPdf(vec3 wi, Ray ray, SurfaceInteraction si, out float bsdfP
          */
 
         return EvaluateBtdfAndPdf(wi, ray, si, bsdfPdf);
+    }
+}
+
+/* The following functions return a diffuse / specular BSDF split for AI denoising */
+
+// See 5.12 BSDF Evaluation
+BsdfSplit EvaluateBsdfSplit(vec3 wi, Ray ray, SurfaceInteraction si) {
+    vec3 ns = si.ns;
+    float nsDotWi = dot(ns, wi);
+    if (nsDotWi > 0.0) {
+        /*
+         * Sample the BRDF
+         * See 5.12 BSDF Evaluation
+         */
+
+        return EvaluateBrdfSplit(wi, ray, si);
+    } else {
+        /*
+         * Sample the BTDF
+         * See 5.12 BSDF Evaluation
+         */
+
+        return EvaluateBtdfSplit(wi, ray, si);
+    }
+}
+
+// See 5.12 BSDF Evaluation
+BsdfSplit EvaluateBsdfAndPdfSplit(vec3 wi, Ray ray, SurfaceInteraction si, out float bsdfPdf) {
+    float nsDotWi = dot(si.ns, wi);
+    if (nsDotWi > 0.0) {
+        /*
+         * Sample the BRDF
+         * See 5.12 BSDF Evaluation
+         */
+
+        return EvaluateBrdfAndPdfSplit(wi, ray, si, bsdfPdf);
+    } else {
+        /*
+         * Sample the BTDF
+         * See 5.12 BSDF Evaluation
+         */
+
+        return EvaluateBtdfAndPdfSplit(wi, ray, si, bsdfPdf);
     }
 }
 

@@ -29,9 +29,13 @@ Light PowerFinitePunctualLightSample(float Xi, out float lightPdf) {
 }
 
 // See 7.5 Punctual Lights
-vec3 SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
+BsdfSplit SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
+    BsdfSplit bsdfSplit;
+    bsdfSplit.diffuse = vec3(0.0);
+    bsdfSplit.specular = vec3(0.0);
+
     if (numFiniteLights == 0) {
-        return vec3(0.0);
+        return bsdfSplit;
     }
 
     // See 2.2 The PCG Hash
@@ -68,22 +72,32 @@ vec3 SampleFinitePunctualLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) 
     
     if (si.mat.transmission == 0.0 && nsDotWi <= 0.0) {
         // Light is blocked from passing through
-        return vec3(0.0);
+        return bsdfSplit;
     }
 
     // See 7.2 Shadow Rays
     VisibilityInteraction vi = ShadowRayTest(rng, si, dist, wi);
     if (vi.isOccluded) {
-        return vec3(0.0);
+        return bsdfSplit;
     }
 
     // See 5.12 BSDF Evaluation
-    vec3 f = EvaluateBsdf(wi, ray, si);
-    return f * Li / lightPdf;
+    BsdfSplit f = EvaluateBsdfSplit(wi, ray, si);
+
+    vec3 Le = Li / lightPdf;
+
+    bsdfSplit.diffuse = f.diffuse * Le;
+    bsdfSplit.specular = f.specular * Le;
+
+    return bsdfSplit;
 }
 
 // See 7.5 Punctual Lights
-vec3 SampleInfinitePunctualLight(SurfaceInteraction si, Ray ray, Light light, inout uvec3 rng) {
+BsdfSplit SampleInfinitePunctualLight(SurfaceInteraction si, Ray ray, Light light, inout uvec3 rng) {
+    BsdfSplit bsdfSplit;
+    bsdfSplit.diffuse = vec3(0.0);
+    bsdfSplit.specular = vec3(0.0);
+
     vec3 wi = normalize(-light.d);
     float dist = INF;
     vec3 Li = light.col * light.intensity;
@@ -94,18 +108,22 @@ vec3 SampleInfinitePunctualLight(SurfaceInteraction si, Ray ray, Light light, in
     
     if (si.mat.transmission == 0.0 && nsDotWi <= 0.0) {
         // Light is blocked from passing through
-        return vec3(0.0);
+        return bsdfSplit;
     }
 
     // See 7.2 Shadow Rays
     VisibilityInteraction vi = ShadowRayTest(rng, si, dist, wi);
     if (vi.isOccluded) {
-        return vec3(0.0);
+        return bsdfSplit;
     }
 
     // See 5.12 BSDF Evaluation
-    vec3 f = EvaluateBsdf(wi, ray, si);
-    return f * Li;
+    BsdfSplit f = EvaluateBsdfSplit(wi, ray, si);
+
+    bsdfSplit.diffuse = f.diffuse * Li;
+    bsdfSplit.specular = f.specular * Li;
+
+    return bsdfSplit;
 }
 
 

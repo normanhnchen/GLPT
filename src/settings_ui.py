@@ -960,16 +960,18 @@ class DebugUI:
     def draw_debug_mode_dropdown(self):
         options = [
             "Off", # 0
-            "Albedo", # 1
-            "Normal", # 2
-            "Depth", # 3
-            "Metallic", # 4
-            "Roughness", # 5
-            "Direct", # 6
-            "Indirect", # 7
-            "Demodulated", # 8
-            "BVH Depth", # 9
-            "BVH Bounds", # 10
+            "Diffuse", # 1
+            "Specular", # 2
+            "Direct", # 3
+            "Indirect", # 4
+            "Albedo", # 5
+            "Normal", # 6
+            "Depth", # 7
+            "Metallic", # 8
+            "Roughness", # 9
+            "Demodulated Diffuse", # 10
+            "BVH Depth", # 11
+            "BVH Bounds", # 12
         ]
 
         def on_change(new_val):
@@ -1342,7 +1344,7 @@ class SettingsUI:
         self.debug_ui.draw_debug_mode_dropdown()
 
         # BVH Bounds
-        if self.pt_state.debug.mode == 10:
+        if self.pt_state.debug.mode == 12:
             if self.debug_ui.scene.bvh is None:
                 imgui.text_disabled("BVH is still building...")
             else:

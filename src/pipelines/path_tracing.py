@@ -17,7 +17,7 @@ class PathTracingPipeline:
 
     def render(self):
         # BVH Bounds
-        if self.pt_state.debug.mode == 10:
+        if self.pt_state.debug.mode == 12:
             # Don't render path tracing (self.pt_pass) since this mode runs through a separate shader
 
             # Create FBO to render to the combined texture
@@ -58,7 +58,7 @@ class PathTracingPipeline:
             self.pt_pass.render()
 
             # Depth
-            if self.pt_state.debug.mode == 3:
+            if self.pt_state.debug.mode == 7:
                 self.depth_debug_pass.render()
 
         self.final_pass.render(override_texture=override_texture)
@@ -95,7 +95,7 @@ class PathTracingPipeline:
             self.pt_pass.render()
 
             # Depth
-            if self.pt_state.debug.mode == 3:
+            if self.pt_state.debug.mode == 7:
                 self.depth_debug_pass.render()
 
         self.final_pass.render(override_texture=override_texture)

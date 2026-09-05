@@ -100,11 +100,15 @@ vec3 DirectSampleHdri(inout uvec3 rng, out vec3 d, out float hdriPdf) {
 }
 
 // See 7.3 HDRI Sampling
-vec3 SampleHdriLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
+BsdfSplit SampleHdriLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
+    BsdfSplit bsdfSplit;
+    bsdfSplit.diffuse = vec3(0.0);
+    bsdfSplit.specular = vec3(0.0);
+
     vec3 wi;
     float lightPdf;
     vec3 Li = DirectSampleHdri(rng, wi, lightPdf);
-    if (lightPdf <= 0.0) return vec3(0.0);
+    if (lightPdf <= 0.0) return bsdfSplit;
 
     vec3 ns = si.ns;
 
@@ -113,13 +117,13 @@ vec3 SampleHdriLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     float dist = INF;
     
     if (si.mat.transmission == 0.0 && nsDotWi <= 0.0) {
-        return vec3(0.0);
+        return bsdfSplit;
     }
 
     // See 7.2 Shadow Rays
     VisibilityInteraction vi = ShadowRayTest(rng, si, dist, wi);
     if (vi.isOccluded) {
-        return vec3(0.0);
+        return bsdfSplit;
     }
 
     /*
@@ -128,10 +132,15 @@ vec3 SampleHdriLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
      */
 
     float bsdfPdf;
-    vec3 f = EvaluateBsdfAndPdf(wi, ray, si, bsdfPdf);
+    BsdfSplit f = EvaluateBsdfAndPdfSplit(wi, ray, si, bsdfPdf);
     float misWeight = PowerHeuristic(1, lightPdf, 1, bsdfPdf);
 
-    return (f * Li * hdriExposure) / lightPdf * misWeight;
+    vec3 Le = Li * hdriExposure / lightPdf * misWeight;
+
+    bsdfSplit.diffuse = f.diffuse * Le;
+    bsdfSplit.specular = f.specular * Le;
+
+    return bsdfSplit;
 }
 
 // See 7.3 HDRI Sampling

@@ -152,10 +152,18 @@ struct BsdfSample {
     vec3 f;
     vec3 wi;
     float pdf;
+    int lobeType; // Diffuse: 0, specular: 1, transmission: 2
+};
+
+struct BsdfSplit {
+    vec3 diffuse;
+    vec3 specular;
 };
 
 struct PathSample {
     vec3 combined;
+    vec3 diffuse;
+    vec3 specular;
     vec3 baseCol;
     vec3 normal;
     float depth;

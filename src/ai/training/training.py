@@ -99,13 +99,15 @@ def save_checkpoint(checkpoint, path):
 # See 9.5 Training
 class DenoiseDataset(Dataset):
     def __init__(self, renders_path, patch_size=256, is_validation=False):
-        self.combined_path = renders_path / "combined/"
+        self.diffuse_path = renders_path / "diffuse/"
+        self.specular_path = renders_path / "specular/"
         self.albedo_path = renders_path / "albedo/"
         self.normal_path = renders_path / "normal/"
         self.depth_path = renders_path / "depth/"
-        self.target_path = renders_path / "target/"
+        self.target_diffuse_path = renders_path / "target_diffuse/"
+        self.target_specular_path = renders_path / "target_specular/"
 
-        self.num_samples = sum(1 for item in self.combined_path.iterdir() if item.is_file())
+        self.num_samples = sum(1 for item in self.diffuse_path.iterdir() if item.is_file())
         self.patch_size = patch_size
 
         self.is_validation = is_validation
@@ -116,24 +118,29 @@ class DenoiseDataset(Dataset):
     def __getitem__(self, idx):
         # Load EXR images from their paths
         # --------------------------------
-        combined = load_exr(self.combined_path / f"combined_{idx}.exr")
+        diffuse = load_exr(self.diffuse_path / f"diffuse_{idx}.exr")
+        specular = load_exr(self.specular_path / f"specular_{idx}.exr")
         albedo = load_exr(self.albedo_path / f"albedo_{idx}.exr")
         normal = load_exr(self.normal_path / f"normal_{idx}.exr")
         depth = load_exr(self.depth_path / f"depth_{idx}.exr")
-        target = load_exr(self.target_path / f"target_{idx}.exr")
+        target_diffuse = load_exr(self.target_diffuse_path / f"target_diffuse_{idx}.exr")
+        target_specular = load_exr(self.target_specular_path / f"target_specular_{idx}.exr")
 
         # Convert EXR images to PyTorch tensors
         # -------------------------------------
-        combined = exr_to_tensor(combined, keep_channels=3)
+        diffuse = exr_to_tensor(diffuse, keep_channels=3)
+        specular = exr_to_tensor(specular, keep_channels=3)
         albedo = exr_to_tensor(albedo, keep_channels=3)
         normal = exr_to_tensor(normal, keep_channels=3)
         depth = exr_to_tensor(depth, keep_channels=1)
-        target = exr_to_tensor(target, keep_channels=3)
+        target_diffuse = exr_to_tensor(target_diffuse, keep_channels=3)
+        target_specular = exr_to_tensor(target_specular, keep_channels=3)
 
         # Normalize depth via the inverse depth method
         depth = denoiser.normalize_depth(depth)
 
-        x = torch.cat([combined, albedo, normal, depth])
+        x = torch.cat([diffuse, specular, albedo, normal, depth])
+        target = torch.cat([target_diffuse, target_specular])
 
         if self.is_validation:
             x_patches = []
@@ -186,18 +193,25 @@ class DenoiseDataset(Dataset):
 
 # See 9.5 Training
 def _preprocess(x, target):
-    combined = x[:, :3]
-    albedo = x[:, 3:6]
-    normal = x[:, 6:9]
-    depth = x[:, 9:10]
+    diffuse = x[:, :3]
+    specular = x[:, 3:6]
+    albedo = x[:, 6:9]
+    normal = x[:, 9:12]
+    depth = x[:, 12:13]
 
-    combined = denoiser.demodulate(combined, albedo)
-    target = denoiser.demodulate(target, albedo)
+    target_diffuse  = target[:, :3]
+    target_specular = target[:, 3:6]
 
-    combined = denoiser.compress(combined)
-    target = denoiser.compress(target)
+    diffuse = denoiser.demodulate(diffuse, albedo)
+    target_diffuse = denoiser.demodulate(target_diffuse, albedo)
 
-    x = torch.cat([combined, albedo, normal, depth], dim=1)
+    diffuse = denoiser.compress(diffuse)
+    specular = denoiser.compress(specular)
+    target_diffuse = denoiser.compress(target_diffuse)
+    target_specular = denoiser.compress(target_specular)
+
+    x = torch.cat([diffuse, specular, albedo, normal, depth], dim=1)
+    target = torch.cat([target_diffuse, target_specular], dim=1)
     return x, target
 
 
@@ -305,10 +319,13 @@ class WorkerThread(QThread):
                 x = x.to(settings.pytorch_device)
                 target = target.to(settings.pytorch_device)
                 x, target = _preprocess(x, target)
-                combined = x[:, :3].to(settings.pytorch_device)
+
+                diffuse = x[:, :3].to(settings.pytorch_device)
+                specular = x[:, 3:6].to(settings.pytorch_device)
 
                 optim.zero_grad()
-                prediction = denoiser(x, combined)
+                diffuse_prediction, specular_prediction = denoiser(x, diffuse, specular)
+                prediction = torch.cat([diffuse_prediction, specular_prediction], dim=1)
                 loss = criterion(prediction, target)
                 loss.backward()
                 optim.step()
@@ -349,9 +366,12 @@ class WorkerThread(QThread):
                     target = target_grid[patch_indices].to(settings.pytorch_device)
  
                     x, target = _preprocess(x, target)
-                    combined = x[:, :3].to(settings.pytorch_device)
- 
-                    prediction = denoiser(x, combined)
+
+                    diffuse = x[:, :3].to(settings.pytorch_device)
+                    specular = x[:, 3:6].to(settings.pytorch_device)
+
+                    diffuse_prediction, specular_prediction = denoiser(x, diffuse, specular)
+                    prediction = torch.cat([diffuse_prediction, specular_prediction], dim=1)
  
                     # Multiply the validation loss by the number of patches
                     val_loss += criterion(prediction, target).item() * x.size(0)

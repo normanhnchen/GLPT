@@ -22,8 +22,11 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
     si.mat.ior = 1.0;
 
     vec3 throughput = vec3(1.0);
-    vec3 directRadiance = vec3(0.0);
-    vec3 indirectRadiance = vec3(0.0);
+
+    vec3 diffuseDirect = vec3(0.0);
+    vec3 specularDirect = vec3(0.0);
+    vec3 diffuseIndirect = vec3(0.0);
+    vec3 specularIndirect = vec3(0.0);
 
     // Entry point of a ray travelling through a medium
     vec3 entryPoint = vec3(0.0);
@@ -39,6 +42,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
     pathSample.combined = vec3(0.0);
 
     float prevBsdfPdf = 0.0;
+    int prevLobeType = 0; // Diffuse: 0, specular: 1, transmission: 2
     vec3 prevPoint = vec3(0.0);
 
     BounceDepth bounceDepth;
@@ -68,7 +72,9 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                 if (i == 0) {
                     /* Add direct contribution */
 
-                    directRadiance += throughput * envColor * hdriExposure;
+                    vec3 contribution = throughput * envColor * hdriExposure;
+
+                    diffuseDirect += contribution;
                 } else {
                     /*
                      * Multiple importance sample (MIS)
@@ -81,14 +87,26 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
                     if (i == 1) {
                         /* Add direct contribution */
-
+                        
                         // See 2.3 Firefly Clamping
-                        directRadiance += ClampLuminance(throughput * envColor * hdriExposure * misWeight, maxDirectLuminance);
+                        vec3 contribution = ClampLuminance(throughput * envColor * hdriExposure * misWeight, maxDirectLuminance);
+
+                        if (prevLobeType != 0) { // Specular or transmission
+                            specularDirect += contribution;
+                        } else {
+                            diffuseDirect += contribution;
+                        }
                     } else {
                         /* Add indirect contribution */
 
                         // See 2.3 Firefly Clamping
-                        indirectRadiance += ClampLuminance(throughput * envColor * hdriExposure * misWeight, maxIndirectLuminance);
+                        vec3 contribution = ClampLuminance(throughput * envColor * hdriExposure * misWeight, maxIndirectLuminance);
+
+                        if (prevLobeType != 0) { // Specular or transmission
+                            specularDirect += contribution;
+                        } else {
+                            diffuseDirect += contribution;
+                        }
                     }
                 }
             } else if (misMode == 1) {
@@ -96,14 +114,26 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
                 if (i == 0 || i == 1) {
                     /* Add direct contribution */
-                    
+
                     // See 2.3 Firefly Clamping
-                    directRadiance += ClampLuminance(throughput * envColor * hdriExposure, maxDirectLuminance);
+                    vec3 contribution = ClampLuminance(throughput * envColor * hdriExposure, maxDirectLuminance);
+                    
+                    if (prevLobeType != 0) { // Specular or transmission
+                        specularDirect += contribution;
+                    } else {
+                        diffuseDirect += contribution;
+                    }
                 } else {
                     /* Add indirect contribution */
-                    
+
                     // See 2.3 Firefly Clamping
-                    indirectRadiance += ClampLuminance(throughput * envColor * hdriExposure, maxIndirectLuminance);
+                    vec3 contribution = ClampLuminance(throughput * envColor * hdriExposure, maxIndirectLuminance);
+                    
+                    if (prevLobeType != 0) { // Specular or transmission
+                        specularDirect += contribution;
+                    } else {
+                        diffuseDirect += contribution;
+                    }
                 }
             }
 
@@ -258,7 +288,11 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                 if (i == 0) {
                     /* Add direct contribution */
 
-                    directRadiance += ClampLuminance(throughput * mat.emissive * mat.emissiveStrength, maxDirectLuminance);
+                    // See 2.3 Firefly Clamping
+                    vec3 contribution = ClampLuminance(throughput * mat.emissive * mat.emissiveStrength, maxDirectLuminance);
+
+                    // Treat direct emission as diffuse for simplicity
+                    diffuseDirect += contribution;
                 } else {
                     /*
                      * Add indirect contribution
@@ -269,8 +303,15 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                     float areaLightPdf = AreaLightPdf(si, ray, prevPoint);
                     float misWeight = PowerHeuristic(1, prevBsdfPdf, 1, areaLightPdf);
                     vec3 indirect = mat.emissive * mat.emissiveStrength * misWeight;
+
                     // See 2.3 Firefly Clamping
-                    indirectRadiance += ClampLuminance(throughput * indirect, maxIndirectLuminance);
+                    vec3 contribution = ClampLuminance(throughput * indirect, maxIndirectLuminance);
+
+                    if (prevLobeType != 0) { // Specular or transmission
+                        specularDirect += contribution;
+                    } else {
+                        diffuseDirect += contribution;
+                    }
                 }
             } else if (misMode == 1) {
                 /*
@@ -282,12 +323,21 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
                     /* Add direct contribution */
 
                     // See 2.3 Firefly Clamping
-                    directRadiance += ClampLuminance(throughput * mat.emissive * mat.emissiveStrength, maxDirectLuminance);
+                    vec3 contribution = ClampLuminance(throughput * mat.emissive * mat.emissiveStrength, maxDirectLuminance);
+
+                    // Treat direct emission as diffuse for simplicity
+                    diffuseDirect += contribution;
                 } else {
                     /* Add indirect contribution */
 
                     // See 2.3 Firefly Clamping
-                    indirectRadiance += ClampLuminance(throughput * mat.emissive * mat.emissiveStrength, maxIndirectLuminance);
+                    vec3 contribution = ClampLuminance(throughput * mat.emissive * mat.emissiveStrength, maxIndirectLuminance);
+
+                    if (prevLobeType != 0) { // Specular or transmission
+                        specularDirect += contribution;
+                    } else {
+                        diffuseDirect += contribution;
+                    }
                 }
             }
         }
@@ -300,34 +350,51 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
 
             /* Add direct contribution */
 
-            vec3 direct = vec3(0.0);
+            BsdfSplit direct;
+            direct.diffuse = vec3(0.0);
+            direct.specular = vec3(0.0);
+
             for (int i = 0; i < lights.length(); i++) {
                 if (lights[i].type == 1) {
                     // See 7.5 Punctual Lights
-                    direct += SampleInfinitePunctualLight(si, ray, lights[i], rng);
+                    BsdfSplit s0 = SampleInfinitePunctualLight(si, ray, lights[i], rng);
+                    direct.diffuse += s0.diffuse;
+                    direct.specular += s0.specular;
                 }
             }
             // See 7.5 Punctual Lights
-            direct += SampleFinitePunctualLight(si, ray, rng);
+            BsdfSplit s1 = SampleFinitePunctualLight(si, ray, rng);
+            direct.diffuse += s1.diffuse;
+            direct.specular += s1.specular;
+
             // See 7.6 Area Light Sampling
-            direct += SampleAreaLight(si, ray, rng);
+            BsdfSplit s2 = SampleAreaLight(si, ray, rng);
+            direct.diffuse += s2.diffuse;
+            direct.specular += s2.specular;
+
             // See 7.3 HDRI Sampling
-            direct += SampleHdriLight(si, ray, rng);
+            BsdfSplit s3 = SampleHdriLight(si, ray, rng);
+            direct.diffuse += s3.diffuse;
+            direct.specular += s3.specular;
 
             if (i == 0) {
                 /* Add direct contribution */
                 
                 // See 2.3 Firefly Clamping
-                direct = ClampLuminance(direct, maxDirectLuminance);
+                direct.diffuse = ClampLuminance(direct.diffuse, maxDirectLuminance);
+                direct.specular = ClampLuminance(direct.specular, maxDirectLuminance);
 
-                directRadiance += throughput * direct;
+                diffuseDirect += throughput * direct.diffuse;
+                specularDirect += throughput * direct.specular;
             } else {
                 /* Add indirect contribution */
 
                 // See 2.3 Firefly Clamping
-                vec3 indirect = ClampLuminance(direct, maxIndirectLuminance);
-                
-                indirectRadiance += throughput * indirect;
+                direct.diffuse = ClampLuminance(direct.diffuse, maxIndirectLuminance);
+                direct.specular = ClampLuminance(direct.specular, maxIndirectLuminance);
+
+                diffuseIndirect += throughput * direct.diffuse;
+                specularIndirect += throughput * direct.specular;
             }
         }
 
@@ -346,33 +413,33 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             pathSample.metallic = mat.metallic;
             pathSample.roughness = mat.roughness;
 
-            if (debugMode == 1) {
+            if (debugMode == 5) {
                 /* Albedo */
 
                 pathSample.combined = pathSample.baseCol;
                 break;
-            } else if (debugMode == 2) {
+            } else if (debugMode == 6) {
                 /* Normal */
 
                 // Encode to range [0, 1]
                 pathSample.combined = pathSample.normal * 0.5 + 0.5;
                 break;
-            } else if (debugMode == 3) {
+            } else if (debugMode == 7) {
                 /* Depth */
 
                 pathSample.combined = vec3(pathSample.depth);
                 break;
-            } else if (debugMode == 4) {
+            } else if (debugMode == 8) {
                 /* Metallic */
 
                 pathSample.combined = vec3(pathSample.metallic);
                 break;
-            } else if (debugMode == 5) {
+            } else if (debugMode == 9) {
                 /* Roughness */
 
                 pathSample.combined = vec3(pathSample.roughness);
                 break;
-            } else if (debugMode == 9) {
+            } else if (debugMode == 11) {
                 /*
                  * BVH depth
                  * See 4.4 Debug Visualization
@@ -384,6 +451,7 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
         }
 
         prevBsdfPdf = bsdfSample.pdf;
+        prevLobeType = bsdfSample.lobeType;
         prevPoint = si.p;
 
         bool didRefract = dot(bsdfSample.wi, si.ng) < 0.0;
@@ -425,27 +493,38 @@ PathSample PathTrace(Ray ray, inout uvec3 rng) {
             }
         }
     }
-    
-    if (debugMode == 0) {
-        /* Off */
 
-        pathSample.combined = directRadiance + indirectRadiance;
-    } else if (debugMode == 6) {
+    pathSample.diffuse = diffuseDirect + diffuseIndirect;
+    pathSample.specular = specularDirect + specularIndirect;
+
+    if (debugMode == 0) {
+        /* Off (Combined) */
+
+        pathSample.combined = pathSample.diffuse + pathSample.specular;
+    } else if (debugMode == 1) {
+        /* Diffuse */
+
+        pathSample.combined = pathSample.diffuse;
+    } else if (debugMode == 2) {
+        /* Specular */
+
+        pathSample.combined = pathSample.specular;
+    } else if (debugMode == 3) {
         /* Direct */
 
-        pathSample.combined = directRadiance;
-    } else if (debugMode == 7) {
+        pathSample.combined = diffuseDirect + specularDirect;
+    } else if (debugMode == 4) {
         /* Indirect */
 
-        pathSample.combined = indirectRadiance;
-    } else if (debugMode == 8) {
-        /* Demodulated */
+        pathSample.combined = diffuseIndirect + specularIndirect;
+    } else if (debugMode == 10) {
+        /* Demodulated Diffuse */
 
         if (pathSample.depth < 0.0) {
-            pathSample.combined = directRadiance + indirectRadiance;
+            pathSample.combined = pathSample.diffuse + pathSample.specular;
         } else {
             vec3 safeAlbedo = max(pathSample.baseCol, vec3(EPSILON));
-            pathSample.combined = (directRadiance + indirectRadiance) / safeAlbedo;
+            pathSample.combined = (pathSample.diffuse + pathSample.specular) / safeAlbedo;
         }
     }
 
@@ -461,8 +540,10 @@ void main() {
 
     // See 2.2 The PCG Hash
     uvec3 state = InitRngState(pixelCoords);
-
+    
     vec3 sampleCombined = vec3(0.0);
+    vec3 sampleDiffuse = vec3(0.0);
+    vec3 sampleSpecular = vec3(0.0);
     vec3 sampleBaseColor = vec3(0.0);
     vec3 sampleNormal = vec3(0.0);
     float sampleDepth = 0.0;
@@ -506,9 +587,25 @@ void main() {
              */
             
             pathSample.combined = vec3(0.0);
+        } if (any(isnan(pathSample.diffuse)) || any(isinf(pathSample.diffuse))) {
+            /*
+             * Remove any lingering NaN or Infs
+             * to prevent permanent artifacts in the render.
+             */
+            
+            pathSample.diffuse = vec3(0.0);
+        } if (any(isnan(pathSample.specular)) || any(isinf(pathSample.specular))) {
+            /*
+             * Remove any lingering NaN or Infs
+             * to prevent permanent artifacts in the render.
+             */
+            
+            pathSample.specular = vec3(0.0);
         }
         
         sampleCombined += pathSample.combined;
+        sampleDiffuse += pathSample.diffuse;
+        sampleSpecular += pathSample.specular;
         sampleBaseColor += pathSample.baseCol;
         sampleNormal += pathSample.normal;
         
@@ -519,6 +616,8 @@ void main() {
     }
 
     sampleCombined /= float(samplesPerPixel);
+    sampleDiffuse /= float(samplesPerPixel);
+    sampleSpecular /= float(samplesPerPixel);
     sampleBaseColor /= float(samplesPerPixel);
     sampleNormal /= float(samplesPerPixel);
     float sampleHitFraction = sampleHitCount / float(samplesPerPixel);
@@ -527,6 +626,8 @@ void main() {
     sampleDepth = sampleHitCount > 0.0 ? sampleDepth / sampleHitCount : -1.0;
 
     vec3 oldCombined = imageLoad(combinedPass, pixelCoords).rgb;
+    vec3 oldDiffuse = imageLoad(diffusePass, pixelCoords).rgb;
+    vec3 oldSpecular = imageLoad(specularPass, pixelCoords).rgb;
     vec3 oldBaseColor = imageLoad(baseColorPass, pixelCoords).rgb;
     vec3 oldNormal = imageLoad(normalPass, pixelCoords).rgb;
     vec2 oldDepth = imageLoad(depthPass, pixelCoords).rg;
@@ -534,6 +635,8 @@ void main() {
     float weight = float(samplesPerPixel) / (float(totalSamples + samplesPerPixel));
     
     vec3 finalCombined;
+    vec3 finalDiffuse;
+    vec3 finalSpecular;
     vec3 finalBaseCol;
     vec3 finalNormal;
     float finalDepth;
@@ -543,6 +646,8 @@ void main() {
         /* Ignore old color */
 
         finalCombined = sampleCombined;
+        finalDiffuse = sampleDiffuse;
+        finalSpecular = sampleSpecular;
         finalBaseCol = sampleBaseColor;
         finalNormal = sampleNormal;
         finalDepth = sampleDepth;
@@ -551,6 +656,8 @@ void main() {
         /* Progressive accumulation */
 
         finalCombined = mix(oldCombined.rgb, sampleCombined, weight);
+        finalDiffuse = mix(oldDiffuse.rgb, sampleDiffuse, weight);
+        finalSpecular = mix(oldSpecular.rgb, sampleSpecular, weight);
         finalBaseCol = mix(oldBaseColor.rgb, sampleBaseColor, weight);
         finalNormal = mix(oldNormal.rgb, sampleNormal, weight);
         finalHitFraction = mix(oldDepth.g, sampleHitFraction, weight);
@@ -567,6 +674,8 @@ void main() {
     }
     
     imageStore(combinedPass, pixelCoords, vec4(finalCombined, 1.0));
+    imageStore(diffusePass, pixelCoords, vec4(finalDiffuse, 1.0));
+    imageStore(specularPass, pixelCoords, vec4(finalSpecular, 1.0));
     imageStore(baseColorPass, pixelCoords, vec4(finalBaseCol, 1.0));
     imageStore(normalPass, pixelCoords, vec4(finalNormal, 1.0));
     imageStore(depthPass, pixelCoords, vec4(finalDepth, finalHitFraction, 0.0, 1.0));

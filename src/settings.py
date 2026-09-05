@@ -349,21 +349,25 @@ class FilePathSettings:
             self.hdris = _resolve_folder(self.internal_config["hdris"])
             self.camera_capture_states = _resolve_file(self.internal_config["camera_capture_states"])
             self.renders = _resolve_folder(self.internal_config["renders"])
-            self.combined_renders = _resolve_folder(self.renders / "combined")
+            self.diffuse_renders = _resolve_folder(self.renders / "diffuse")
+            self.specular_renders = _resolve_folder(self.renders / "specular")
             self.albedo_renders = _resolve_folder(self.renders / "albedo")
             self.normal_renders = _resolve_folder(self.renders / "normal")
             self.depth_renders = _resolve_folder(self.renders / "depth")
-            self.target_renders = _resolve_folder(self.renders / "target")
+            self.target_diffuse_renders = _resolve_folder(self.renders / "target_diffuse")
+            self.target_specular_renders = _resolve_folder(self.renders / "target_specular")
 
         def _load_user(self):
             self.scenes = _resolve_folder(self.user_config["scenes"])
             self.hdris = _resolve_folder(self.user_config["hdris"])
             self.renders = _resolve_folder(self.internal_config["renders"])
-            self.combined_renders = _resolve_folder(self.renders / "combined")
+            self.diffuse_renders = _resolve_folder(self.renders / "diffuse")
+            self.specular_renders = _resolve_folder(self.renders / "specular")
             self.albedo_renders = _resolve_folder(self.renders / "albedo")
             self.normal_renders = _resolve_folder(self.renders / "normal")
             self.depth_renders = _resolve_folder(self.renders / "depth")
-            self.target_renders = _resolve_folder(self.renders / "target")
+            self.target_diffuse_renders = _resolve_folder(self.renders / "target_diffuse")
+            self.target_specular_renders = _resolve_folder(self.renders / "target_specular")
 
     class Denoiser:
         def __init__(self, internal_config):

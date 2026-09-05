@@ -30,9 +30,13 @@ Triangle PowerEmissiveTriangleSample(float Xi, out float triPdf) {
 }
 
 // See 7.6 Area Light Sampling
-vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
+BsdfSplit SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
+    BsdfSplit bsdfSplit;
+    bsdfSplit.diffuse = vec3(0.0);
+    bsdfSplit.specular = vec3(0.0);
+
     if (numEmissiveTriangles == 0) {
-        return vec3(0.0);
+        return bsdfSplit;
     }
 
     // See 2.2 The PCG Hash
@@ -56,19 +60,19 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
     float cosLight = dot(lightNs, -wi);
     if (cosLight <= 0.0) {
         // Ray hit the light's backface
-        return vec3(0.0);
+        return bsdfSplit;
     }
     
     float nsDotWi = dot(ns, wi);
     
     if (si.mat.transmission == 0.0 && nsDotWi <= 0.0) {
-        return vec3(0.0);
+        return bsdfSplit;
     }
 
     // See 7.2 Shadow Rays
     VisibilityInteraction vi = ShadowRayTest(rng, si, dist, wi);
     if (vi.isOccluded) {
-        return vec3(0.0);
+        return bsdfSplit;
     }
 
     float pdfPoint = (dist * dist) / (cosLight * tri.area);
@@ -82,10 +86,15 @@ vec3 SampleAreaLight(SurfaceInteraction si, Ray ray, inout uvec3 rng) {
      */
 
     float bsdfPdf;
-    vec3 f = EvaluateBsdfAndPdf(wi, ray, si, bsdfPdf);
+    BsdfSplit f = EvaluateBsdfAndPdfSplit(wi, ray, si, bsdfPdf);
     float misWeight = PowerHeuristic(1, lightPdf, 1, bsdfPdf);
+    
+    vec3 Le = lightMat.emissive * lightMat.emissiveStrength / lightPdf * misWeight;
 
-    return (f * lightMat.emissive * lightMat.emissiveStrength) / lightPdf * misWeight;
+    bsdfSplit.diffuse = f.diffuse * Le;
+    bsdfSplit.specular = f.specular * Le;
+
+    return bsdfSplit;
 }
 
 // See 7.6 Area Light Sampling

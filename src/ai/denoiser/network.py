@@ -101,9 +101,9 @@ class UNet(nn.Module):
 
 # See 9.3 KPCN
 class KPCN(nn.Module):
-    def __init__(self, in_channels=10, kernel_size=21):
+    def __init__(self, in_channels=13, kernel_size=21):
         """
-        The default in_channels is 10: combined(3) + albedo(3) + normal(3) + depth(1).
+        The default in_channels is 13: diffuse(3) + specular(3) + albedo(3) + normal(3) + depth(1).
         kernel_size=21 per Bako et al. U-Net output is kernel_size**2 channels: one predicted
         set of weights based on the neighborhood per pixel.
         """
@@ -138,20 +138,22 @@ class KPCN(nn.Module):
         
         return pad(x)
     
-    def forward(self, x, combined):
+    def forward(self, x, diffuse, specular):
         # Original spatial dimensions
         _, _, h, w = x.shape
 
         x = self._pad_to_multiple(x)
-        combined = self._pad_to_multiple(combined)
+        diffuse = self._pad_to_multiple(diffuse)
+        specular = self._pad_to_multiple(specular)
 
         # (B, K*K, H, W)
         weights = self.unet(x)
         # Normalize
         weights = torch.softmax(weights, dim=1)
-        combined = self._apply_kernel(weights, combined)
+        diffuse = self._apply_kernel(weights, diffuse)
+        specular = self._apply_kernel(weights, specular)
 
-        return combined[:, :, :h, :w]
+        return diffuse[:, :, :h, :w], specular[:, :, :h, :w]
     
     def _apply_kernel(self, weights, combined):
         B, _, H, W = weights.shape
@@ -178,11 +180,12 @@ class KPCN(nn.Module):
         # Apply weights to the combined image RGB channels
         return (output * w).sum(dim=2) # (B, 3, H, W)
 
-    def denoise(self, combined, albedo, normal, depth, denoised):
+    def denoise(self, diffuse, specular, albedo, normal, depth, denoised):
         with torch.no_grad():
             self.eval()
             # Convert from OpenGL textures to torch tensors
-            combined = self._tex_to_tensor(combined, keep_channels=3) # RGBA -> RGB
+            diffuse = self._tex_to_tensor(diffuse, keep_channels=3) # RGBA -> RGB
+            specular = self._tex_to_tensor(specular, keep_channels=3) # RGBA -> RGB
             albedo = self._tex_to_tensor(albedo, keep_channels=3) # RGBA -> RGB
             normal = self._tex_to_tensor(normal, keep_channels=3) # RGBA -> RGB
             depth = self._tex_to_tensor(depth, keep_channels=1) # RGBA -> R
@@ -190,16 +193,24 @@ class KPCN(nn.Module):
             # Normalize depth via the inverse depth method
             depth = self.normalize_depth(depth)
 
-            combined = self.demodulate(combined, albedo)
-            combined = self.compress(combined)
+            diffuse = self.demodulate(diffuse, albedo)
+            diffuse = self.compress(diffuse)
+
+            specular = self.compress(specular)
 
             # 10 channels
-            x = torch.cat([combined, albedo, normal, depth], dim=1)
+            x = torch.cat([diffuse, specular, albedo, normal, depth], dim=1)
 
-            output = self(x, combined)
-            output = self.decompress(output)
-            output = self.remodulate(output, albedo)
-            self._tensor_to_tex(output, denoised)
+            diffuse, specular = self(x, diffuse, specular)
+
+            diffuse = self.decompress(diffuse)
+            diffuse = self.remodulate(diffuse, albedo)
+
+            specular = self.decompress(specular)
+
+            combined = diffuse + specular
+
+            self._tensor_to_tex(combined, denoised)
     
     def _tex_to_tensor(self, tex, keep_channels=None):
         # bytearray() to copy the original as it is not writable (PyTorch requirement)
