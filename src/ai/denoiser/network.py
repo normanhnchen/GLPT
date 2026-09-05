@@ -111,7 +111,8 @@ class KPCN(nn.Module):
         super().__init__()
 
         self.kernel_size = kernel_size
-        self.unet = UNet(in_channels=in_channels, out_channels=kernel_size**2)
+        self.diffuse_unet = UNet(in_channels=in_channels, out_channels=kernel_size**2)
+        self.specular_unet = UNet(in_channels=in_channels, out_channels=kernel_size**2)
     
     def _pad_to_multiple(self, x, multiple=16):
         """
@@ -147,11 +148,14 @@ class KPCN(nn.Module):
         specular = self._pad_to_multiple(specular)
 
         # (B, K*K, H, W)
-        weights = self.unet(x)
+        diffuse_weights = self.diffuse_unet(x)
+        specular_weights = self.specular_unet(x)
         # Normalize
-        weights = torch.softmax(weights, dim=1)
-        diffuse = self._apply_kernel(weights, diffuse)
-        specular = self._apply_kernel(weights, specular)
+        diffuse_weights = torch.softmax(diffuse_weights, dim=1)
+        specular_weights = torch.softmax(specular_weights, dim=1)
+
+        diffuse = self._apply_kernel(diffuse_weights, diffuse)
+        specular = self._apply_kernel(specular_weights, specular)
 
         return diffuse[:, :, :h, :w], specular[:, :, :h, :w]
     
@@ -193,22 +197,20 @@ class KPCN(nn.Module):
             # Normalize depth via the inverse depth method
             depth = self.normalize_depth(depth)
 
-            diffuse = self.demodulate(diffuse, albedo)
-            diffuse = self.compress(diffuse)
+            diffuse_linear = self.demodulate(diffuse, albedo)
+            specular_linear = specular
 
-            specular = self.compress(specular)
+            diffuse_feature = self.compress(diffuse_linear)
+            specular_feature = self.compress(specular_linear)
 
-            # 10 channels
-            x = torch.cat([diffuse, specular, albedo, normal, depth], dim=1)
+            # 13 channels
+            x = torch.cat([diffuse_feature, specular_feature, albedo, normal, depth], dim=1)
 
-            diffuse, specular = self(x, diffuse, specular)
+            diffuse_filtered, specular_filtered = self(x, diffuse_linear, specular_linear)
 
-            diffuse = self.decompress(diffuse)
-            diffuse = self.remodulate(diffuse, albedo)
+            diffuse_final = self.remodulate(diffuse_filtered, albedo)
 
-            specular = self.decompress(specular)
-
-            combined = diffuse + specular
+            combined = diffuse_final + specular_filtered
 
             self._tensor_to_tex(combined, denoised)
     
