@@ -1,9 +1,3 @@
-# Gallery
-
-## BVH Debug
-
-The image below will be used as the reference image for the BVH debug images.
-
 <style>
     .gallery-card {
         border: 2px solid var(--md-default-fg-color--lightest);
@@ -39,6 +33,44 @@ The image below will be used as the reference image for the BVH debug images.
         accent-color: var(--md-primary-fg-color);
     }
 </style>
+
+
+# Gallery
+
+## Diffuse / Specular Split
+
+### Combined
+
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="bvhDepthImage" src="../assets/gallery/Diffuse-Specular_Split/combined.png">
+    </div>
+    <p class="gallery-credit">Dragon model courtesy of XYZ RGB Inc. and the Stanford University Computer Graphics Laboratory.</p> 
+</div>
+
+### Diffuse
+
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="bvhDepthImage" src="../assets/gallery/Diffuse-Specular_Split/diffuse.png">
+    </div>
+    <p class="gallery-credit">Dragon model courtesy of XYZ RGB Inc. and the Stanford University Computer Graphics Laboratory.</p> 
+</div>
+
+
+### Specular
+
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="bvhDepthImage" src="../assets/gallery/Diffuse-Specular_Split/specular.png">
+    </div>
+    <p class="gallery-credit">Dragon model courtesy of XYZ RGB Inc. and the Stanford University Computer Graphics Laboratory.</p> 
+</div>
+
+
+## BVH Debug
+
+The image below will be used as the reference image for the BVH debug images.
 
 <div class="gallery-card">
     <div class="gallery-viewer">
