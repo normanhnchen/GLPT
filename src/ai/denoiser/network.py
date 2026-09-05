@@ -63,7 +63,7 @@ class DecoderBlock(nn.Module):
 
 # See 9.2 The U-Net
 class UNet(nn.Module):
-    def __init__(self, in_channels=10, out_channels=3):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
 
         self.conv_in = ConvBlock(in_channels, 64)
@@ -111,8 +111,8 @@ class KPCN(nn.Module):
         super().__init__()
 
         self.kernel_size = kernel_size
-        self.diffuse_unet = UNet(in_channels=in_channels, out_channels=kernel_size**2)
-        self.specular_unet = UNet(in_channels=in_channels, out_channels=kernel_size**2)
+        self.diffuse_unet = UNet(in_channels, kernel_size**2)
+        self.specular_unet = UNet(in_channels, kernel_size**2)
     
     def _pad_to_multiple(self, x, multiple=16):
         """
