@@ -597,6 +597,8 @@ class Settings:
         self.pytorch_device = torch.device("cpu")
         if torch.cuda.is_available():
             self.pytorch_device = torch.device("cuda")
+        if torch.backends.mps.is_available():
+            self.pytorch_device = torch.device("mps")
 
     def export_user_settings(self):
         merged = {}
