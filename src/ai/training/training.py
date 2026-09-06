@@ -515,37 +515,66 @@ class Launcher(QMainWindow):
         self.progress_bar.setValue(0)
         self.progress_bar.setFixedHeight(50)
 
-        self.plot_widget = pg.PlotWidget()
-        self.plot_widget.setStyleSheet(APP_STYLESHEET)
-        self.plot_widget.setTitle("Loss Graph")
-        self.plot_widget.setLabel("left", "Loss")
-        self.plot_widget.setLabel("bottom", "Epoch")
-        self.plot_widget.addLegend()
-        self.plot_widget.setLogMode(x=False, y=True)
-        self.plot_widget.setXRange(0, settings.ai_training.training.epochs)
-        self.plot_widget.getViewBox().setLimits(xMin=0, xMax=settings.ai_training.training.epochs)
+        self.graph_layout = pg.GraphicsLayoutWidget()
+        self.graph_layout.setStyleSheet(APP_STYLESHEET)
 
-        self.epochs_data = []
-        self.train_loss_data = []
-        self.val_loss_data = []
+        # Top plot (Train)
+        # ----------------
+        self.train_plot = self.graph_layout.addPlot(title="Training Loss")
+        self.train_plot.setLabel("left", "Loss")
+        self.train_plot.addLegend()
+        self.train_plot.setXRange(0, settings.ai_training.training.epochs)
+        self.train_plot.getViewBox().setLimits(xMin=0, xMax=settings.ai_training.training.epochs)
 
-        train_pen = pg.mkPen(color="#4d89c580", width=2)
-        val_pen = pg.mkPen(color="#ffffff80", width=2)
+        self.graph_layout.nextRow()
+
+        # Bottom plot (Val)
+        # -----------------
+        self.val_plot = self.graph_layout.addPlot(title="Validation Loss")
+        self.val_plot.setLabel("left", "Loss")
+        self.val_plot.setLabel("bottom", "Epoch")
+        self.val_plot.addLegend()
+        self.val_plot.setXRange(0, settings.ai_training.training.epochs)
+        self.val_plot.getViewBox().setLimits(xMin=0, xMax=settings.ai_training.training.epochs)
+        
+        # Link the x-axis of the validation and training plots
+        self.val_plot.setXLink(self.train_plot)
+
+        # Pretrain data
+        self.pre_epochs = []
+        self.pre_train_loss = []
+        self.pre_val_loss = []
+
+        # Fine-tune data
+        self.ft_epochs = []
+        self.ft_train_loss = []
+        self.ft_val_loss = []
+
+        # Pretrain pens
+        train_pre_pen = pg.mkPen(color="#375c81ff", width=2)
+        val_pre_pen = pg.mkPen(color="#6F6F6FFF", width=2)
+
+        # Fine-tune pens
+        train_ft_pen = pg.mkPen(color="#5e9fe0ff", width=2)
+        val_ft_pen = pg.mkPen(color="#ffffffff", width=2)
 
         # Set anchor to be directly right of the graph line with breathing room space to the right
         anchor = (-0.1, 0.5)
         self.train_tip_label = pg.TextItem(color="#7ca4cc", anchor=anchor)
         self.val_tip_label = pg.TextItem(color="#ffffff", anchor=anchor)
 
-        self.plot_widget.addItem(self.train_tip_label)
-        self.plot_widget.addItem(self.val_tip_label)
+        self.train_plot.addItem(self.train_tip_label)
+        self.val_plot.addItem(self.val_tip_label)
 
-        self.train_line = self.plot_widget.plot(pen=train_pen, name="Train Loss")
-        self.val_line = self.plot_widget.plot(pen=val_pen, name="Val Loss")
+        self.train_pre_line = self.train_plot.plot(pen=train_pre_pen, name="Train (Pretrain)")
+        self.val_pre_line = self.val_plot.plot(pen=val_pre_pen, name="Val (Pretrain)")
+        
+        self.train_ft_line = self.train_plot.plot(pen=train_ft_pen, name="Train (Fine-Tune)")
+        self.val_ft_line = self.val_plot.plot(pen=val_ft_pen, name="Val (Fine-Tune)")
 
         self.main_layout.addWidget(self.status_label)
         self.main_layout.addWidget(self.progress_bar)
-        self.main_layout.addWidget(self.plot_widget)
+        self.main_layout.addWidget(self.graph_layout)
 
         self.worker = WorkerThread()
 
@@ -558,19 +587,29 @@ class Launcher(QMainWindow):
         self.worker.start()
 
     def update_plot(self, epoch, train_loss, val_loss):
-        self.epochs_data.append(epoch)
-        self.train_loss_data.append(train_loss)
-        self.val_loss_data.append(val_loss)
+        # Update text labels
+        self.train_tip_label.setText(f"{train_loss:.2e}")
+        self.val_tip_label.setText(f"{val_loss:.2e}")
+        self.train_tip_label.setPos(epoch, train_loss)
+        self.val_tip_label.setPos(epoch, val_loss)
 
-        self.train_tip_label.setText(f"{train_loss:.10f}")
-        self.val_tip_label.setText(f"{val_loss:.10f}")
+        # Pretrain phase
+        if epoch <= settings.ai_training.training.pretrain_epochs - 1:
+            self.pre_epochs.append(epoch)
+            self.pre_train_loss.append(train_loss)
+            self.pre_val_loss.append(val_loss)
+            
+            self.train_pre_line.setData(self.pre_epochs, self.pre_train_loss)
+            self.val_pre_line.setData(self.pre_epochs, self.pre_val_loss)
 
-        # The plot is logarithmic, so convert y coordinates to log10
-        self.train_tip_label.setPos(epoch, np.log10(max(train_loss, 1e-8)))
-        self.val_tip_label.setPos(epoch, np.log10(max(val_loss, 1e-8)))
-
-        self.train_line.setData(self.epochs_data, self.train_loss_data)
-        self.val_line.setData(self.epochs_data, self.val_loss_data)
+        # Fine-tune phase
+        if epoch > settings.ai_training.training.pretrain_epochs - 1:
+            self.ft_epochs.append(epoch)
+            self.ft_train_loss.append(train_loss)
+            self.ft_val_loss.append(val_loss)
+            
+            self.train_ft_line.setData(self.ft_epochs, self.ft_train_loss)
+            self.val_ft_line.setData(self.ft_epochs, self.ft_val_loss)
 
     def closeEvent(self, event):
         """
