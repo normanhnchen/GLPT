@@ -98,7 +98,7 @@ def save_checkpoint(checkpoint, path):
 
 # See 9.5 Training
 class DenoiseDataset(Dataset):
-    def __init__(self, renders_path, patch_size=256, is_validation=False):
+    def __init__(self, renders_path, patch_size=64, is_validation=False):
         self.diffuse_path = renders_path / "diffuse/"
         self.specular_path = renders_path / "specular/"
         self.albedo_path = renders_path / "albedo/"
@@ -212,7 +212,36 @@ def _preprocess(x, target):
 
     target_linear = target_diffuse + target_specular
 
-    return x, diffuse_demodulated, specular_compressed, target_linear
+    target_diffuse_demodulated = denoiser.demodulate(target_diffuse, albedo)
+    target_specular_compressed = denoiser.compress(target_specular)
+
+    return x, diffuse_demodulated, specular_compressed, target_linear, target_diffuse_demodulated, target_specular_compressed
+
+
+def _compute_loss(denoiser, x, diffuse_linear, specular_linear,
+                   target_diffuse_demodulated, target_specular_compressed, target_linear,
+                   is_pretrain):
+    albedo = x[:, 6:9]
+
+    diffuse_prediction, specular_prediction = denoiser(x, diffuse_linear, specular_linear)
+
+    if is_pretrain:
+        # Pretrain
+        # Bako et al. Sec 5.2
+
+        diffuse_loss = criterion(diffuse_prediction, target_diffuse_demodulated)
+        specular_loss = criterion(specular_prediction, target_specular_compressed)
+        return diffuse_loss + specular_loss
+    
+    else:
+        # Fine-tune
+        # Bako et al. Sec 4.3, Eq 4
+
+        diffuse_final = denoiser.remodulate(diffuse_prediction, albedo)
+        specular_final = denoiser.decompress(specular_prediction)
+        prediction_linear = diffuse_final + specular_final
+
+        return criterion(prediction_linear, target_linear)
 
 
 class WorkerThread(QThread):
@@ -252,7 +281,7 @@ class WorkerThread(QThread):
 
         train_loader = DataLoader(
             train_dataset,
-            batch_size=4,
+            batch_size=5,
             shuffle=True,
             # Parallelize data loading across worker processes
             num_workers=4,
@@ -319,6 +348,8 @@ class WorkerThread(QThread):
             if self.should_close:
                 break
 
+            is_pretrain = epoch < settings.ai_training.training.pretrain_epochs
+
             # Training loop
             # See 9.5 Training
             # ----------------
@@ -332,22 +363,17 @@ class WorkerThread(QThread):
                 x = x.to(settings.pytorch_device)
                 target = target.to(settings.pytorch_device)
 
-                x, diffuse_linear, specular_linear, target_linear = _preprocess(x, target)
+                (x, diffuse_linear, specular_linear, target_linear,
+                 target_diffuse_demod, target_specular_comp) = _preprocess(x, target)
 
                 optim.zero_grad()
 
-                diffuse_prediction, specular_prediction = denoiser(x, diffuse_linear, specular_linear)
-
-                albedo = x[:, 6:9]
+                loss = _compute_loss(
+                    denoiser, x, diffuse_linear, specular_linear,
+                    target_diffuse_demod, target_specular_comp, target_linear,
+                    is_pretrain
+                )
                 
-                diffuse_final = denoiser.remodulate(diffuse_prediction, albedo)
-                specular_final = denoiser.decompress(specular_prediction)
-                prediction_linear = diffuse_final + specular_final
-
-                prediction_compressed = denoiser.compress(prediction_linear)
-                target_compressed = denoiser.compress(target_linear)
-
-                loss = criterion(prediction_compressed, target_compressed)
                 loss.backward()
                 optim.step()
 
@@ -375,20 +401,14 @@ class WorkerThread(QThread):
                     x = x_grid[patch_indices].to(settings.pytorch_device)
                     target = target_grid[patch_indices].to(settings.pytorch_device)
  
-                    x, diffuse_linear, specular_linear, target_linear = _preprocess(x, target)
+                    (x, diffuse_linear, specular_linear, target_linear,
+                     target_diffuse_demod, target_specular_comp) = _preprocess(x, target)
 
-                    diffuse_prediction, specular_prediction = denoiser(x, diffuse_linear, specular_linear)
-
-                    albedo = x[:, 6:9]
-
-                    diffuse_final = denoiser.remodulate(diffuse_prediction, albedo)
-                    specular_final = denoiser.decompress(specular_prediction)
-                    prediction_linear = diffuse_final + specular_final
-                    
-                    prediction_compressed = denoiser.compress(prediction_linear)
-                    target_compressed = denoiser.compress(target_linear)
-
-                    loss = criterion(prediction_compressed, target_compressed)
+                    loss = _compute_loss(
+                        denoiser, x, diffuse_linear, specular_linear,
+                        target_diffuse_demod, target_specular_comp, target_linear,
+                        is_pretrain
+                    )
  
                     # Multiply the validation loss by the number of patches
                     val_loss += loss.item() * x.size(0)
@@ -402,7 +422,11 @@ class WorkerThread(QThread):
             val_loss = val_loss / max(1, total_val_patches)
 
             # Update the text label
-            status_text = f"Epoch: {epoch} / {settings.ai_training.training.epochs}"
+            if is_pretrain:
+                status_text = f"[Pretraining] Epoch: {epoch} / {settings.ai_training.training.epochs - 1}"
+            else:
+                status_text = f"[Fine-Tuning] Epoch: {epoch} / {settings.ai_training.training.epochs - 1}"
+
             self.status.emit(status_text)
 
             self.loss_update.emit(epoch, epoch_loss, val_loss)
@@ -424,6 +448,9 @@ class WorkerThread(QThread):
 
             save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.latest_checkpoint)
 
+            if epoch == settings.ai_training.training.pretrain_epochs:
+                best_val_loss = torch.inf
+    
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.best_checkpoint)
@@ -546,7 +573,7 @@ class Launcher(QMainWindow):
 
 # Initialize globally so the dataset can access it
 denoiser = KPCN().to(settings.pytorch_device)
-optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
+optim = torch.optim.Adam(denoiser.parameters(), lr=1e-5)
 criterion = nn.L1Loss()
 
 

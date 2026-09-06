@@ -522,7 +522,9 @@ class AI_Training:
             self._load_internal()
 
         def _load_internal(self):
-            self.epochs = self.internal_config["epochs"]
+            self.pretrain_epochs = self.internal_config["pretrain_epochs"]
+            self.fine_tune_epochs = self.internal_config["fine_tune_epochs"]
+            self.epochs = self.internal_config = self.pretrain_epochs + self.fine_tune_epochs
     
     def __init__(self, internal_settings):
         self.internal_config = internal_settings["ai_training"]
