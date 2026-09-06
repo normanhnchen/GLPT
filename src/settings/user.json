@@ -29,14 +29,14 @@
     },
     "file_paths": {
         "ai_training": {
-            "hdris": "src\\assets\\hdris\\ai_training",
-            "renders": "src\\assets\\renders\\ai_training",
-            "scenes": "src\\assets\\models\\ai_training"
+            "hdris": "src/assets/hdris/ai_training",
+            "renders": "src/assets/renders/ai_training",
+            "scenes": "src/assets/models/ai_training"
         },
         "hdri": false,
-        "renders": "src\\assets\\renders\\images",
-        "scene": "src\\assets\\models\\dragon_scene.glb",
-        "scenes": "src\\assets\\models"
+        "renders": "src/assets/renders/images",
+        "scene": "src/assets/models/dragon_scene.glb",
+        "scenes": "src/assets/models"
     },
     "path_tracing": {
         "backface_culling": false,

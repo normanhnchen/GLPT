@@ -430,10 +430,10 @@ class FilePathSettings:
                 path = Path(path)
 
                 if path.is_relative_to(_ROOT_DIR):
-                    return str(path.relative_to(_ROOT_DIR))
+                    return str(path.relative_to(_ROOT_DIR)).as_posix()
                 
                 # File lives outside of the project root
-                return str(path)
+                return str(path).as_posix()
             
             # This case is for when there is no HDRI selected
             return path

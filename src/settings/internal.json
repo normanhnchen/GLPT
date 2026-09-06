@@ -58,47 +58,47 @@
     },
     "file_paths": {
         "ai_training": {
-            "camera_capture_states": "src\\ai\\training\\camera_capture_states.json",
-            "hdris": "src\\assets\\hdris\\ai_training\\",
-            "renders": "src\\assets\\renders\\ai_training",
-            "scenes": "src\\assets\\models\\ai_training\\"
+            "camera_capture_states": "src/ai/training/camera_capture_states.json",
+            "hdris": "src/assets/hdris/ai_training/",
+            "renders": "src/assets/renders/ai_training",
+            "scenes": "src/assets/models/ai_training/"
         },
         "cache": {
-            "scenes": "src\\assets\\cache\\scene",
-            "bvhs": "src\\assets\\cache\\bvh"
+            "scenes": "src/assets/cache/scene",
+            "bvhs": "src/assets/cache/bvh"
         },
         "denoiser": {
-            "latest_checkpoint": "src\\ai\\denoiser\\latest_checkpoint.pt",
-            "best_checkpoint": "src\\ai\\denoiser\\best_checkpoint.pt"
+            "latest_checkpoint": "src/ai/denoiser/latest_checkpoint.pt",
+            "best_checkpoint": "src/ai/denoiser/best_checkpoint.pt"
         },
-        "hdri": "src\\assets\\hdris\\day_sky_hdri.exr",
+        "hdri": "src/assets/hdris/day_sky_hdri.exr",
         "path_tracing": {
             "bvh_bounds_debug": {
-                "frag": "src\\shaders\\path_tracing\\bvh_bounds_debug.fs",
-                "vert": "src\\shaders\\path_tracing\\bvh_bounds_debug.vs"
+                "frag": "src/shaders/path_tracing/bvh_bounds_debug.fs",
+                "vert": "src/shaders/path_tracing/bvh_bounds_debug.vs"
             },
-            "comp": "src\\shaders\\path_tracing\\path_trace.comp",
-            "frag": "src\\shaders\\path_tracing\\final.fs",
-            "vert": "src\\shaders\\path_tracing\\final.vs"
+            "comp": "src/shaders/path_tracing/path_trace.comp",
+            "frag": "src/shaders/path_tracing/final.fs",
+            "vert": "src/shaders/path_tracing/final.vs"
         },
         "rasterization": {
             "background": {
-                "frag": "src\\shaders\\rasterization\\background.fs",
-                "vert": "src\\shaders\\rasterization\\background.vs"
+                "frag": "src/shaders/rasterization/background.fs",
+                "vert": "src/shaders/rasterization/background.vs"
             },
             "final": {
-                "frag": "src\\shaders\\rasterization\\final.fs",
-                "vert": "src\\shaders\\rasterization\\final.vs"
+                "frag": "src/shaders/rasterization/final.fs",
+                "vert": "src/shaders/rasterization/final.vs"
             },
             "pbr": {
-                "frag": "src\\shaders\\rasterization\\pbr.fs",
-                "vert": "src\\shaders\\rasterization\\pbr.vs"
+                "frag": "src/shaders/rasterization/pbr.fs",
+                "vert": "src/shaders/rasterization/pbr.vs"
             }
         },
-        "renders": "src\\assets\\renders\\images",
-        "scene": "src\\assets\\models\\cornell_box.glb",
-        "scenes": "src\\assets\\models",
-        "hdris": "src\\assets\\hdris"
+        "renders": "src/assets/renders/images",
+        "scene": "src/assets/models/cornell_box.glb",
+        "scenes": "src/assets/models",
+        "hdris": "src/assets/hdris"
     },
     "cache_fingerprints": {
         "chunk_size": 65536,
