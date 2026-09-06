@@ -202,17 +202,17 @@ def _preprocess(x, target):
     target_diffuse  = target[:, :3]
     target_specular = target[:, 3:6]
 
-    diffuse_linear = denoiser.demodulate(diffuse, albedo)
+    diffuse_demodulated = denoiser.demodulate(diffuse, albedo)
     specular_linear = specular
 
-    diffuse_feature = denoiser.compress(diffuse_linear)
-    specular_feature = denoiser.compress(specular_linear)
+    diffuse_compressed = denoiser.compress(diffuse_demodulated)
+    specular_compressed = denoiser.compress(specular_linear)
 
-    x = torch.cat([diffuse_feature, specular_feature, albedo, normal, depth], dim=1)
+    x = torch.cat([diffuse_compressed, specular_compressed, albedo, normal, depth], dim=1)
 
     target_linear = target_diffuse + target_specular
 
-    return x, diffuse_linear, specular_linear, target_linear
+    return x, diffuse_demodulated, specular_compressed, target_linear
 
 
 class WorkerThread(QThread):
@@ -339,9 +339,10 @@ class WorkerThread(QThread):
                 diffuse_prediction, specular_prediction = denoiser(x, diffuse_linear, specular_linear)
 
                 albedo = x[:, 6:9]
+                
                 diffuse_final = denoiser.remodulate(diffuse_prediction, albedo)
-
-                prediction_linear = diffuse_final + specular_prediction
+                specular_final = denoiser.decompress(specular_prediction)
+                prediction_linear = diffuse_final + specular_final
 
                 prediction_compressed = denoiser.compress(prediction_linear)
                 target_compressed = denoiser.compress(target_linear)
@@ -379,10 +380,12 @@ class WorkerThread(QThread):
                     diffuse_prediction, specular_prediction = denoiser(x, diffuse_linear, specular_linear)
 
                     albedo = x[:, 6:9]
+
                     diffuse_final = denoiser.remodulate(diffuse_prediction, albedo)
-                    prediction_beauty_linear = diffuse_final + specular_prediction
+                    specular_final = denoiser.decompress(specular_prediction)
+                    prediction_linear = diffuse_final + specular_final
                     
-                    prediction_compressed = denoiser.compress(prediction_beauty_linear)
+                    prediction_compressed = denoiser.compress(prediction_linear)
                     target_compressed = denoiser.compress(target_linear)
 
                     loss = criterion(prediction_compressed, target_compressed)

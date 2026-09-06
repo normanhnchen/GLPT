@@ -376,7 +376,8 @@ class FilePathSettings:
             self._load_internal()
 
         def _load_internal(self):
-            self.checkpoint = _resolve_file(self.internal_config["checkpoint"])
+            self.latest_checkpoint = _resolve_file(self.internal_config["latest_checkpoint"])
+            self.best_checkpoint = _resolve_file(self.internal_config["best_checkpoint"])
 
     class Cache:
         def __init__(self, internal_config):

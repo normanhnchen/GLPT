@@ -197,20 +197,21 @@ class KPCN(nn.Module):
             # Normalize depth via the inverse depth method
             depth = self.normalize_depth(depth)
 
-            diffuse_linear = self.demodulate(diffuse, albedo)
+            diffuse_demodulated = self.demodulate(diffuse, albedo)
             specular_linear = specular
 
-            diffuse_feature = self.compress(diffuse_linear)
-            specular_feature = self.compress(specular_linear)
+            diffuse_compressed = self.compress(diffuse_demodulated)
+            specular_compressed = self.compress(specular_linear)
 
             # 13 channels
-            x = torch.cat([diffuse_feature, specular_feature, albedo, normal, depth], dim=1)
+            x = torch.cat([diffuse_compressed, specular_compressed, albedo, normal, depth], dim=1)
 
-            diffuse_filtered, specular_filtered = self(x, diffuse_linear, specular_linear)
+            diffuse_predicted, specular_predicted = self(x, diffuse_demodulated, specular_compressed)
 
-            diffuse_final = self.remodulate(diffuse_filtered, albedo)
+            diffuse_final = self.remodulate(diffuse_predicted, albedo)
+            specular_final = self.decompress(specular_predicted)
 
-            combined = diffuse_final + specular_filtered
+            combined = diffuse_final + specular_final
 
             self._tensor_to_tex(combined, denoised)
     
@@ -261,7 +262,7 @@ class KPCN(nn.Module):
         return inv
 
     def demodulate(self, x, albedo):
-        return x / albedo.clamp(min=1e-1)
+        return x / albedo.clamp(min=0.00316)
 
     def remodulate(self, x, albedo):
-        return x * albedo.clamp(min=1e-1)
+        return x * albedo.clamp(min=0.00316)
