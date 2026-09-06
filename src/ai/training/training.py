@@ -98,7 +98,7 @@ def save_checkpoint(checkpoint, path):
 
 # See 9.5 Training
 class DenoiseDataset(Dataset):
-    def __init__(self, renders_path, patch_size=64, is_validation=False):
+    def __init__(self, renders_path, patch_size=64, patches_per_image=1, is_validation=False):
         self.diffuse_path = renders_path / "diffuse/"
         self.specular_path = renders_path / "specular/"
         self.albedo_path = renders_path / "albedo/"
@@ -109,7 +109,7 @@ class DenoiseDataset(Dataset):
 
         self.num_samples = sum(1 for item in self.diffuse_path.iterdir() if item.is_file())
         self.patch_size = patch_size
-
+        self.patches_per_image = patches_per_image
         self.is_validation = is_validation
 
     def __len__(self):
@@ -166,20 +166,31 @@ class DenoiseDataset(Dataset):
             target = torch.stack(target_patches)
 
         else:
-            # Get random image patch
-            # ----------------------
+            x_patches = []
+            target_patches = []
+
             _, h, w = x.shape
 
-            top = random.randint(0, h - self.patch_size)
-            bottom = top + self.patch_size
-            left = random.randint(0, w - self.patch_size)
-            right = left + self.patch_size
+            for _ in range(self.patches_per_image):
+                # Get random image patch
+                # ----------------------
 
-            x = x[:, top:bottom, left:right]
-            target = target[:, top:bottom, left:right]
+                top = random.randint(0, h - self.patch_size)
+                bottom = top + self.patch_size
+                left = random.randint(0, w - self.patch_size)
+                right = left + self.patch_size
 
-            x, target = self._augment(x, target)
+                x_crop = x[:, top:bottom, left:right]
+                target_crop = target[:, top:bottom, left:right]
 
+                x_crop, target_crop = self._augment(x_crop, target_crop)
+
+                x_patches.append(x_crop)
+                target_patches.append(target_crop)
+
+            x = torch.stack(x_patches)
+            target = torch.stack(target_patches)
+        
         return x, target
 
     def _augment(self, x, target):
@@ -363,6 +374,9 @@ class WorkerThread(QThread):
                 x = x.to(settings.pytorch_device)
                 target = target.to(settings.pytorch_device)
 
+                x = x.flatten(0, 1)
+                target = target.flatten(0, 1)
+
                 (x, diffuse_linear, specular_linear, target_linear,
                  target_diffuse_demod, target_specular_comp) = _preprocess(x, target)
 
@@ -539,6 +553,7 @@ class Launcher(QMainWindow):
         self.worker.progress.connect(self.progress_bar.setValue)
         self.worker.setup_progress.connect(self.progress_bar.setMaximum)
         self.worker.loss_update.connect(self.update_plot)
+        self.worker.error.connect(self.status_label.setText)
 
         self.worker.start()
 
