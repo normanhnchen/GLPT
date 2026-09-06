@@ -287,7 +287,7 @@ class WorkerThread(QThread):
         # See 9.5 Training
         # ----------------
         try:
-            checkpoint = torch.load(settings.file_paths.denoiser.checkpoint, map_location=settings.pytorch_device)
+            checkpoint = torch.load(settings.file_paths.denoiser.latest_checkpoint, map_location=settings.pytorch_device)
             denoiser.load_state_dict(checkpoint["model_state_dict"])
             optim.load_state_dict(checkpoint["optimizer_state_dict"])
             starting_epoch = checkpoint["epoch"] + 1
@@ -307,10 +307,13 @@ class WorkerThread(QThread):
                 train_history = []
                 val_history = []
 
+            best_val_loss = min(val_history) if val_history else torch.inf
+
         except FileNotFoundError:
             starting_epoch = 0
             train_history = []
             val_history = []
+            best_val_loss = torch.inf
 
         for epoch in range(starting_epoch, settings.ai_training.training.epochs):
             if self.should_close:
@@ -416,7 +419,11 @@ class WorkerThread(QThread):
                 "val_history": val_history
             }
 
-            save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.checkpoint)
+            save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.latest_checkpoint)
+
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                save_checkpoint(curr_checkpoint, settings.file_paths.denoiser.best_checkpoint)
 
         self.status.emit("Training Complete!")
 
@@ -510,8 +517,8 @@ class Launcher(QMainWindow):
         self.train_loss_data.append(train_loss)
         self.val_loss_data.append(val_loss)
 
-        self.train_tip_label.setText(f"{train_loss:.6f}")
-        self.val_tip_label.setText(f"{val_loss:.6f}")
+        self.train_tip_label.setText(f"{train_loss:.10f}")
+        self.val_tip_label.setText(f"{val_loss:.10f}")
 
         # The plot is logarithmic, so convert y coordinates to log10
         self.train_tip_label.setPos(epoch, np.log10(max(train_loss, 1e-8)))

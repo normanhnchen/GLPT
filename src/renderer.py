@@ -43,7 +43,7 @@ def preload_scene_data(progress_callback=None):
     ai_denoiser = KPCN()
     try:
         # Load saved weights and biases
-        ai_denoiser.load_state_dict(torch.load(settings.file_paths.denoiser.checkpoint)["model_state_dict"])
+        ai_denoiser.load_state_dict(torch.load(settings.file_paths.denoiser.best_checkpoint)["model_state_dict"])
     except FileNotFoundError:
         ai_denoiser = None
 
