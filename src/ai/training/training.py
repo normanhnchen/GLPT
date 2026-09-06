@@ -202,17 +202,17 @@ def _preprocess(x, target):
     target_diffuse  = target[:, :3]
     target_specular = target[:, 3:6]
 
-    diffuse = denoiser.demodulate(diffuse, albedo)
-    target_diffuse = denoiser.demodulate(target_diffuse, albedo)
+    diffuse_linear = denoiser.demodulate(diffuse, albedo)
+    specular_linear = specular
 
-    diffuse = denoiser.compress(diffuse)
-    specular = denoiser.compress(specular)
-    target_diffuse = denoiser.compress(target_diffuse)
-    target_specular = denoiser.compress(target_specular)
+    diffuse_feature = denoiser.compress(diffuse_linear)
+    specular_feature = denoiser.compress(specular_linear)
 
-    x = torch.cat([diffuse, specular, albedo, normal, depth], dim=1)
-    target = torch.cat([target_diffuse, target_specular], dim=1)
-    return x, target
+    x = torch.cat([diffuse_feature, specular_feature, albedo, normal, depth], dim=1)
+
+    target_linear = target_diffuse + target_specular
+
+    return x, diffuse_linear, specular_linear, target_linear
 
 
 class WorkerThread(QThread):
@@ -271,6 +271,16 @@ class WorkerThread(QThread):
             val_x_cache.append(x_grid.squeeze(0))
             val_target_cache.append(target_grid.squeeze(0))
 
+        # Precompute a fixed set of patches per validation image
+        # so the same patches are used every epoch instead of stochastically sampled
+        val_patch_indices_cache = []
+        patch_gen = torch.Generator().manual_seed(9999)
+        for x_grid in val_x_cache:
+            num_patches = x_grid.size(0)
+            k = min(NUM_VAL_SAMPLES_PER_IMAGE, num_patches)
+            patch_indices = torch.randperm(num_patches, generator=patch_gen)[:k]
+            val_patch_indices_cache.append(patch_indices)
+
         # Tell the progress bar the maximum epoch value
         self.setup_progress.emit(settings.ai_training.training.epochs)
 
@@ -318,15 +328,22 @@ class WorkerThread(QThread):
                 
                 x = x.to(settings.pytorch_device)
                 target = target.to(settings.pytorch_device)
-                x, target = _preprocess(x, target)
 
-                diffuse = x[:, :3].to(settings.pytorch_device)
-                specular = x[:, 3:6].to(settings.pytorch_device)
+                x, diffuse_linear, specular_linear, target_linear = _preprocess(x, target)
 
                 optim.zero_grad()
-                diffuse_prediction, specular_prediction = denoiser(x, diffuse, specular)
-                prediction = torch.cat([diffuse_prediction, specular_prediction], dim=1)
-                loss = criterion(prediction, target)
+
+                diffuse_prediction, specular_prediction = denoiser(x, diffuse_linear, specular_linear)
+
+                albedo = x[:, 6:9]
+                diffuse_final = denoiser.remodulate(diffuse_prediction, albedo)
+
+                prediction_linear = diffuse_final + specular_prediction
+
+                prediction_compressed = denoiser.compress(prediction_linear)
+                target_compressed = denoiser.compress(target_linear)
+
+                loss = criterion(prediction_compressed, target_compressed)
                 loss.backward()
                 optim.step()
 
@@ -347,34 +364,28 @@ class WorkerThread(QThread):
             val_loss = 0
             total_val_patches = 0
             with torch.no_grad():
-                for x_grid, target_grid in zip(val_x_cache, val_target_cache):
+                for x_grid, target_grid, patch_indices in zip(val_x_cache, val_target_cache, val_patch_indices_cache):
                     if self.should_close:
                         break
-
-                    # Remove batch dimension
-                    # (num batches, num patches, channels, batch_size, batch_size)
-                    # -> (num patches, channels, batch_size, batch_size)
-                    x_grid = x_grid.squeeze(0)
-                    target_grid = target_grid.squeeze(0)
- 
-                    # Randomly sample a few image patches instead
-                    num_patches = x_grid.size(0)
-                    k = min(NUM_VAL_SAMPLES_PER_IMAGE, num_patches)
-                    patch_indices = torch.randperm(num_patches)[:k]
  
                     x = x_grid[patch_indices].to(settings.pytorch_device)
                     target = target_grid[patch_indices].to(settings.pytorch_device)
  
-                    x, target = _preprocess(x, target)
+                    x, diffuse_linear, specular_linear, target_linear = _preprocess(x, target)
 
-                    diffuse = x[:, :3].to(settings.pytorch_device)
-                    specular = x[:, 3:6].to(settings.pytorch_device)
+                    diffuse_prediction, specular_prediction = denoiser(x, diffuse_linear, specular_linear)
 
-                    diffuse_prediction, specular_prediction = denoiser(x, diffuse, specular)
-                    prediction = torch.cat([diffuse_prediction, specular_prediction], dim=1)
+                    albedo = x[:, 6:9]
+                    diffuse_final = denoiser.remodulate(diffuse_prediction, albedo)
+                    prediction_beauty_linear = diffuse_final + specular_prediction
+                    
+                    prediction_compressed = denoiser.compress(prediction_beauty_linear)
+                    target_compressed = denoiser.compress(target_linear)
+
+                    loss = criterion(prediction_compressed, target_compressed)
  
                     # Multiply the validation loss by the number of patches
-                    val_loss += criterion(prediction, target).item() * x.size(0)
+                    val_loss += loss.item() * x.size(0)
  
                     total_val_patches += x.size(0)
             
@@ -527,6 +538,7 @@ class Launcher(QMainWindow):
 denoiser = KPCN().to(settings.pytorch_device)
 optim = torch.optim.Adam(denoiser.parameters(), lr=1e-4)
 criterion = nn.L1Loss()
+
 
 def run_app():
     app = QApplication.instance()
