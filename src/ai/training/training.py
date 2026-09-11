@@ -107,6 +107,12 @@ class DenoiseDataset(Dataset):
         self.target_diffuse_path = renders_path / "target_diffuse/"
         self.target_specular_path = renders_path / "target_specular/"
 
+        self.diffuse_sq_path = renders_path / "diffuse_sq/"
+        self.specular_sq_path = renders_path / "specular_sq/"
+        self.albedo_sq_path = renders_path / "albedo_sq/"
+        self.normal_sq_path = renders_path / "normal_sq/"
+        self.depth_sq_path = renders_path / "depth_sq/"
+
         self.num_samples = sum(1 for item in self.diffuse_path.iterdir() if item.is_file())
         self.patch_size = patch_size
         self.patches_per_image = patches_per_image
@@ -128,7 +134,8 @@ class DenoiseDataset(Dataset):
 
         # Convert EXR images to PyTorch tensors
         # -------------------------------------
-        diffuse = exr_to_tensor(diffuse, keep_channels=3)
+        diffuse_full = exr_to_tensor(diffuse, keep_channels=4)
+        diffuse = diffuse_full[..., :3]
         specular = exr_to_tensor(specular, keep_channels=3)
         albedo = exr_to_tensor(albedo, keep_channels=3)
         normal = exr_to_tensor(normal, keep_channels=3)
@@ -136,10 +143,39 @@ class DenoiseDataset(Dataset):
         target_diffuse = exr_to_tensor(target_diffuse, keep_channels=3)
         target_specular = exr_to_tensor(target_specular, keep_channels=3)
 
+        diffuse_sq = exr_to_tensor(load_exr(self.diffuse_sq_path / f"diffuse_sq_{idx}.exr"), keep_channels=3)
+        specular_sq = exr_to_tensor(load_exr(self.specular_sq_path / f"specular_sq_{idx}.exr"), keep_channels=3)
+        albedo_sq = exr_to_tensor(load_exr(self.albedo_sq_path / f"albedo_sq_{idx}.exr"), keep_channels=3)
+        normal_sq = exr_to_tensor(load_exr(self.normal_sq_path / f"normal_sq_{idx}.exr"), keep_channels=3)
+        depth_sq_full = exr_to_tensor(load_exr(self.depth_sq_path / f"depth_sq_{idx}.exr"), keep_channels=2)
+        depth_sq = depth_sq_full[0]
+
+        # We saved the number of depth samples here on the shader side
+        depth_samples = depth_sq_full[:, 1]
+        # We saved the number of total samples here on the shader side
+        total_samples = diffuse_full[..., 3]
+
+        diffuse_variance = denoiser.calculate_variance(diffuse, diffuse_sq, total_samples)
+        specular_variance = denoiser.calculate_variance(specular, specular_sq, total_samples)
+        albedo_variance = denoiser.calculate_variance(albedo, albedo_sq, total_samples)
+        normal_variance = denoiser.calculate_variance(normal, normal_sq, total_samples)
+        depth_variance = denoiser.calculate_variance(depth, depth_sq, depth_samples)
+
         # Normalize depth via the inverse depth method
         depth = denoiser.normalize_depth(depth)
 
-        x = torch.cat([diffuse, specular, albedo, normal, depth])
+        x = torch.cat([
+            diffuse,
+            specular,
+            albedo,
+            normal,
+            depth,
+            diffuse_variance,
+            specular_variance,
+            albedo_variance, 
+            normal_variance,
+            depth_variance
+        ])
         target = torch.cat([target_diffuse, target_specular])
 
         if self.is_validation:
@@ -209,6 +245,16 @@ def _preprocess(x, target):
     albedo = x[:, 6:9]
     normal = x[:, 9:12]
     depth = x[:, 12:13]
+    diffuse_variance = x[:, 13:16]
+    specular_variance = x[:, 16:19]
+    albedo_variance = x[:, 19:22]
+    normal_variance = x[:, 22:25]
+    depth_variance = x[:, 25:26]
+
+    # Taylor-approximation transformation per Bako et al.
+    diffuse_variance /= (albedo + settings.ai_training.epsilon) ** 2
+    # Add small offset to prevent division by zero
+    specular_variance /= specular ** 2 + settings.ai_training.epsilon
 
     target_diffuse  = target[:, :3]
     target_specular = target[:, 3:6]
@@ -219,7 +265,18 @@ def _preprocess(x, target):
     diffuse_compressed = denoiser.compress(diffuse_demodulated)
     specular_compressed = denoiser.compress(specular_linear)
 
-    x = torch.cat([diffuse_compressed, specular_compressed, albedo, normal, depth], dim=1)
+    x = torch.cat([
+        diffuse_compressed,
+        specular_compressed,
+        albedo,
+        normal,
+        depth,
+        diffuse_variance,
+        specular_variance,
+        albedo_variance,
+        normal_variance,
+        depth_variance
+    ], dim=1)
 
     target_linear = target_diffuse + target_specular
 

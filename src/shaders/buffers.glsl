@@ -11,6 +11,11 @@ layout(rgba32f, binding = 2) uniform image2D specularPass;
 layout(rgba32f, binding = 3) uniform image2D baseColorPass;
 layout(rgba32f, binding = 4) uniform image2D normalPass;
 layout(rgba32f, binding = 5) uniform image2D depthPass;
+layout(rgba32f, binding = 6) uniform image2D diffuseSq;
+layout(rgba32f, binding = 7) uniform image2D specularSq;
+layout(rgba32f, binding = 8) uniform image2D baseColorSq;
+layout(rgba32f, binding = 9) uniform image2D normalSq;
+layout(rgba32f, binding = 10) uniform image2D depthSq;
 
 layout(std430, binding = 0) buffer CameraBuffer {
     vec3 pos;

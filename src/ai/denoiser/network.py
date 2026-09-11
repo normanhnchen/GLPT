@@ -101,9 +101,12 @@ class UNet(nn.Module):
 
 # See 9.3 KPCN
 class KPCN(nn.Module):
-    def __init__(self, in_channels=13, kernel_size=21):
+    def __init__(self, in_channels=26, kernel_size=21):
         """
-        The default in_channels is 13: diffuse(3) + specular(3) + albedo(3) + normal(3) + depth(1).
+        The default in_channels is 26:
+        diffuse(3) + specular(3) + albedo(3) + normal(3) + depth(1)
+        + diffuse_var(3) + specular_var(3) + albedo_var(3) + normal_var(3) + depth_var(1),
+        where a buffer with var is the per-pixel variance.
         kernel_size=21 per Bako et al. U-Net output is kernel_size**2 channels: one predicted
         set of weights based on the neighborhood per pixel.
         """
@@ -184,15 +187,53 @@ class KPCN(nn.Module):
         # Apply weights to the combined image RGB channels
         return (output * w).sum(dim=2) # (B, 3, H, W)
 
-    def denoise(self, diffuse, specular, albedo, normal, depth, denoised):
+    def denoise(
+        self,
+        diffuse,
+        specular,
+        albedo,
+        normal,
+        depth,
+        diffuse_sq,
+        specular_sq,
+        albedo_sq,
+        normal_sq,
+        depth_sq,
+        denoised
+    ):
         with torch.no_grad():
             self.eval()
             # Convert from OpenGL textures to torch tensors
-            diffuse = self._tex_to_tensor(diffuse, keep_channels=3) # RGBA -> RGB
+            diffuse_full = self._tex_to_tensor(diffuse, keep_channels=4) # RGBA -> RGBA
+            diffuse = diffuse_full[..., :3] # RGBA -> RGB
             specular = self._tex_to_tensor(specular, keep_channels=3) # RGBA -> RGB
             albedo = self._tex_to_tensor(albedo, keep_channels=3) # RGBA -> RGB
             normal = self._tex_to_tensor(normal, keep_channels=3) # RGBA -> RGB
             depth = self._tex_to_tensor(depth, keep_channels=1) # RGBA -> R
+
+            diffuse_sq = self._tex_to_tensor(diffuse_sq, keep_channels=3) # RGBA -> RGB
+            specular_sq = self._tex_to_tensor(specular_sq, keep_channels=3) # RGBA -> RGB
+            albedo_sq = self._tex_to_tensor(albedo_sq, keep_channels=3) # RGBA -> RGB
+            normal_sq = self._tex_to_tensor(normal_sq, keep_channels=3) # RGBA -> RGB
+            depth_sq_full = self._tex_to_tensor(depth_sq, keep_channels=2) # RGBA -> RG
+
+            # We saved the number of depth samples here on the shader side
+            depth_samples = depth_sq_full[:, 1] # RG -> G
+            # We saved the number of total samples here on the shader side
+            total_samples = diffuse_full[..., 3] # RGBA -> A
+
+            depth_sq = depth_sq_full[:, 0]
+
+            diffuse_variance = self.calculate_variance(diffuse, diffuse_sq, total_samples)
+            specular_variance = self.calculate_variance(specular, specular_sq, total_samples)
+            albedo_variance = self.calculate_variance(albedo, albedo_sq, total_samples)
+            normal_variance = self.calculate_variance(normal, normal_sq, total_samples)
+            depth_variance = self.calculate_variance(depth, depth_sq, depth_samples)
+
+            # Taylor-approximation transformation per Bako et al.
+            diffuse_variance /= (albedo + settings.ai_training.epsilon) ** 2
+            # Add small offset to prevent division by zero
+            specular_variance /= specular ** 2 + settings.ai_training.epsilon
 
             # Normalize depth via the inverse depth method
             depth = self.normalize_depth(depth)
@@ -203,8 +244,19 @@ class KPCN(nn.Module):
             diffuse_compressed = self.compress(diffuse_demodulated)
             specular_compressed = self.compress(specular_linear)
 
-            # 13 channels
-            x = torch.cat([diffuse_compressed, specular_compressed, albedo, normal, depth], dim=1)
+            # 26 channels
+            x = torch.cat([
+                diffuse_compressed,
+                specular_compressed,
+                albedo,
+                normal,
+                depth,
+                diffuse_variance,
+                specular_variance,
+                albedo_variance,
+                normal_variance,
+                depth_variance
+            ], dim=1)
 
             diffuse_predicted, specular_predicted = self(x, diffuse_demodulated, specular_compressed)
 
@@ -262,7 +314,11 @@ class KPCN(nn.Module):
         return inv
 
     def demodulate(self, x, albedo):
-        return x / albedo.clamp(min=0.00316)
+        return x / albedo.clamp(min=settings.ai_training.epsilon)
 
     def remodulate(self, x, albedo):
-        return x * albedo.clamp(min=0.00316)
+        return x * albedo.clamp(min=settings.ai_training.epsilon)
+
+    def calculate_variance(self, mean, mean_sq, n):
+        # Clamp values to prevent negative variance or division by zero
+        return (mean_sq - mean ** 2).clamp(min=0) * (n / min(n - 1, 1))

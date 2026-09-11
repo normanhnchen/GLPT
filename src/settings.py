@@ -368,6 +368,11 @@ class FilePathSettings:
             self.depth_renders = _resolve_folder(self.renders / "depth")
             self.target_diffuse_renders = _resolve_folder(self.renders / "target_diffuse")
             self.target_specular_renders = _resolve_folder(self.renders / "target_specular")
+            self.diffuse_sq_renders = _resolve_folder(self.renders / "diffuse_sq")
+            self.specular_sq_renders = _resolve_folder(self.renders / "specular_sq")
+            self.albedo_sq_renders = _resolve_folder(self.renders / "albedo_sq")
+            self.normal_sq_renders = _resolve_folder(self.renders / "normal_sq")
+            self.depth_sq_renders = _resolve_folder(self.renders / "depth_sq")
 
     class Denoiser:
         def __init__(self, internal_config):
@@ -536,6 +541,7 @@ class AI_Training:
         self.mode = self.internal_config["mode"]
         self.rendering = self.Rendering(self.internal_config["rendering"])
         self.training = self.Training(self.internal_config["training"])
+        self.epsilon = 0.00316
 
     def get_new_noisy_samples(self):
         self.noisy_samples = random.choice(self.rendering.noisy_samples_list)
