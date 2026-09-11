@@ -18,12 +18,6 @@ class FramebufferState:
         self.saved_normal = None
         self.saved_depth = None
 
-        self.saved_diffuse_sq = None
-        self.saved_specular_sq = None
-        self.saved_albedo_sq = None
-        self.saved_normal_sq = None
-        self.saved_depth_sq = None
-
     def _create_active_buffers(self):
         self.combined = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.diffuse = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
@@ -31,12 +25,6 @@ class FramebufferState:
         self.albedo = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.normal = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.depth = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
-
-        self.diffuse_sq = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
-        self.specular_sq = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
-        self.albedo_sq = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
-        self.normal_sq = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
-        self.depth_sq = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
     
     def _create_saved_buffers(self):
         self.saved_combined = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
@@ -46,12 +34,6 @@ class FramebufferState:
         self.saved_normal = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
         self.saved_depth = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
 
-        self.saved_diffuse_sq = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
-        self.saved_specular_sq = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
-        self.saved_albedo_sq = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
-        self.saved_normal_sq = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
-        self.saved_depth_sq = self.ctx.texture(settings.screen.resolution, 4, dtype=f4)
-
     def _clear_active_buffers(self):
         zeros = np.zeros((*settings.screen.resolution, 4), dtype=f4)
         self.combined.write(zeros)
@@ -60,12 +42,6 @@ class FramebufferState:
         self.albedo.write(zeros)
         self.normal.write(zeros)
         self.depth.write(zeros)
-
-        self.diffuse_sq.write(zeros)
-        self.specular_sq.write(zeros)
-        self.albedo_sq.write(zeros)
-        self.normal_sq.write(zeros)
-        self.depth_sq.write(zeros)
 
     def _release_saved_buffers(self):
         if self.saved_combined is not None:
@@ -81,17 +57,6 @@ class FramebufferState:
         if self.saved_depth is not None:
             self.saved_depth.release()
 
-        if self.saved_diffuse_sq is not None:
-            self.saved_diffuse_sq.release()
-        if self.saved_specular_sq is not None:
-            self.saved_specular_sq.release()
-        if self.saved_albedo_sq is not None:
-            self.saved_albedo_sq.release()
-        if self.saved_normal_sq is not None:
-            self.saved_normal_sq.release()
-        if self.saved_depth_sq is not None:
-            self.saved_depth_sq.release()
-
     def _release_active_buffers(self):
         if self.combined is not None:
             self.combined.release()
@@ -105,17 +70,6 @@ class FramebufferState:
             self.normal.release()
         if self.depth is not None:
             self.depth.release()
-
-        if self.diffuse_sq is not None:
-            self.diffuse_sq.release()
-        if self.specular_sq is not None:
-            self.specular_sq.release()
-        if self.albedo_sq is not None:
-            self.albedo_sq.release()
-        if self.normal_sq is not None:
-            self.normal_sq.release()
-        if self.depth_sq is not None:
-            self.depth_sq.release()
     
     def reset(self):
         self._release_active_buffers()
@@ -133,12 +87,6 @@ class FramebufferState:
         self.saved_normal.write(self.normal.read())
         self.saved_depth.write(self.depth.read())
 
-        self.saved_diffuse_sq.write(self.diffuse_sq.read())
-        self.saved_specular_sq.write(self.specular_sq.read())
-        self.saved_albedo_sq.write(self.albedo_sq.read())
-        self.saved_normal_sq.write(self.normal_sq.read())
-        self.saved_depth_sq.write(self.depth_sq.read())
-
     def bind_to_images(
             self,
             combined_loc=0,
@@ -146,12 +94,7 @@ class FramebufferState:
             specular_loc=2,
             albedo_loc=3,
             normal_loc=4,
-            depth_loc=5,
-            diffuse_sq_loc=6,
-            specular_sq_loc=7,
-            albedo_sq_loc=8,
-            normal_sq_loc=9,
-            depth_sq_loc=10
+            depth_loc=5
         ):
         self.combined.bind_to_image(combined_loc, read=True, write=True)
         self.diffuse.bind_to_image(diffuse_loc, read=True, write=True)
@@ -159,11 +102,6 @@ class FramebufferState:
         self.albedo.bind_to_image(albedo_loc, read=True, write=True)
         self.normal.bind_to_image(normal_loc, read=True, write=True)
         self.depth.bind_to_image(depth_loc, read=True, write=True)
-        self.diffuse_sq.bind_to_image(diffuse_sq_loc, read=True, write=True)
-        self.specular_sq.bind_to_image(specular_sq_loc, read=True, write=True)
-        self.albedo_sq.bind_to_image(albedo_sq_loc, read=True, write=True)
-        self.normal_sq.bind_to_image(normal_sq_loc, read=True, write=True)
-        self.depth_sq.bind_to_image(depth_sq_loc, read=True, write=True)
 
     def _get_ndarray(self, buffer):
         data = buffer.read()
@@ -194,21 +132,6 @@ class FramebufferState:
 
     def get_ndarray_depth(self):
         return self._get_ndarray(self.depth)
-
-    def get_ndarray_diffuse_sq(self):
-        return self._get_ndarray(self.diffuse_sq)
-
-    def get_ndarray_specular_sq(self):
-        return self._get_ndarray(self.specular_sq)
-
-    def get_ndarray_albedo_sq(self):
-        return self._get_ndarray(self.albedo_sq)
-
-    def get_ndarray_normal_sq(self):
-        return self._get_ndarray(self.normal_sq)
-
-    def get_ndarray_depth_sq(self):
-        return self._get_ndarray(self.depth_sq)
 
 
 class TileState:
@@ -298,35 +221,10 @@ class DenoiseState:
         if self.saved_denoised is not None:
             self.saved_denoised.release()
 
-    def denoise(
-            self,
-            ai_denoiser,
-            diffuse,
-            specular,
-            albedo,
-            normal,
-            depth,
-            diffuse_sq,
-            specular_sq,
-            albedo_sq,
-            normal_sq,
-            depth_sq
-        ):
+    def denoise(self, ai_denoiser, diffuse, specular, albedo, normal, depth):
         if self.saved_denoised is None:
             self.saved_denoised = self.ctx.texture(settings.screen.resolution, 3, dtype=f4)
-            ai_denoiser.denoise(
-                diffuse,
-                specular,
-                albedo,
-                normal,
-                depth,
-                diffuse_sq,
-                specular_sq,
-                albedo_sq,
-                normal_sq,
-                depth_sq,
-                self.saved_denoised
-            )
+            ai_denoiser.denoise(diffuse, specular, albedo, normal, depth, self.saved_denoised)
 
     def reset(self):
         self._release_buffer()
@@ -388,12 +286,7 @@ class PTState:
             self.framebuffers.saved_specular,
             self.framebuffers.saved_albedo,
             self.framebuffers.saved_normal,
-            self.framebuffers.saved_depth,
-            self.framebuffers.saved_diffuse_sq,
-            self.framebuffers.saved_specular_sq,
-            self.framebuffers.saved_albedo_sq,
-            self.framebuffers.saved_normal_sq,
-            self.framebuffers.saved_depth_sq
+            self.framebuffers.saved_depth
         )
 
 

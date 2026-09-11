@@ -28,12 +28,7 @@ class ExportState:
                 "specular": self.pt_state.framebuffers.get_ndarray_specular(),
                 "albedo": self.pt_state.framebuffers.get_ndarray_albedo(),
                 "normal": self.pt_state.framebuffers.get_ndarray_normal(),
-                "depth": self.pt_state.framebuffers.get_ndarray_depth(),
-                "diffuse_sq": self.pt_state.framebuffers.get_ndarray_diffuse_sq(),
-                "specular_sq": self.pt_state.framebuffers.get_ndarray_specular_sq(),
-                "albedo_sq": self.pt_state.framebuffers.get_ndarray_albedo_sq(),
-                "normal_sq": self.pt_state.framebuffers.get_ndarray_normal_sq(),
-                "depth_sq": self.pt_state.framebuffers.get_ndarray_depth_sq(),
+                "depth": self.pt_state.framebuffers.get_ndarray_depth()
             }
         
         if self.noisy is not None and total_samples >= settings.path_tracing.max_samples:
@@ -86,12 +81,6 @@ class ExportState:
         albedo_array = noisy["albedo"]
         normal_array = noisy["normal"]
         depth_array = noisy["depth"]
-
-        diffuse_sq_array = noisy["diffuse_sq"]
-        specular_sq_array = noisy["specular_sq"]
-        albedo_sq_array = noisy["albedo_sq"]
-        normal_sq_array = noisy["normal_sq"]
-        depth_sq_array = noisy["depth_sq"]
         
         # Flip image vertically
         # OpenGL is bottom-up, EXR is top-down
@@ -100,12 +89,6 @@ class ExportState:
         albedo_array = np.flipud(albedo_array)
         normal_array = np.flipud(normal_array)
         depth_array = np.flipud(depth_array)
-
-        diffuse_sq_array = np.flipud(diffuse_sq_array)
-        specular_sq_array = np.flipud(specular_sq_array)
-        albedo_sq_array = np.flipud(albedo_sq_array)
-        normal_sq_array = np.flipud(normal_sq_array)
-        depth_sq_array = np.flipud(depth_sq_array)
         
         diffuse_dir = Path(settings.file_paths.ai_training.diffuse_renders)
         specular_dir = Path(settings.file_paths.ai_training.specular_renders)
@@ -113,23 +96,11 @@ class ExportState:
         normal_dir = Path(settings.file_paths.ai_training.normal_renders)
         depth_dir = Path(settings.file_paths.ai_training.depth_renders)
 
-        diffuse_sq_dir = Path(settings.file_paths.ai_training.diffuse_sq_renders)
-        specular_sq_dir = Path(settings.file_paths.ai_training.specular_sq_renders)
-        albedo_sq_dir = Path(settings.file_paths.ai_training.albedo_sq_renders)
-        normal_sq_dir = Path(settings.file_paths.ai_training.normal_sq_renders)
-        depth_sq_dir = Path(settings.file_paths.ai_training.depth_sq_renders)
-
         diffuse_path = self._get_next_exr_path(diffuse_dir, "diffuse")
         specular_path = self._get_next_exr_path(specular_dir, "specular")
         albedo_path = self._get_next_exr_path(albedo_dir, "albedo")
         normal_path = self._get_next_exr_path(normal_dir, "normal")
         depth_path = self._get_next_exr_path(depth_dir, "depth")
-
-        diffuse_sq_path = self._get_next_exr_path(diffuse_sq_dir, "diffuse_sq")
-        specular_sq_path = self._get_next_exr_path(specular_sq_dir, "specular_sq")
-        albedo_sq_path = self._get_next_exr_path(albedo_sq_dir, "albedo_sq")
-        normal_sq_path = self._get_next_exr_path(normal_sq_dir, "normal_sq")
-        depth_sq_path = self._get_next_exr_path(depth_sq_dir, "depth_sq")
 
         # Save to .exr files
         self._export_exr(diffuse_path, diffuse_array)
@@ -137,12 +108,6 @@ class ExportState:
         self._export_exr(albedo_path, albedo_array)
         self._export_exr(normal_path, normal_array)
         self._export_exr(depth_path, depth_array)
-
-        self._export_exr(diffuse_sq_path, diffuse_sq_array)
-        self._export_exr(specular_sq_path, specular_sq_array)
-        self._export_exr(albedo_sq_path, albedo_sq_array)
-        self._export_exr(normal_sq_path, normal_sq_array)
-        self._export_exr(depth_sq_path, depth_sq_array)
     
     def _export_training_target_diffuse(self, target_diffuse):
         target_diffuse_array = target_diffuse
