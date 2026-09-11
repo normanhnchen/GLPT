@@ -37,6 +37,36 @@
 
 # Gallery
 
+## Denoising
+
+Please note that this denoiser prototype is not a great denoiser because of the limited amount of produceable scene variety. On other scenes, there may be noticeable artifacts and issues because of the lack of variety and the missing variance and gradient buffers from Bako et al's implementation. However, the image below represents a scene where the denoiser performs well. They were both rendered at 100 samples:
+
+### Noisy
+
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="denoisingNoisyImage" src="../assets/gallery/Denoising/noisy.png">
+    </div>
+</div>
+
+### Denoised
+
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="denoisingDenoisedImage" src="../assets/gallery/Denoising/denoised.png">
+    </div>
+</div>
+
+### Loss Graph
+
+The KPCN network was trained with 300 pretrain epochs and 500 fine-tune epochs.
+
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="DenoisingLossGraphImage" src="../assets/gallery/Denoising/loss_graph.png">
+    </div>
+</div>
+
 ## Diffuse / Specular Split
 
 ### Combined
