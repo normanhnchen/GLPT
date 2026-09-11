@@ -41,13 +41,13 @@ Scenes must be `glTF` or `.glb`. GLPT reads the following extra lighting and mat
 
 GLPT includes a few gallery photos of its rendering capabilities and debug passes. It also includes interactive sliders for the BVH depth debug passes.
 
-**[See the gallery](https://normanhnchen.github.io/GLPT/Gallery)**
+**[See the gallery](https://normanhnchen.github.io/GLPT/gallery/)**
 
 ## Documentation
 
 GLPT includes comprehensive documentation covering the underlying mathematics, derivations, and concepts used in the engine. 
 
-**[Read the Documentation](https://normanhnchen.github.io/GLPT/Documentation)**
+**[Read the Documentation](https://normanhnchen.github.io/GLPT/getting_started/)**
 
 ## Developer Installation
 
