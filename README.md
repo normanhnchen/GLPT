@@ -1,6 +1,6 @@
 # GLPT
 
-GLPT is a GPU path tracer built with a ModernGL and GLFW backend. 
+GLPT is a GPU path tracer built with a ModernGL and GLFW backend.
 
 ## Path Tracer Features
 
@@ -11,7 +11,7 @@ GLPT is a GPU path tracer built with a ModernGL and GLFW backend.
 - **Next Event Estimation (NEE):** Direct sampling for punctual lights, area lights, and HDRI
 - **Multiple Importance Sampling (MIS):** Power heuristic for combining BSDF and NEE contributions
 - **Volumetrics:** Beer-Lambert law integration for homogenous mediums
-- **AI Denoising:** Kernel-Predicting Convolutional Network (KPCN) with a U-Net architecture
+- **AI Denoising:** Kernel-Predicting Convolutional Network (KPCN) with a U-Net architecture (note that it isn't perfect and has artifacts)
 
 ## Requirements
 
@@ -30,7 +30,15 @@ Scenes must be `glTF` or `.glb`. GLPT reads the following extra lighting and mat
 
 ## Gallery
 
-## Benchmarks
+GLPT includes a few gallery photos of its rendering capabilities and debug passes. It also includes interactive sliders for the BVH depth debug passes.
+
+**[See the gallery](https://normanhnchen.github.io/GLPT/Gallery)**
+
+## Documentation
+
+GLPT includes comprehensive documentation covering the underlying mathematics, derivations, and concepts used in the engine. 
+
+**[Read the Documentation](https://normanhnchen.github.io/GLPT/Documentation)**
 
 ## Developer Installation
 
@@ -51,12 +59,6 @@ Run the main launcher with:
 python -m src.run
 ```
 
-## Documentation
-
-GLPT includes comprehensive documentation covering the underlying mathematics, derivations, and concepts used in the engine. 
-
-**[Read the Documentation](docs/1_Introduction/1.0_Table_of_Contents.md)**
-
 ## License
 
 Unless otherwise noted, all original source code in this repository is Copyright © 2026 Norman Chen.
@@ -65,21 +67,18 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 Third-party code and assets remain under their respective licenses and copyrights.
 
-## Assets
-
-All 3d scenes were created by me using Blender 4.4.
-
 ### External Assets
 
-- Textures and HDRI environments are from [ambientCG.com](ambientCG.com),
+- HDRI environments are from [ambientCG.com](ambientCG.com),
 licensed under the Creative Commons CC0 1.0 Universal License.
 
-- Models from the Stanford 3D Scanning Repository: 
-    - Stanford Dragon
+- Models
+    - Many models are from [polyhaven.com](https://polyhaven.com/),
+    licensed under the Creative Commons CC0 1.0 Universal License.
 
-Stanford Dragon
-Source: Stanford Computer Graphics Laboratory
-https://graphics.stanford.edu/data/3Dscanrep/
+    - Asian dragon model courtesy of XYZ RGB Inc. and the Stanford University Computer Graphics Laboratory
+
+    - BMW car model courtesy of Mike Pan and Morgan McGuire, license CC0/Public Domain
 
 Please see the Stanford 3D Scanning Repository for licensing and usage terms.
 
