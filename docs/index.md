@@ -53,13 +53,13 @@ GLPT includes comprehensive documentation covering the underlying mathematics, d
 
 Unless otherwise noted, all original source code in this repository is Copyright © 2026 Norman Chen.
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [license](license.md) for details.
 
 Third-party code and assets remain under their respective licenses and copyrights.
 
 ### External Assets
 
-- HDRI environments are from [ambientCG.com](ambientCG.com),
+- HDRI environments are from [ambientCG.com](https://ambientCG.com),
 licensed under the Creative Commons CC0 1.0 Universal License.
 
 - Models
