@@ -2,8 +2,6 @@
 
 GLPT is a GPU path tracer built with a ModernGL and GLFW backend.
 
-## Downloads
-
 ## Path Tracer Features
 
 - **Primitive Intersection:** Möller-Trumbore ray-triangle intersection
@@ -14,6 +12,15 @@ GLPT is a GPU path tracer built with a ModernGL and GLFW backend.
 - **Multiple Importance Sampling (MIS):** Power heuristic for combining BSDF and NEE contributions
 - **Volumetrics:** Beer-Lambert law integration for homogenous mediums
 - **AI Denoising:** Kernel-Predicting Convolutional Network (KPCN) with a U-Net architecture (note that it isn't perfect and has artifacts)
+
+## Engine Features
+
+- **PySide6:** Startup launcher and AI training loss visualization using *PyQtGraph*
+- **ImGUI:** Real-time settings
+- **Rendering for AI Training Data:** Camera setup, scene randomization
+- **AI Training Loop:** Loss graph, epochs display
+- **Rasterization:** Camera setup and scene basic visualization
+- **Caching:** BVH and scene caching for quick scene loading
 
 ## Requirements
 
