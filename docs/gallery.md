@@ -37,6 +37,55 @@
 
 # Gallery
 
+## Auxiliary Buffers
+
+### Combined
+
+The following combined image will be used as reference for the auxiliary buffers below:
+
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="auxiliaryCombinedImage" src="../assets/gallery/Auxiliary_Buffers/combined.png">
+    </div>
+    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Morgan McGuire's Computer Graphics Archive https://casual-effects.com/data.)</p> 
+</div>>
+
+### Albedo
+
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="auxiliaryAlbedoImage" src="../assets/gallery/Auxiliary_Buffers/albedo.png">
+    </div>
+    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Morgan McGuire's Computer Graphics Archive https://casual-effects.com/data.)</p> 
+</div>
+
+### Normal
+
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="auxiliaryAlbedoImage" src="../assets/gallery/Auxiliary_Buffers/normal.png">
+    </div>
+    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Morgan McGuire's Computer Graphics Archive https://casual-effects.com/data.)</p> 
+</div>
+
+### Roughness
+
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="auxiliaryAlbedoImage" src="../assets/gallery/Auxiliary_Buffers/roughness.png">
+    </div>
+    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Morgan McGuire's Computer Graphics Archive https://casual-effects.com/data.)</p> 
+</div>
+
+### Metallic
+
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="auxiliaryAlbedoImage" src="../assets/gallery/Auxiliary_Buffers/metallic.png">
+    </div>
+    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Morgan McGuire's Computer Graphics Archive https://casual-effects.com/data.)</p> 
+</div>
+
 ## Denoising
 
 Please note that this denoiser prototype is not a great denoiser because of the limited amount of produceable scene variety. On other scenes, there may be noticeable artifacts and issues because of the lack of variety and the missing variance and gradient buffers from Bako et al's implementation. However, the image below represents a scene where the denoiser performs well. They were both rendered at 100 samples:
