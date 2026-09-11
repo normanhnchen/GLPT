@@ -78,7 +78,7 @@ Third-party code and assets remain under their respective licenses and copyright
 
 ### External Assets
 
-- HDRI environments are from [ambientCG.com](ambientCG.com),
+- HDRI environments are from [ambientCG.com](https://ambientCG.com),
 licensed under the Creative Commons CC0 1.0 Universal License.
 
 - Models
