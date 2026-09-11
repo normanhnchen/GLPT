@@ -37,6 +37,13 @@
 
 # Gallery
 
+<div class="gallery-card">
+    <div class="gallery-viewer">
+        <img id="galleryBathroomImage" src="../assets/gallery/bathroom.png">
+    </div>
+    <p class="gallery-credit">Bathroom scene "Salle de bain" courtesy of nacimus and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Benedikt Bitterli's Rendering Resources https://benedikt-bitterli.me/resources/.)</p>
+</div>
+
 ## Auxiliary Buffers
 
 ### Combined
@@ -47,7 +54,7 @@ The following combined image will be used as reference for the auxiliary buffers
     <div class="gallery-viewer">
         <img id="auxiliaryCombinedImage" src="../assets/gallery/Auxiliary_Buffers/combined.png">
     </div>
-    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Morgan McGuire's Computer Graphics Archive https://casual-effects.com/data.)</p> 
+    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Benedikt Bitterli's Rendering Resources https://benedikt-bitterli.me/resources/.)</p> 
 </div>>
 
 ### Albedo
@@ -56,34 +63,34 @@ The following combined image will be used as reference for the auxiliary buffers
     <div class="gallery-viewer">
         <img id="auxiliaryAlbedoImage" src="../assets/gallery/Auxiliary_Buffers/albedo.png">
     </div>
-    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Morgan McGuire's Computer Graphics Archive https://casual-effects.com/data.)</p> 
+    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Benedikt Bitterli's Rendering Resources https://benedikt-bitterli.me/resources/.)</p> 
 </div>
 
 ### Normal
 
 <div class="gallery-card">
     <div class="gallery-viewer">
-        <img id="auxiliaryAlbedoImage" src="../assets/gallery/Auxiliary_Buffers/normal.png">
+        <img id="auxiliaryNormalImage" src="../assets/gallery/Auxiliary_Buffers/normal.png">
     </div>
-    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Morgan McGuire's Computer Graphics Archive https://casual-effects.com/data.)</p> 
+    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Benedikt Bitterli's Rendering Resources https://benedikt-bitterli.me/resources/.)</p> 
 </div>
 
 ### Roughness
 
 <div class="gallery-card">
     <div class="gallery-viewer">
-        <img id="auxiliaryAlbedoImage" src="../assets/gallery/Auxiliary_Buffers/roughness.png">
+        <img id="auxiliaryRoughnessImage" src="../assets/gallery/Auxiliary_Buffers/roughness.png">
     </div>
-    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Morgan McGuire's Computer Graphics Archive https://casual-effects.com/data.)</p> 
+    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Benedikt Bitterli's Rendering Resources https://benedikt-bitterli.me/resources/.)</p> 
 </div>
 
 ### Metallic
 
 <div class="gallery-card">
     <div class="gallery-viewer">
-        <img id="auxiliaryAlbedoImage" src="../assets/gallery/Auxiliary_Buffers/metallic.png">
+        <img id="auxiliaryMetallicImage" src="../assets/gallery/Auxiliary_Buffers/metallic.png">
     </div>
-    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Morgan McGuire's Computer Graphics Archive https://casual-effects.com/data.)</p> 
+    <p class="gallery-credit">Kitchen scene courtesy of Jay-Artist and Benedikt Bitterli, license CC BY 3.0. (Model downloaded from Benedikt Bitterli's Rendering Resources https://benedikt-bitterli.me/resources/.)</p> 
 </div>
 
 ## Denoising
