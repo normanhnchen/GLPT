@@ -3,8 +3,8 @@
         "mode": "off",
         "enable_launcher_buttons": true,
         "training": {
-            "pretrain_epochs": 200,
-            "fine_tune_epochs": 100
+            "pretrain_epochs": 300,
+            "fine_tune_epochs": 500
         },
         "rendering": {
             "mode": "off",

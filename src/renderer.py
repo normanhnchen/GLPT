@@ -137,7 +137,8 @@ def run_app(scene, ai_denoiser, camera, buffers):
 
         frame_stats.track()
 
-        if glfw_window.is_minimized:
+        fb_w, fb_h = glfwGetFramebufferSize(glfw_window.window)
+        if glfw_window.is_minimized or fb_w <= 0 or fb_h <= 0:
             glfwPollEvents()
 
             if settings.rendering.mode == "path_tracing":
@@ -169,7 +170,8 @@ def run_app(scene, ai_denoiser, camera, buffers):
 
         glfw_window.poll()
         input_state.process_input(frame_stats.delta_time, camera)
-        imgui_state.begin_frame()
+        if not imgui_state.begin_frame(glfw_window.window):
+            continue
         ui_state.settings_window = settings_ui.draw(ui_state.settings_window)
 
         if settings.rendering.mode == "path_tracing":

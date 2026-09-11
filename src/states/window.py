@@ -153,9 +153,16 @@ class ImguiState:
     def want_text_input(self):
         return imgui.get_io().want_text_input
 
-    def begin_frame(self):
+    def begin_frame(self, window):
+        fb_w, fb_h = glfwGetFramebufferSize(window)
+        scale_x, scale_y = glfwGetWindowContentScale(window)
+
+        if fb_w <= 0 or fb_h <= 0 or scale_x <= 0 or scale_y <= 0:
+            return False
+
         self.impl.process_inputs()
         imgui.new_frame()
+        return True
 
     def end_frame(self):
         imgui.render()

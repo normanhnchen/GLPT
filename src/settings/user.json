@@ -33,9 +33,9 @@
             "renders": "src/assets/renders/ai_training",
             "scenes": "src/assets/models/ai_training"
         },
-        "hdri": false,
+        "hdri": "src/assets/hdris/day_sky_hdri.exr",
         "renders": "src/assets/renders/images",
-        "scene": "src/assets/models/dragon_scene.glb",
+        "scene": "src/assets/models/bathroom2.glb",
         "scenes": "src/assets/models"
     },
     "path_tracing": {
@@ -56,11 +56,11 @@
     },
     "post_processing": {
         "exposure": 3.0,
-        "hdri_exposure": 0.10000000149011612,
+        "hdri_exposure": 1.0,
         "tonemap": "AgX"
     },
     "rendering": {
-        "mode": "rasterization",
+        "mode": "path_tracing",
         "texture_size": [
             1024,
             1024

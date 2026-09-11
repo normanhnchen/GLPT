@@ -31,32 +31,29 @@ need_resize = False
 
 # See 9.4 Rendering
 def run_app():
-    glfw_window = None
+    glfw_window = GlfwWindow()
+    imgui_state = ImguiState()
+    input_state = InputState(glfw_window, imgui_state)
+    ui_state = UIState()
+    camera = Camera()
+
+    glfw_window.create("FPS: 0 | Samples: 0")
+
+    ctx = moderngl.create_context()
+
+    imgui_state.create(glfw_window.window)
+    
+    glfw_callback_state = GlfwCallbackState(glfw_window, input_state, ui_state, imgui_state, camera)
+    # Set callbacks after so imgui doesn't override them
+    glfw_callback_state.set_callbacks()
 
     try:
         for _ in range(settings.ai_training.rendering.num_pass_throughs):
             remove_stale_cache()
 
             # Break if the user exited the previous window
-            if glfw_window:
-                if glfw_window.should_close():
-                    break
-            
-            glfw_window = GlfwWindow()
-            imgui_state = ImguiState()
-            input_state = InputState(glfw_window, imgui_state)
-            ui_state = UIState()
-            camera = Camera()
-
-            glfw_window.create("FPS: 0 | Samples: 0")
-
-            ctx = moderngl.create_context()
-
-            imgui_state.create(glfw_window.window)
-            
-            glfw_callback_state = GlfwCallbackState(glfw_window, input_state, ui_state, imgui_state, camera)
-            # Set callbacks after so imgui doesn't override them
-            glfw_callback_state.set_callbacks()
+            if glfw_window.should_close():
+                break
             
             pt_shaders = PTShaders(ctx)
             raster_shaders = RasterShaders(ctx)
@@ -154,7 +151,8 @@ def run_app():
                 while not glfw_window.should_close():
                     frame_stats.track()
 
-                    if glfw_window.is_minimized:
+                    fb_w, fb_h = glfwGetFramebufferSize(glfw_window.window)
+                    if glfw_window.is_minimized or fb_w <= 0 or fb_h <= 0:
                         glfwPollEvents()
 
                         if settings.rendering.mode == "path_tracing":
@@ -186,7 +184,8 @@ def run_app():
 
                     glfw_window.poll()
                     input_state.process_input(frame_stats.delta_time, camera)
-                    imgui_state.begin_frame()
+                    if not imgui_state.begin_frame(glfw_window.window):
+                        continue
                     ui_state.settings_window = settings_ui.draw(ui_state.settings_window)
 
                     if settings.ai_training.mode != "camera_setup":
